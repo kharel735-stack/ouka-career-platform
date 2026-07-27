@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="OUKA">
+  <defs>
+    <linearGradient id="oukaPetal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f8bcd0"/>
+      <stop offset="1" stop-color="#e0688f"/>
+    </linearGradient>
+    <path id="oukaP" d="M32,33 C27,28 23.5,20 26,12.5 C27.5,8 30,9 32,14 C34,9 36.5,8 38,12.5 C40.5,20 37,28 32,33 Z"/>
+  </defs>
+  <g fill="url(#oukaPetal)" stroke="#cf4f7d" stroke-width="0.7" stroke-linejoin="round">
+    <use href="#oukaP"/>
+    <use href="#oukaP" transform="rotate(72 32 32)"/>
+    <use href="#oukaP" transform="rotate(144 32 32)"/>
+    <use href="#oukaP" transform="rotate(216 32 32)"/>
+    <use href="#oukaP" transform="rotate(288 32 32)"/>
+  </g>
+  <g fill="#c8a869">
+    <circle cx="32" cy="32" r="3.4"/>
+    <circle cx="32" cy="25.5" r="1.15"/>
+    <circle cx="38.2" cy="30" r="1.15"/>
+    <circle cx="35.8" cy="37.2" r="1.15"/>
+    <circle cx="28.2" cy="37.2" r="1.15"/>
+    <circle cx="25.8" cy="30" r="1.15"/>
+  </g>
+</svg>

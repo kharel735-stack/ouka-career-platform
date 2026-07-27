@@ -1,0 +1,93 @@
+/* ============================================================================
+ * theme.css  ―  重厚テーマ（2026-07-22）。style.css の後に全ページで読み込む。
+ * 要望：①ヘッダーを固定しない ②ベージュ感を抜く ③一枚目(導入画面)のような重量感
+ *       ④色合いに深み（均一でなく墨のトーン差＋金・ローズの差し色）
+ * 方針：地は「墨（濃色）」で重く。読ませる中身は白いカードに載せて可読性を確保。
+ *       style.css は触らず、この層で上書きする（別セッションとの衝突回避）。
+ * ==========================================================================*/
+
+/* ① ヘッダーを固定しない（スクロールで一緒に流れる。ロゴが乗るので地は明るいまま） */
+.site-header{ position: static !important; }
+.progress{ top: 0 !important; }   /* 診断ページの進捗バー：固定ヘッダー前提の隙間を解消 */
+
+/* ② 地＝墨。ローズ／金をごく薄く効かせて重量感 */
+body{
+  background:
+    radial-gradient(1200px 640px at 85% -10%, rgba(200,68,122,.16), transparent 62%),
+    radial-gradient(1000px 560px at 3% 112%, rgba(184,146,60,.12), transparent 60%),
+    #150d0e !important;
+  color: #e7dcdc;
+}
+
+/* セクション：既定は透明（＝墨地が透ける）。旧ベージュ帯は一段濃い墨（トーン差でリズム） */
+.section{ background: transparent; color: #d7cacd; }
+.section--beige{ background: #201419 !important; }
+.section--green{ background: #100b0c !important; }
+
+/* セクション直置きの見出し・段落は淡色に（暗地で読める） */
+.section-head h2, .cta-band h2{ color: #ffffff; }
+.section-head p, .cta-band p{ color: #c9b9bc; }
+.section-head .eyebrow{ color: var(--gold-soft); }
+/* 明るいカード内の eyebrow は濃い金に戻す（淡地で読めるように） */
+.assess-cta-box .eyebrow{ color: var(--gold); }
+
+/* 流れ（タイムライン）は地に直接乗るので淡色へ */
+.flow__txt{ color: #ffffff; }
+.flow__txt small{ color: #c3b2b6; }
+.flow__d{ color: #c3b2b6; }
+
+/* ③ 読ませる中身＝白いカード（可読）。カード内の文字は墨へ戻す */
+.card, .strength-list li, .assess-cta-box, .assess-points li,
+.fee-table, .fee-includes .box, .flow__total,
+.contact-card, .faq details, .form-card, .field, .notice, .job-chip{
+  color: var(--ink);
+}
+
+/* ④ 厚み：縁を金のヘアラインに、影を深く */
+.card, .strength-list li, .assess-cta-box,
+.fee-includes .box, .contact-card, .faq details, .form-card{
+  border-color: rgba(220,196,136,.28) !important;
+  box-shadow: 0 18px 46px rgba(0,0,0,.42) !important;
+}
+.job-chip{ border-color: rgba(220,196,136,.30) !important; box-shadow: 0 8px 22px rgba(0,0,0,.35) !important; }
+
+/* 学費の総額パネル（元々ダーク）を、暗地でも際立つよう縁と影を強調 */
+.fee-total{ box-shadow: 0 20px 54px rgba(0,0,0,.5) !important; border: 1px solid rgba(220,196,136,.5) !important; }
+
+/* ⑤ ヘッダーは明るいバーのまま（ロゴが墨文字のため）。金線を少し強調 */
+.site-header{ background: rgba(253,250,246,.96); }
+.site-header::after{ opacity: .9; }
+
+/* ⑥ CTA（学生向け・既定セクション）ボタン周りの視認性 */
+.cta-band .btn--primary{ box-shadow: 0 14px 34px rgba(169,41,92,.45); }
+
+/* ⑦ フッター上の金線を強めて締める */
+.site-footer{ box-shadow: inset 0 3px 0 rgba(184,146,60,.0); }
+
+/* ⑧ ナビ項目が増えても崩れないよう折り返し許可（デスクトップ中間幅の保険） */
+.nav-links{ flex-wrap: wrap; justify-content: flex-end; }
+
+/* ⑨ 診断・結果ページの可読性修正（暗い地×暗い文字＝黒に黒 を解消）
+ *    クイズ本体と結果を白いカードに載せる。中の文字は元の濃色でそのまま読める。 */
+main > .container > .assess-wrap,
+.result-wrap{
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: clamp(20px, 4vw, 44px);
+  color: var(--ink);
+  margin: 8px auto 44px;
+}
+main > .container > .assess-wrap h1,
+main > .container > .assess-wrap h2,
+main > .container > .assess-wrap h3,
+.result-wrap h1, .result-wrap h2, .result-wrap h3{ color: var(--green-900); }
+/* 進捗バー内の assess-wrap はカード化しない（白バーの中の文字は濃色に） */
+.progress{ color: var(--ink); }
+.progress .assess-wrap{ background: transparent; border: 0; box-shadow: none; padding: 0; margin: 0; }
+/* 結果ブロックの見出しも白カード上で濃色に */
+.result-block h2, .result-block h3{ color: var(--green-900); }
+
+/* ⑩ 言語切替ボタンが中幅で縦積みになるのを防ぐ */
+.lang-switch button{ white-space: nowrap; }

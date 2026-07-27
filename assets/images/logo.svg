@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 96" width="320" height="96" role="img" aria-label="OUKA Skill Training Center — Work to Japan">
+  <defs>
+    <radialGradient id="disc" cx="38%" cy="30%" r="80%">
+      <stop offset="0" stop-color="#e85c8a"/>
+      <stop offset="1" stop-color="#a9295c"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#efd489"/>
+      <stop offset="50" stop-color="#c9a227"/>
+      <stop offset="1" stop-color="#9c7a16"/>
+    </linearGradient>
+  </defs>
+  <!-- 桜エンブレム -->
+  <g transform="translate(48 48)">
+    <circle r="42" fill="url(#disc)"/>
+    <circle r="42" fill="none" stroke="url(#gold)" stroke-width="2"/>
+    <circle r="37" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="1"/>
+    <text x="0" y="16" text-anchor="middle" fill="#fff"
+          font-family="'Hiragino Mincho ProN','Yu Mincho','Noto Serif JP',serif"
+          font-size="48" font-weight="700">桜</text>
+  </g>
+  <!-- ワードマーク -->
+  <text x="108" y="45" fill="#241d1f"
+        font-family="'Times New Roman',Georgia,'Noto Serif JP',serif"
+        font-size="41" font-weight="700" letter-spacing="7">OUKA</text>
+  <line x1="110" y1="57" x2="292" y2="57" stroke="url(#gold)" stroke-width="1.4"/>
+  <text x="110" y="75" fill="#a9295c"
+        font-family="'Helvetica Neue',Arial,sans-serif"
+        font-size="12.5" font-weight="700" letter-spacing="5.5">WORK TO JAPAN</text>
+</svg>

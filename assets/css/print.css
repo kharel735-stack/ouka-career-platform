@@ -1,0 +1,49 @@
+/* ============================================================================
+ * print.css  ―  診断結果の印刷 / PDF保存用レイアウト
+ * 使い方：<link rel="stylesheet" href="assets/css/print.css" media="print">
+ * ブラウザの「印刷」→「PDFに保存」で1枚のレポートになります。
+ * ==========================================================================*/
+
+@media print {
+  @page { size: A4; margin: 14mm; }
+
+  /* 画面用の装飾・操作要素は印刷しない */
+  .site-header, .site-footer, .nav, .result-actions, .assess-nav, .assess-toolbar,
+  .progress, .lang-switch, .hero__petals, .skip-link, .print-hide {
+    display: none !important;
+  }
+
+  html, body { background: #fff !important; color: #000 !important; font-size: 11pt; }
+  a { color: #000 !important; text-decoration: none !important; }
+
+  .result-hero { background: #fff !important; color: #000 !important; padding: 0 0 8mm !important; text-align: left !important; border-bottom: 2px solid #0f3d2e; }
+  .result-hero h1 { color: #0f3d2e !important; font-size: 18pt; }
+  .result-hero .meta { color: #333 !important; }
+
+  .result-wrap { max-width: 100% !important; padding: 0 !important; }
+
+  .result-block {
+    border: 1px solid #bbb !important; box-shadow: none !important; padding: 6mm !important;
+    margin-top: 5mm !important; break-inside: avoid; page-break-inside: avoid;
+  }
+  .result-block h2 { font-size: 12pt; color: #0f3d2e !important; }
+
+  .top-job, .detail-card, .score-bar, .pill-list li { break-inside: avoid; page-break-inside: avoid; }
+  .top-job .rank { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  /* バーやチップの色をなるべく残す */
+  .score-bar .bar, .top-job .rank, .job-status-tag, .badge {
+    -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;
+  }
+
+  .print-only { display: block !important; }
+
+  /* 印刷フッター（注意書き） */
+  .print-footer {
+    display: block !important; margin-top: 6mm; padding-top: 3mm; border-top: 1px solid #999;
+    font-size: 8.5pt; color: #333;
+  }
+}
+
+/* 画面表示時は印刷専用要素を隠す */
+.print-only, .print-footer { display: none; }

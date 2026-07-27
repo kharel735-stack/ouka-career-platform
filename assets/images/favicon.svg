@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="桜花">
+  <rect width="64" height="64" rx="14" fill="#e85c8a"/>
+  <text x="32" y="45" text-anchor="middle" fill="#ffffff"
+        font-family="'Hiragino Mincho ProN','Yu Mincho','Noto Serif JP',serif"
+        font-size="42" font-weight="700">桜</text>
+</svg>

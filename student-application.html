@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>入学・面談のお申し込み｜桜花スキルトレーニングセンター</title>
+  <meta name="description" content="入学・面談のお申し込み。適性診断を受けた方は入力済み情報が自動反映されます。">
+  <link rel="icon" type="image/svg+xml" href="assets/images/favicon.svg">
+  <!-- OGP / SNS共有・検索時のロゴ表示（REPLACE-DOMAIN はドメイン確定後に _tools/apply-domain.sh で置換）-->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="OUKA｜work to japan">
+  <meta property="og:title" content="入学・面談のお申し込み｜桜花スキルトレーニングセンター">
+  <meta property="og:description" content="入学・面談のお申し込み。適性診断を受けた方は入力済み情報が自動反映されます。">
+  <meta property="og:image" content="https://REPLACE-DOMAIN/assets/images/ogp.png">
+  <meta property="og:url" content="https://REPLACE-DOMAIN/student-application.html">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="入学・面談のお申し込み｜桜花スキルトレーニングセンター">
+  <meta name="twitter:description" content="入学・面談のお申し込み。適性診断を受けた方は入力済み情報が自動反映されます。">
+  <meta name="twitter:image" content="https://REPLACE-DOMAIN/assets/images/ogp.png">
+
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/theme.css">
+  <link rel="stylesheet" href="assets/css/assessment.css">
+  <!-- SEO:BEGIN （_tools/build-seo.py が生成。手で編集しない。再実行で更新される） -->
+  <link rel="canonical" href="https://REPLACE-DOMAIN/student-application.html">
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1">
+  <meta property="og:locale" content="ja_JP">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:locale:alternate" content="ne_NP">
+  <meta name="theme-color" content="#c8447a">
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "ホーム",
+      "item": "https://REPLACE-DOMAIN/index.html"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "入学・面談のお申し込み",
+      "item": "https://REPLACE-DOMAIN/student-application.html"
+    }
+  ]
+}
+  </script>
+  <!-- SEO:END -->
+</head>
+<body>
+  <a class="skip-link" href="#main" data-i18n="nav.menu">メニュー</a>
+  <header class="site-header">
+    <div class="container nav">
+      <a class="brand" href="index.html" aria-label="OUKA Skill Training Center - Work to Japan">
+        <img class="brand__logo" src="assets/images/logo.svg" alt="OUKA Skill Training Center - Work to Japan" width="320" height="96">
+        <span class="brand__text"><span class="brand__ja">桜花スキルトレーニングセンター</span></span>
+      </a>
+      <nav class="nav-links" aria-label="main">
+        <a href="index.html#about" data-i18n="nav.about">学校について</a>
+        <a href="visa.html" data-i18n="nav.visa">ビザ・在留資格</a>
+        <a href="assessment.html" data-i18n="nav.assessment">無料適性診断</a>
+        <a href="company.html" data-i18n="nav.forCompanies">企業の方へ</a>
+        <a href="contact.html" data-i18n="nav.contact">お問い合わせ</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="lang-switch" role="group" aria-label="Language">
+          <button type="button" data-set-lang="ja" aria-pressed="true">日本語</button>
+          <button type="button" data-set-lang="en" aria-pressed="false">EN</button>
+        </div>
+        <button class="nav-toggle" aria-label="メニュー" aria-expanded="false"><span></span></button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="result-hero" style="padding:clamp(24px,5vw,40px) 0">
+      <div class="container">
+        <h1 style="color:#fff" data-i18n="application.title">入学・面談のお申し込み</h1>
+        <p class="meta" data-i18n="application.intro"></p>
+      </div>
+    </div>
+
+    <div class="container">
+      <div style="max-width:760px;margin:24px auto 0">
+
+        <!-- 診断引継ぎバナー -->
+        <div id="carryover" class="notice" hidden style="margin-bottom:16px">
+          <p style="margin:0 0 6px;font-weight:700" data-i18n="application.fromAssessment"></p>
+          <div id="carryover-jobs" style="font-size:.92rem;color:var(--ink-soft)"></div>
+        </div>
+
+        <form id="app-form" class="form-card" novalidate>
+
+          <h3 style="margin-top:0" data-i18n="assessment.steps.basic">基本情報</h3>
+          <div class="field">
+            <label for="a_fullName">氏名 / Full name<span class="req">*</span></label>
+            <input type="text" id="a_fullName" name="fullName" required>
+            <div class="err-msg" data-i18n="errors.required"></div>
+          </div>
+          <div class="field">
+            <label for="a_fullNameRoman">氏名（ローマ字） / Full name (Roman)</label>
+            <input type="text" id="a_fullNameRoman" name="fullNameRoman" autocapitalize="characters">
+          </div>
+          <div class="grid grid-2" style="gap:14px">
+            <div class="field">
+              <label for="a_dob">生年月日 / Date of birth</label>
+              <input type="date" id="a_dob" name="dateOfBirth">
+            </div>
+            <div class="field">
+              <label for="a_age">年齢 / Age</label>
+              <input type="number" id="a_age" name="age" readonly>
+            </div>
+          </div>
+          <div class="grid grid-2" style="gap:14px">
+            <div class="field">
+              <label for="a_gender">性別 / Gender</label>
+              <select id="a_gender" name="gender"></select>
+            </div>
+            <div class="field">
+              <label for="a_nationality">国籍 / Nationality</label>
+              <input type="text" id="a_nationality" name="nationality" value="ネパール">
+            </div>
+          </div>
+          <div class="grid grid-2" style="gap:14px">
+            <div class="field">
+              <label for="a_phone">電話番号 / Phone<span class="req">*</span></label>
+              <input type="tel" id="a_phone" name="phone" required>
+              <div class="err-msg" data-i18n="errors.phone"></div>
+            </div>
+            <div class="field">
+              <label for="a_whatsapp">WhatsApp</label>
+              <input type="tel" id="a_whatsapp" name="whatsapp">
+            </div>
+          </div>
+          <div class="field">
+            <label for="a_email">メールアドレス / Email</label>
+            <input type="email" id="a_email" name="email">
+            <div class="err-msg" data-i18n="errors.email"></div>
+          </div>
+          <div class="field">
+            <label for="a_address">現住所 / Address</label>
+            <input type="text" id="a_address" name="address">
+          </div>
+          <div class="grid grid-2" style="gap:14px">
+            <div class="field">
+              <label for="a_guardianName">保護者氏名 / Guardian name</label>
+              <input type="text" id="a_guardianName" name="guardianName">
+            </div>
+            <div class="field">
+              <label for="a_guardianPhone">保護者電話 / Guardian phone</label>
+              <input type="tel" id="a_guardianPhone" name="guardianPhone">
+            </div>
+          </div>
+
+          <h3 data-i18n="assessment.steps.japanese">日本語・学習状況</h3>
+          <div class="grid grid-2" style="gap:14px">
+            <div class="field">
+              <label for="a_jpLevel">日本語レベル / Japanese level</label>
+              <select id="a_jpLevel" name="japaneseLevel"></select>
+            </div>
+            <div class="field">
+              <label for="a_course"><span data-i18n="application.course">希望コース</span></label>
+              <select id="a_course" name="course"></select>
+            </div>
+          </div>
+
+          <h3 data-i18n="assessment.steps.preference">希望職種</h3>
+          <div class="grid grid-2" style="gap:14px">
+            <div class="field">
+              <label for="a_job1">希望職種 第1 / Preferred 1</label>
+              <select id="a_job1" name="preferredJob1"></select>
+            </div>
+            <div class="field">
+              <label for="a_job2">希望職種 第2 / Preferred 2</label>
+              <select id="a_job2" name="preferredJob2"></select>
+            </div>
+          </div>
+          <div class="field">
+            <label for="a_job3">希望職種 第3 / Preferred 3</label>
+            <select id="a_job3" name="preferredJob3"></select>
+          </div>
+          <div class="field" id="rec-jobs-field" hidden>
+            <label data-i18n="application.topJobsLabel">診断の上位3職種</label>
+            <input type="text" id="a_recjobs" readonly>
+          </div>
+
+          <h3 id="interview" data-i18n="result.interviewBtn">無料面談を申し込む</h3>
+          <div class="grid grid-2" style="gap:14px">
+            <div class="field">
+              <label for="a_interviewDate" data-i18n="application.interviewDate">希望面談日時</label>
+              <input type="text" id="a_interviewDate" name="interviewDate" placeholder="例：7/20 午後 / e.g. Jul 20 PM">
+            </div>
+            <div class="field">
+              <label data-i18n="application.interviewMethod">面談方法</label>
+              <div class="opt-btn-group cols-2" id="a_method"></div>
+            </div>
+          </div>
+          <div class="field">
+            <label data-i18n="application.guardianJoin">保護者の同席</label>
+            <div class="opt-btn-group cols-2" id="a_guardianJoin"></div>
+          </div>
+          <div class="field">
+            <label for="a_note" data-i18n="application.freeNote">自由記入（ご質問・ご要望など）</label>
+            <textarea id="a_note" name="freeNote"></textarea>
+          </div>
+
+          <div class="field">
+            <label class="consent-row">
+              <input type="checkbox" id="a_consent" name="privacyConsent" required>
+              <span><span data-i18n="assessment.requiredConsent">個人情報の取扱いに同意します</span>（<a href="privacy.html" target="_blank" rel="noopener" data-i18n="footer.privacy">個人情報の取扱い</a>）</span>
+            </label>
+            <div class="err-msg" data-i18n="errors.consent"></div>
+          </div>
+
+          <div id="app-status" class="notice" hidden style="margin-bottom:14px"></div>
+
+          <button type="submit" class="btn btn--primary btn--lg btn--block" id="a_submit" data-i18n="application.submit">申し込む</button>
+        </form>
+
+        <!-- 送信完了（Apps Script受理時のみ） -->
+        <div id="app-thanks" class="form-card" hidden style="text-align:center;margin-top:16px">
+          <h2 data-i18n="application.thanksTitle">お申し込みを受け付けました</h2>
+          <p data-i18n="application.thanksBody"></p>
+          <p id="thanks-id" style="font-weight:700;color:var(--green-700)"></p>
+          <a class="btn btn--green" href="index.html" data-i18n="nav.about">学校について</a>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container"><p class="fine"><span data-i18n="footer.copyright"></span></p></div>
+  </footer>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/translations.js"></script>
+  <script src="assets/js/assessment-questions.js"></script>
+  <script src="assets/js/assessment-scoring.js"></script>
+  <script src="assets/js/main.js"></script>
+  <script src="assets/js/form-connector.js"></script>
+  <script src="assets/js/application.js"></script>
+</body>
+</html>

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>無料適性診断｜桜花スキルトレーニングセンター</title>
+  <meta name="description" content="日本語力・経験・性格・体力・希望を回答して、向いている可能性のある日本の仕事を確認できる無料の職業適性診断です。">
+  <link rel="icon" type="image/svg+xml" href="assets/images/favicon.svg">
+  <!-- OGP / SNS共有・検索時のロゴ表示（REPLACE-DOMAIN はドメイン確定後に _tools/apply-domain.sh で置換）-->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="OUKA｜work to japan">
+  <meta property="og:title" content="無料適性診断｜桜花スキルトレーニングセンター">
+  <meta property="og:description" content="日本語力・経験・性格・体力・希望を回答して、向いている可能性のある日本の仕事を確認できる無料の職業適性診断です。">
+  <meta property="og:image" content="https://REPLACE-DOMAIN/assets/images/ogp.png">
+  <meta property="og:url" content="https://REPLACE-DOMAIN/assessment.html">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="無料適性診断｜桜花スキルトレーニングセンター">
+  <meta name="twitter:description" content="日本語力・経験・性格・体力・希望を回答して、向いている可能性のある日本の仕事を確認できる無料の職業適性診断です。">
+  <meta name="twitter:image" content="https://REPLACE-DOMAIN/assets/images/ogp.png">
+
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/theme.css">
+  <link rel="stylesheet" href="assets/css/assessment.css">
+  <!-- SEO:BEGIN （_tools/build-seo.py が生成。手で編集しない。再実行で更新される） -->
+  <link rel="canonical" href="https://REPLACE-DOMAIN/assessment.html">
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1">
+  <meta property="og:locale" content="ja_JP">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:locale:alternate" content="ne_NP">
+  <meta name="theme-color" content="#c8447a">
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "ホーム",
+      "item": "https://REPLACE-DOMAIN/index.html"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "無料適性診断",
+      "item": "https://REPLACE-DOMAIN/assessment.html"
+    }
+  ]
+}
+  </script>
+  <!-- SEO:END -->
+</head>
+<body>
+  <a class="skip-link" href="#main" data-i18n="nav.menu">メニュー</a>
+
+  <header class="site-header">
+    <div class="container nav">
+      <a class="brand" href="index.html" aria-label="OUKA Skill Training Center - Work to Japan">
+        <img class="brand__logo" src="assets/images/logo.svg" alt="OUKA Skill Training Center - Work to Japan" width="320" height="96">
+        <span class="brand__text"><span class="brand__ja">桜花スキルトレーニングセンター</span></span>
+      </a>
+      <nav class="nav-links" aria-label="main">
+        <a href="index.html#about" data-i18n="nav.about">学校について</a>
+        <a href="index.html#jobs" data-i18n="nav.courses">コース</a>
+        <a href="visa.html" data-i18n="nav.visa">ビザ・在留資格</a>
+        <a href="assessment.html" data-i18n="nav.assessment">無料適性診断</a>
+        <a href="company.html" data-i18n="nav.forCompanies">企業の方へ</a>
+        <a href="contact.html" data-i18n="nav.contact">お問い合わせ</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="lang-switch" role="group" aria-label="Language">
+          <button type="button" data-set-lang="ja" aria-pressed="true">日本語</button>
+          <button type="button" data-set-lang="en" aria-pressed="false">EN</button>
+        </div>
+        <button class="nav-toggle" aria-label="メニュー" aria-expanded="false"><span></span></button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- 進捗バー -->
+    <div class="progress" id="progress" hidden>
+      <div class="container assess-wrap" style="padding-top:0;padding-bottom:0">
+        <div class="progress__meta">
+          <span id="progress-step-name">—</span>
+          <span><b id="progress-cur">1</b> <span data-i18n="assessment.stepOf">／</span> <span id="progress-total">7</span></span>
+        </div>
+        <div class="progress__bar"><div class="progress__fill" id="progress-fill"></div></div>
+        <div class="progress__dots" id="progress-dots"></div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="assess-wrap">
+
+        <!-- イントロ（初回表示） -->
+        <div id="intro">
+          <div class="section-head" style="text-align:left;margin-bottom:16px">
+            <h1 data-i18n="assessment.title">無料適性診断</h1>
+            <p data-i18n="assessment.intro"></p>
+          </div>
+          <div class="notice" data-i18n="disclaimer.storage" style="margin-bottom:16px"></div>
+          <div id="resume-box" class="notice notice--warn" hidden style="margin-bottom:16px">
+            <p style="margin:0 0 10px" data-i18n="assessment.resumeNotice"></p>
+            <button type="button" class="btn btn--outline" id="btn-clear-intro" data-i18n="assessment.clearSaved">一時保存を削除して最初から</button>
+          </div>
+          <button type="button" class="btn btn--primary btn--lg btn--block" id="btn-start" data-i18n="assessIntro.cta">無料適性診断を始める</button>
+        </div>
+
+        <!-- フォーム本体 -->
+        <form id="assess-form" novalidate hidden>
+          <div class="assess-toolbar">
+            <button type="button" id="btn-restart" data-i18n="assessment.clearSaved">一時保存を削除して最初から</button>
+          </div>
+          <div class="step-head">
+            <h2 id="step-title">—</h2>
+            <p class="step-sub" id="step-sub"></p>
+          </div>
+
+          <div id="step-container"><!-- 質問をJSで描画 --></div>
+
+          <div class="autosave-flag" id="autosave-flag" data-i18n="assessment.autosaved">自動保存しました</div>
+
+          <div class="assess-nav">
+            <button type="button" class="btn btn--outline btn--back" id="btn-back" data-i18n="common.back">戻る</button>
+            <button type="button" class="btn btn--primary" id="btn-next" data-i18n="common.next">次へ</button>
+          </div>
+        </form>
+
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p class="fine"><span data-i18n="footer.copyright">© 2026 Ouka Skill Training Center Pvt. Ltd.</span></p>
+    </div>
+  </footer>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/translations.js"></script>
+  <script src="assets/js/assessment-questions.js"></script>
+  <script src="assets/js/assessment-scoring.js"></script>
+  <script src="assets/js/main.js"></script>
+  <script src="assets/js/assessment.js"></script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1c1512"/>
+      <stop offset="0.55" stop-color="#241a20"/>
+      <stop offset="1" stop-color="#2c1a24"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="82%" cy="-10%" r="70%">
+      <stop offset="0" stop-color="#e85c8a" stop-opacity="0.30"/>
+      <stop offset="0.6" stop-color="#e85c8a" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="sak" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e85c8a"/>
+      <stop offset="1" stop-color="#c8447a"/>
+    </linearGradient>
+    <linearGradient id="rule" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#c9a24b"/>
+      <stop offset="1" stop-color="#e85c8a"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+  <!-- 桜の花びら（装飾） -->
+  <g fill="#e85c8a" opacity="0.10">
+    <path d="M980 140 q40 -60 80 0 q-40 60 -80 0 Z" transform="rotate(18 1020 140)"/>
+    <circle cx="1120" cy="300" r="34"/>
+    <circle cx="900" cy="560" r="70"/>
+  </g>
+  <!-- 金の枠 -->
+  <rect x="44" y="44" width="1112" height="542" fill="none" stroke="#c9a24b" stroke-opacity="0.45" stroke-width="1"/>
+
+  <!-- マーク＋日本語校名 -->
+  <g transform="translate(96 150)">
+    <circle cx="37" cy="17" r="37" fill="url(#sak)"/>
+    <text x="37" y="33" text-anchor="middle" fill="#ffffff"
+          font-family="'Hiragino Mincho ProN','Yu Mincho','Noto Serif JP',serif"
+          font-size="40" font-weight="700">桜</text>
+    <text x="98" y="27" fill="#e7c9d5"
+          font-family="'Hiragino Mincho ProN','Yu Mincho','Noto Serif JP',serif"
+          font-size="23" letter-spacing="4">桜花スキルトレーニングセンター</text>
+  </g>
+
+  <!-- OUKA -->
+  <text x="94" y="360" fill="#ffffff"
+        font-family="Georgia,'Times New Roman',serif" font-size="132" font-weight="700"
+        letter-spacing="16">OUKA</text>
+  <rect x="98" y="392" width="132" height="3" fill="url(#rule)"/>
+  <text x="100" y="446" fill="#c9a24b"
+        font-family="'Helvetica Neue',Arial,sans-serif" font-size="30" font-weight="600"
+        letter-spacing="13">WORK TO JAPAN</text>
+
+  <!-- サブコピー -->
+  <text x="98" y="512" fill="#efe7ea"
+        font-family="'Hiragino Mincho ProN','Yu Mincho','Noto Serif JP',serif" font-size="26">日本語だけを教える学校ではありません。</text>
+  <text x="98" y="548" fill="#efe7ea"
+        font-family="'Hiragino Mincho ProN','Yu Mincho','Noto Serif JP',serif" font-size="26">日本企業で長く活躍できる人材を育てる教育機関です。</text>
+</svg>

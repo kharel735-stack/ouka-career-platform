@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>適性診断の結果｜桜花スキルトレーニングセンター</title>
+  <meta name="description" content="適性診断の結果（参考情報）。向いている可能性のある職種・強み・準備を確認できます。">
+  <link rel="icon" type="image/svg+xml" href="assets/images/favicon.svg">
+  <!-- OGP / SNS共有・検索時のロゴ表示（REPLACE-DOMAIN はドメイン確定後に _tools/apply-domain.sh で置換）-->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="OUKA｜work to japan">
+  <meta property="og:title" content="適性診断の結果｜桜花スキルトレーニングセンター">
+  <meta property="og:description" content="適性診断の結果（参考情報）。向いている可能性のある職種・強み・準備を確認できます。">
+  <meta property="og:image" content="https://REPLACE-DOMAIN/assets/images/ogp.png">
+  <meta property="og:url" content="https://REPLACE-DOMAIN/assessment-result.html">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="適性診断の結果｜桜花スキルトレーニングセンター">
+  <meta name="twitter:description" content="適性診断の結果（参考情報）。向いている可能性のある職種・強み・準備を確認できます。">
+  <meta name="twitter:image" content="https://REPLACE-DOMAIN/assets/images/ogp.png">
+
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/theme.css">
+  <link rel="stylesheet" href="assets/css/assessment.css">
+  <link rel="stylesheet" href="assets/css/print.css" media="print">
+  <!-- SEO:BEGIN （_tools/build-seo.py が生成。手で編集しない。再実行で更新される） -->
+  <link rel="canonical" href="https://REPLACE-DOMAIN/assessment-result.html">
+  <meta name="robots" content="noindex,follow">
+  <meta property="og:locale" content="ja_JP">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:locale:alternate" content="ne_NP">
+  <meta name="theme-color" content="#c8447a">
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "ホーム",
+      "item": "https://REPLACE-DOMAIN/index.html"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "適性診断の結果",
+      "item": "https://REPLACE-DOMAIN/assessment-result.html"
+    }
+  ]
+}
+  </script>
+  <!-- SEO:END -->
+</head>
+<body>
+  <header class="site-header print-hide">
+    <div class="container nav">
+      <a class="brand" href="index.html" aria-label="OUKA Skill Training Center - Work to Japan">
+        <img class="brand__logo" src="assets/images/logo.svg" alt="OUKA Skill Training Center - Work to Japan" width="320" height="96">
+        <span class="brand__text"><span class="brand__ja">桜花スキルトレーニングセンター</span></span>
+      </a>
+      <nav class="nav-links" aria-label="main">
+        <a href="index.html" data-i18n="nav.about">学校について</a>
+        <a href="visa.html" data-i18n="nav.visa">ビザ・在留資格</a>
+        <a href="assessment.html" data-i18n="nav.assessment">無料適性診断</a>
+        <a href="company.html" data-i18n="nav.forCompanies">企業の方へ</a>
+        <a href="contact.html" data-i18n="nav.contact">お問い合わせ</a>
+      </nav>
+      <div class="nav-actions">
+        <div class="lang-switch" role="group" aria-label="Language">
+          <button type="button" data-set-lang="ja" aria-pressed="true">日本語</button>
+          <button type="button" data-set-lang="en" aria-pressed="false">EN</button>
+        </div>
+        <button class="nav-toggle" aria-label="メニュー" aria-expanded="false"><span></span></button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- データが無い場合 -->
+    <section id="no-data" class="section" hidden>
+      <div class="container text-center">
+        <div class="notice notice--warn" style="max-width:520px;margin:0 auto 20px" data-i18n="result.noData"></div>
+        <a class="btn btn--primary" href="assessment.html" data-i18n="result.goAssessment">診断を受ける</a>
+      </div>
+    </section>
+
+    <!-- 結果本体 -->
+    <div id="result-root" hidden>
+      <div class="result-hero">
+        <div class="container">
+          <h1 data-i18n="result.title">適性診断の結果</h1>
+          <p class="meta">
+            <span data-i18n="result.forWhom">診断を受けた方</span>：<b id="r-name">—</b>
+            ／ <span data-i18n="result.date">診断日</span>：<span id="r-date">—</span>
+          </p>
+        </div>
+      </div>
+
+      <div class="result-wrap">
+        <!-- 総合コメント -->
+        <section class="result-block">
+          <h2>💬 <span data-i18n="result.overall">総合コメント</span></h2>
+          <p id="r-overall"></p>
+        </section>
+
+        <!-- 上位3職種 -->
+        <section class="result-block">
+          <h2>🎯 <span data-i18n="result.topJobs">向いている可能性がある職種（上位3つ）</span></h2>
+          <div class="top-jobs" id="r-top-jobs"></div>
+        </section>
+
+        <!-- スコアグラフ -->
+        <section class="result-block">
+          <h2>📊 <span data-i18n="result.scoreChart">職種別スコア</span></h2>
+          <div class="score-bars" id="r-score-bars"></div>
+          <p class="q__help" style="margin-top:12px" data-i18n="result.lowPriorityNote"></p>
+        </section>
+
+        <!-- 強み / 注意点 -->
+        <section class="result-block">
+          <div class="grid grid-2" style="gap:20px">
+            <div>
+              <h2>💪 <span data-i18n="result.strengths">あなたの強み</span></h2>
+              <ul class="pill-list" id="r-strengths"></ul>
+            </div>
+            <div>
+              <h2>🔎 <span data-i18n="result.cautions">確認が必要な点</span></h2>
+              <ul class="pill-list caution" id="r-cautions"></ul>
+            </div>
+          </div>
+        </section>
+
+        <!-- 職種別 詳細（理由・準備・必要日本語） -->
+        <section class="result-block">
+          <h2>📝 <span data-i18n="result.why">向いている可能性がある理由</span></h2>
+          <div class="detail-cards" id="r-details"></div>
+        </section>
+
+        <!-- 注意（参考情報） -->
+        <div class="notice notice--warn" data-i18n="disclaimer.result" style="margin-top:20px"></div>
+        <p class="q__help text-center" style="margin-top:10px" data-i18n="result.recommendMeeting"></p>
+
+        <!-- アクション -->
+        <div class="result-actions print-hide">
+          <a class="btn btn--primary" href="student-application.html" data-i18n="result.applyBtn">入学を申し込む</a>
+          <a class="btn btn--green" href="student-application.html#interview" data-i18n="result.interviewBtn">無料面談を申し込む</a>
+          <button class="btn btn--outline" id="btn-print" data-i18n="result.printBtn">結果を印刷 / PDF保存</button>
+          <a class="btn btn--outline" href="assessment.html" id="btn-restart" data-i18n="result.restartBtn">最初から診断する</a>
+        </div>
+
+        <!-- 一時保存の削除 -->
+        <p class="text-center print-hide" style="margin-top:16px">
+          <button class="btn btn--ghost" id="btn-clear" style="color:var(--muted);border-color:var(--line)"></button>
+        </p>
+      </div>
+
+      <!-- 印刷専用フッター -->
+      <div class="print-footer">
+        <span data-i18n="disclaimer.result"></span>　—　Ouka Skill Training Center Pvt. Ltd.
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer print-hide">
+    <div class="container"><p class="fine"><span data-i18n="footer.copyright"></span></p></div>
+  </footer>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/translations.js"></script>
+  <script src="assets/js/assessment-scoring.js"></script>
+  <script src="assets/js/main.js"></script>
+  <script src="assets/js/result.js"></script>
+</body>
+</html>

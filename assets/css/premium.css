@@ -1,0 +1,70 @@
+/* ============================================================================
+ * premium.css  ―  導入画面（スプラッシュ）専用レイヤー。index.html のみで読込。
+ * style.css（上質・高級路線）を土台に、最初の一枚「OUKA / Work to Japan」を表示。
+ * ※ style.css と競合するオーバーライドは一切持たない（.splash 系のみ）。
+ * ==========================================================================*/
+
+body.ouka-splash-open{ overflow: hidden; }
+
+.splash{
+  position: fixed; inset: 0; z-index: 3000;
+  display: grid; place-items: center; text-align: center; padding: 28px; color: #fff;
+  background:
+    linear-gradient(180deg, rgba(28,18,22,.90), rgba(18,11,13,.97)),
+    radial-gradient(1100px 520px at 80% -12%, rgba(200,68,122,.42), transparent 60%),
+    radial-gradient(900px 420px at 12% 112%, rgba(184,146,60,.22), transparent 60%),
+    #1c1216;
+  transition: opacity .7s ease, visibility .7s ease;
+}
+.splash::before{
+  content:""; position:absolute; left:0; right:0; top:0; height:3px;
+  background: linear-gradient(90deg, transparent, #d9c07a 20%, #b8923c 50%, #d9c07a 80%, transparent);
+  opacity:.85;
+}
+.splash.is-hidden{ opacity:0; visibility:hidden; }
+
+.splash__inner{ max-width: 720px; }
+.splash__logo{
+  width: clamp(78px, 17vw, 112px); height:auto; margin: 0 auto 14px;
+  filter: drop-shadow(0 8px 22px rgba(0,0,0,.45)); animation: oukaFade 1s ease both;
+}
+.splash__brand{
+  font-family: "Cormorant Garamond","Noto Serif JP",Georgia,serif; font-weight:700; color:#fff;
+  font-size: clamp(52px, 15vw, 120px); line-height:1; margin:0;
+  letter-spacing:.18em; text-indent:.18em; animation: oukaRise 1s .05s ease both;
+}
+.splash__wtj{
+  font-family: "Cormorant Garamond","Noto Serif JP",Georgia,serif; color:#dcc488; font-weight:700;
+  text-transform:uppercase; letter-spacing:.5em; text-indent:.5em;
+  font-size: clamp(13px, 3.5vw, 22px); margin:16px 0 0; animation: oukaRise 1s .16s ease both;
+}
+.splash__rule{
+  display:block; width:64px; height:2px; margin:22px auto 0;
+  background: linear-gradient(90deg, transparent, #d9c07a, #b8923c, #d9c07a, transparent);
+  animation: oukaFade 1s .3s ease both;
+}
+.splash__jp{
+  font-family:"Noto Serif JP",serif; color:#f0dfe4; letter-spacing:.28em; text-indent:.28em;
+  margin:18px 0 0; font-size: clamp(12px,3vw,15px); animation: oukaFade 1s .38s ease both;
+}
+.splash__tag{
+  color:#c9b3b7; max-width:600px; margin:14px auto 0; line-height:2;
+  font-size: clamp(12px,3.1vw,14.5px); animation: oukaFade 1s .46s ease both;
+}
+.splash__enter{
+  appearance:none; cursor:pointer; margin-top:34px; font-family:"Noto Sans JP",sans-serif; font-weight:700;
+  font-size:15px; letter-spacing:.2em; text-indent:.2em; color:#241d1f; border:none; border-radius:999px;
+  padding:16px 44px; background: linear-gradient(135deg, #efd489, #c9a227);
+  box-shadow: 0 14px 34px rgba(184,146,60,.4); transition: transform .2s ease, filter .2s ease;
+  animation: oukaRise 1s .55s ease both;
+}
+.splash__enter:hover{ transform: translateY(-2px); filter: brightness(1.05); }
+.splash__enter:focus-visible{ outline:3px solid #dcc488; outline-offset:3px; }
+.splash__cue{ display:block; margin:26px auto 0; color:#dcc488; font-size:24px; animation: oukaBob 1.8s ease-in-out infinite; }
+
+@keyframes oukaFade{ from{opacity:0} to{opacity:1} }
+@keyframes oukaRise{ from{opacity:0; transform:translateY(16px)} to{opacity:1; transform:none} }
+@keyframes oukaBob{ 0%,100%{ transform:translateY(0); opacity:.7 } 50%{ transform:translateY(7px); opacity:1 } }
+@media (prefers-reduced-motion: reduce){
+  .splash *{ animation: none !important; } .splash{ transition:none; }
+}
