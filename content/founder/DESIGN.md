@@ -231,6 +231,12 @@ RAW VOICE（本人の生の発言）
 
 ---
 
+## 9-1. NEPAL ATTENTION MODE（一時運用・現在アクティブ）
+
+2026年8月26日のネパール洪水災害を受け、一時的な発信モードを `nepal_attention_mode/` に追加した（2026-08-28）。5段階の発信レイヤー（災害情報→ネパールを知る→Founder Story→日本×ネパール→OUKA/ABAS）と、14日間・20テーマの編集カレンダー案を管理する。詳細は `nepal_attention_mode/00_system.md` と `nepal_attention_mode/editorial_calendar.md` を参照。
+
+このモードは本セクション以下の通常のPRIORITY順制作を一時的に上書きするものではなく、並行する一時レイヤーである。関心の高さが落ち着いた時点（目安14日後）で終了し、通常のPRIORITY 2バッチ（SERIES 03・05・09）に戻る。
+
 ## 10. 現在の進捗
 
 - [x] MASTER STORY 初版作成（辻先生エピソード含む）
