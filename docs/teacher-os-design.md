@@ -1,465 +1,309 @@
-# OUKA Teacher OS 設計書（v0.1 ドラフト）
+# OUKA Teacher OS 設計書 v0.2（Phase1簡素化版）
 
 > **本書のステータス**: 設計のみ。実装コードなし。
 > **変更禁止範囲**: 既存 School OS（`apps-script/*.gs`）、128日教材本体、既存ホームページ機能は本書では一切変更しません。
-> Teacher OS は既存 School OS と**並走する別モジュール**として設計します（詳細は §10）。
+> **v0.1からの変更**: Phase1で「毎日教師が使えること」を最優先に、画面・入力・評価項目・新規シートを大幅に簡素化した。v0.1で設計したTeacher Level（T0〜T5）・診断テスト・Skill Matrixの考え方は維持しつつ、日次運用から切り離し、Phase1では最小限の骨組みだけを実装対象とする。
 
 ---
 
-## 0. 目的とスコープ
+## 1. Phase1 最小構成（サマリー）
 
-Teacher OS は勤怠管理システムではない。目的は次の2つを同時に満たすこと。
+これがPhase1の全体像。詳細は各章を参照。
 
-1. **教師自身を育成する**（先生も生徒、という思想）
-2. **誰が教えても一定品質の授業を再現できるようにする**（属人化の排除）
-
-そのために、教師を「経歴 → 診断 → レベル → 研修 → 教案学習 → 模擬授業 → 担当許可 → 実授業 → 生徒到達評価 → 再評価 → 資格成長」まで**一本のパイプライン**で管理する。
-
-本書では以下を提出する（実装はしない）。
-
-1. Teacher OS全体構造
-2. Teacher Master項目
-3. Madhu初期Profile
-4. Shanti初期Profile
-5. Teacher Skill Matrix
-6. Teacher Level昇格条件
-7. 教師能力診断テスト案
-8. 1日の教師運用フロー
-9. 128日教材との接続方法
-10. 既存School OSとの接続方法
+| 区分 | 内容 |
+|---|---|
+| **教師が毎日触る画面（最大4つ）** | ①今日の授業　②授業前確認　③授業後Daily Report　④自分の研修 |
+| **日次評価項目（最大5つ）** | 教案準拠度／時間管理／生徒の理解度・反応／クラス運営／自己学習達成度（すべて0〜5） |
+| **新規シート（4つ以内）** | `Teacher_Master` / `Teacher_Lesson_Status` / `Teacher_Training_Log` / `Teacher_Daily_Log` |
+| **共通キー** | `teacherId` / `studentId` / `lessonId` / `classId` / `sessionId` / `date` |
+| **Teacher Level** | 総合能力の目安（T0〜T5）。日次では更新しない。四半期〜半期など節目で確定評価 |
+| **Lesson Authorization** | Lesson単位の担当許可。日々の「今日の授業」に出せるかどうかを直接決める |
+| **二重入力** | 出席・生徒成績・授業実施時間は既存School OSにあるものを再入力させない。`sessionId`等のキーで参照連携のみ |
+| **Phase1で作らないもの** | Skill Matrix全項目（25項目）の常設シート、Teacher Level History専用シート、Assessment Records専用シート、Teacher Development Plan専用シート（すべて `Teacher_Training_Log` に統合、または将来Phase） |
 
 ---
 
-## 1. Teacher OS 全体構造
+## 2. Teacher OS 全体構造（Phase1の位置づけ）
 
-### 1.1 コアパイプライン
+全体パイプライン自体はv0.1のまま維持する（Profile→診断→Level→研修→教案学習→模擬授業→Lesson Authorization→実授業→生徒到達評価→再評価→資格成長）。**Phase1が実装するのは図の中の「教師が毎日触る部分」だけ**であり、Level判定・診断テストの制度設計は据え置いたまま、運用の入り口を小さく作る。
 
 ```mermaid
 flowchart LR
-    A[Teacher Profile
-    Teacher Master] --> B[能力診断
-    仮評価]
-    B --> C[Teacher Level
-    仮レベル]
-    C --> D[教師研修
-    Training Log]
-    D --> E[教案学習
-    Lesson Study]
-    E --> F[模擬授業
-    Mock Lesson]
-    F --> G{Lesson単位で
-    担当許可?}
-    G -- 合格 --> H[Lesson Authorization
-    担当可能]
-    G -- 不合格 --> D
-    H --> I[実授業
-    Real Lesson]
-    I --> J[生徒到達評価
-    Student Outcome]
-    J --> K[教師再評価
-    Skill Matrix 更新]
-    K --> L{Level昇格
-    条件を満たすか}
-    L -- Yes --> C
-    L -- No --> D
-    K --> M[教師自身の資格成長
-    JLPT N2/N1等]
-    M --> B
+    subgraph Phase1（今回実装対象）
+        D1[今日の授業] --> D2[授業前確認]
+        D2 --> D3[実授業]
+        D3 --> D4[授業後 Daily Report]
+        D5[自分の研修] -.並行して実施.-> D3
+    end
+    subgraph Phase2以降（今回は設計据え置き）
+        P1[Skill Matrix 確定評価]
+        P2[Teacher Level 昇格判定]
+        P3[診断テスト運用]
+        P4[Lesson Authorization
+        自動状態遷移]
+    end
+    D4 --> P1
+    D5 --> P1
+    P1 --> P2
+    P1 --> P4
 ```
+
+Phase1では、Level判定やLesson Authorizationの状態変更自体は**人（研修責任者）が手動で確定・更新する**運用にとどめ、自動化・厳密な状態機械の実装は行わない。日々のログ（Daily Log / Training Log）はその判断材料として溜まっていく、という位置づけ。
+
+---
+
+## 3. 教師が毎日触る画面（最大4つ）
+
+| # | 画面 | 目的 | 入力/操作 | 表示元データ |
+|---|---|---|---|---|
+| ① 今日の授業 | 本日担当するLesson・クラスを確認 | なし（表示のみ） | `Teacher_Lesson_Status`（担当可能のみ）＋ School OS側の時間割/クラス編成（参照） |
+| ② 授業前確認 | 教案・研修動画の確認完了を記録 | チェック（完了/未完了）1タップ | `Teacher_Lesson_Status` の現在ステータスに応じて「教案確認」または「研修動画視聴」のどちらを出すかを自動判定 |
+| ③ 授業後Daily Report | 本日の授業実績・所感を記録（3分想定） | 5項目のうち授業に関する4項目をタップ評価＋自由記述コメント | `Teacher_Daily_Log` に書き込み |
+| ④ 自分の研修 | 教師自身の学習タスクを確認・完了報告 | 完了チェック＋学習時間（自己申告） | `Teacher_Training_Log` に書き込み |
 
 **設計原則**
 
-- 各矢印は「自動遷移」ではなく「判定ポイント」。人（研修責任者・校長等）またはテストの合格が遷移条件になる（§6, §7）。
-- Teacher Level は「Lessonを教えてよい範囲の目安」であって、Lesson単位の担当許可を一括で与えない（§7の思想を継承、詳細は §9）。
-- 生徒到達評価（Student Outcome）は School OS の Journey / 学習進捗データを参照し、教師の再評価にフィードバックする（§10）。
-
-### 1.2 モジュール構成
-
-| モジュール | 役割 | 主キー |
-|---|---|---|
-| Teacher Master | 教師の基本情報台帳 | `teacherId` |
-| Teacher Skill Matrix | 日本語力・指導力・職場教育力の評価（仮評価/確定評価） | `teacherId` + `skillCode` |
-| Teacher Level History | レベル判定の履歴（昇格・降格・理由・承認者） | `teacherId` + `effectiveDate` |
-| Teacher Development Plan | 教師自身の学習計画・実績（月次） | `teacherId` + `yearMonth` |
-| Assessment Records | 診断テスト・実力試験の結果 | `teacherId` + `testId` |
-| Lesson Authorization Matrix | Teacher×LessonごとのProgressステータス | `teacherId` + `lessonId` |
-| Daily Ops Log | 日次の「教える授業」「自己学習」「事前/事後タスク」実績 | `teacherId` + `date` |
-| Student Outcome Reference | 生徒到達度（School OS参照のみ、書き込みしない） | `studentId` + `lessonId` |
-
-### 1.3 データ思想
-
-- Teacher OS は Student側の School OS（Student Master / Journey）と**IDで疎結合**する。Teacher OS が Student Master を直接編集することはない。
-- 「仮評価」と「確定評価」は必ず別カラムで保持する（経歴だけで確定させない、という要件を構造的に担保）。
-- Lesson単位の許可情報は Teacher Level から独立したテーブルとして持つ（レベルだけで一括許可しない）。
+- 4画面以外の「常設の入力画面」はPhase1では作らない。Skill Matrix全体の編集画面、Teacher Level申請画面などはPhase1の対象外（研修責任者が別途手動でシートを更新する運用でカバー）。
+- ①は完全に表示のみ（教師の入力ゼロ）。教師が能動的に入力するのは②③④の3箇所、合計でも数タップ＋3分程度のレポート記入に収める。
 
 ---
 
-## 2. Teacher Master 項目
+## 4. Teacher LevelとLesson Authorizationの分離
 
-| # | 項目 | 型/例 | 備考 |
+| | Teacher Level（総合能力） | Lesson Authorization（個別授業の担当許可） |
+|---|---|---|
+| 単位 | 教師1人につき1つ（T0〜T5） | 教師×Lessonの組ごとに1つ |
+| 更新頻度 | 節目（四半期〜半期目安）。日次では変えない | 研修進捗に応じて随時（週内でも変わりうる） |
+| 何を決めるか | 担当してよい**範囲の上限**（例: T1はN5・初級まで） | その**特定のLesson**を単独で教えてよいかどうか |
+| 更新方法 | 研修責任者が診断テスト・実績（Training Log）を見て手動確定 | 研修責任者が動画研修/教案理解度テスト/模擬授業の結果を見て手動更新 |
+| Phase1での実装 | `Teacher_Master.currentLevel` フィールド（手動更新） | `Teacher_Lesson_Status` シート（手動更新） |
+
+**ルール（明文化）**
+
+- Teacher Levelが高くても、その教師の`Teacher_Lesson_Status`が該当Lessonで「担当可能」でなければ、「今日の授業」には出さない（一括許可はしない）。
+- Lesson Authorizationの状態変化（1つのLessonが担当可能になった等）が、自動的にTeacher Levelを変えることはない。Level変更は別途、研修責任者が総合的に判断する。
+
+---
+
+## 5. 日次評価項目（最大5つ）
+
+Skill Matrix全項目（25項目）を毎日入力させることはしない。教師が③④の画面で日々つける／自動的に記録される評価は次の5項目のみに絞る（すべて0〜5、簡易タップ入力）。
+
+| # | 項目 | 記録元画面 | 対応する能力領域（将来のSkill Matrix集計用） |
 |---|---|---|---|
-| 1 | Teacher ID | `OUKA-TCH-0001` | 発行元はTeacher OS側（School OSのstudentId採番方式に合わせる） |
-| 2 | 氏名 | 文字列 | ローマ字/現地語 両方保持を推奨 |
-| 3 | 日本滞在年数 | 数値（年） | 入社時点のヒアリング値。更新は年1回見直し |
-| 4 | 日本での学校 | 文字列 | 日本語学校／大学等、複数可 |
-| 5 | 専攻 | 文字列 | 大学等の専攻 |
-| 6 | 日本での職歴 | 文字列（複数可） | 業種・職種・役職・期間 |
-| 7 | 日本語教師経験年数 | 数値（年） | OUKA入社前の経験も含める |
-| 8 | 最大担当人数 | 数値 | これまでの最大クラスサイズ実績 |
-| 9 | 指導経験レベル | 文字列 | 例: N5まで／N4まで等、自己申告＋実績 |
-| 10 | JLPT | 列挙 | 保有級／未保有／受験予定 |
-| 11 | JFT | 列挙 | 合格／不合格／未受験 |
-| 12 | その他資格 | 文字列（複数可） | 日本語教育能力検定試験 等 |
-| 13 | 得意分野 | タグ（複数可） | Skill Matrixの上位項目と連動（§5） |
-| 14 | 現在の目標資格 | 文字列 | 例: JLPT N2 |
-| 15 | 入社日 | 日付 | |
+| 1 | 教案準拠度 | ②授業前確認（完了度から自動算出）／③でも補正可 | Teaching Ability（教案理解） |
+| 2 | 時間管理 | ③授業後Daily Report | Japan Work Education（時間管理） |
+| 3 | 生徒の理解度・反応 | ③授業後Daily Report | Teaching Ability（会話授業・生徒への質問） |
+| 4 | クラス運営 | ③授業後Daily Report | Teaching Ability（クラス管理） |
+| 5 | 自己学習達成度 | ④自分の研修（完了チェック→スコア化） | 教師自身の成長（資格学習） |
 
-**運用ステータス項目（提案・任意）**: `雇用形態`, `在籍ステータス（在籍/休職/退職）`, `所属拠点`。要否は運用側で確認。
+**運用ルール**
+
+- この5項目は**簡易な傾向把握用**。Teacher LevelやLesson Authorizationの正式判定には使わない（正式判定は診断テスト・模擬授業などの公式イベントを使う。v0.1 §7の位置づけを維持し、実施記録は `Teacher_Training_Log` にTEST/MOCK_LESSON種別として記録する）。
+- 週次・月次で5項目を単純平均し、研修責任者が「気になる教師」を早期発見するためのシグナルとして使う（自動判定・自動降格などのロジックはPhase1では作らない）。
 
 ---
 
-## 3. Madhu 初期 Profile（Teacher Master）
+## 6. キー設計（統一）
 
-| 項目 | 値 | 出典・備考 |
+| キー | 発行元 | 形式（案） | 役割 |
+|---|---|---|---|
+| `teacherId` | Teacher OS | `OUKA-TCH-0001` | 教師を一意に識別 |
+| `studentId` | 既存School OS（Apps Script） | `OUKA-202607-0001` | 生徒を一意に識別。Teacher OSでは**参照のみ**、発行・編集はしない |
+| `lessonId` | 128日教材マッピング（Teacher OS側で定義） | `LESSON-D021-02`（Day21のLesson2） | 教材上の1コマを一意に識別 |
+| `classId` | 既存School OS側（未整備なら暫定でTeacher OS側発行、要確認） | `CLASS-2026H1-A` | 生徒のクラス（コホート）を一意に識別 |
+| `sessionId` | Teacher OS（生成規則） | `SESSION-{classId}-{date}-{lessonId}` | 「いつ・どのクラスに・どのLessonを・誰が教えたか」という**1回の授業実施**を一意に識別。Daily Log/出席参照/成績参照の結節点 |
+| `date` | 共通 | `YYYY-MM-DD` | 日次ログの基準日 |
+
+**キーの使い方**
+
+- `sessionId` が Teacher OS と School OS をつなぐ**結節点**になる。Teacher_Daily_Logは`sessionId`をPKにして持ち、School OS側の出席・成績データも同じ`sessionId`（または`classId`+`date`）で引けることを前提にする。
+- `classId` が現状School OS側に明文化されていない場合は、Phase1着手前に「クラス編成データがどこにあるか」を確認する必要がある（§9の未確定事項）。
+
+---
+
+## 7. Student OS（既存School OS）との二重入力禁止
+
+| データ項目 | 既存School OSにある想定の場所 | Teacher OSでの扱い |
 |---|---|---|
-| Teacher ID | `OUKA-TCH-0001` | 仮採番 |
-| 氏名 | Madhu Neupane | |
-| 日本滞在年数 | 約10年 | ヒアリング値 |
-| 日本での学校 | 日本語学校 卒業／日本の大学 卒業 | |
-| 専攻 | Business Management | |
-| 日本での職歴 | ホテル勤務（スタッフマネジメント経験あり） | |
-| 日本語教師経験年数 | 約3年 | |
-| 最大担当人数 | 約20名 | |
-| 指導経験レベル | N4まで指導経験あり | |
-| JLPT | **未保有**（要受験・§7で確定評価） | 経歴だけでは確定させない |
-| JFT | 情報なし（要確認） | |
-| その他資格 | 情報なし（要確認） | |
-| 得意分野（仮） | 日本生活／日本文化／日本職場教育／マネジメント／N5・N4指導 | Skill Matrix仮評価より |
-| 現在の目標資格 | JLPT N2 → 将来的にN1 | |
-| 入社日 | 要確認（TBD） | |
+| 出席 | School OS（クラス運営データ、要確認） | Teacher OSでは**入力させない**。`sessionId`で参照表示のみ |
+| 生徒成績・到達度 | School OS（Journey等） | 同上。参照表示のみ |
+| 授業実施時間（実施有無・時間） | School OS（クラス運営データ、要確認） | 同上。参照表示のみ |
+| 生徒の様子・所感（自由記述） | Teacher OS固有 | ③Daily Reportで**新規記録**（School OS側にはない情報のため二重入力にはあたらない） |
+| 教師の研修実績・自己学習 | Teacher OS固有 | ④で記録（School OS側にはない） |
 
-**初期レベル候補: T2（Standard Teacher）候補**
-根拠: N4までの指導実績、10年の在日経験、マネジメント経験、20名規模のクラス運営実績。ただしJLPT資格が未保有のため、**T2確定は日本語能力確認テスト（§7-A）合格が条件**。
+**原則**: Teacher OSはSchool OSに**書き込まない**。School OS側のデータは`sessionId`/`classId`/`studentId`/`date`をキーに**参照するだけ**。もし出席・成績・授業実施時間を管理する仕組みが現状School OSに存在しない場合、Phase1ではその項目を「未接続（表示なし）」として空けておき、**Teacher OS側で代わりに入力させることはしない**（存在しないからといって二重入力の抜け道を作らない）。存在箇所の確認は §9 未確定事項。
 
 ---
 
-## 4. Shanti 初期 Profile（Teacher Master）
+## 8. Phase1 新規シート設計（4つ）
 
-| 項目 | 値 | 出典・備考 |
-|---|---|---|
-| Teacher ID | `OUKA-TCH-0002` | 仮採番 |
-| 氏名 | Shanti Paudel | |
-| 日本滞在年数 | 約4年半 | |
-| 日本での学校 | 情報なし（要ヒアリング） | |
-| 専攻 | 情報なし（要ヒアリング） | |
-| 日本での職歴 | コンビニ勤務（接客経験） | |
-| 日本語教師経験年数 | 約1年 | |
-| 最大担当人数 | 約10名 | |
-| 指導経験レベル | N5指導経験あり | |
-| JLPT | 情報なし（未保有と推定、要確認） | |
-| JFT | **合格** | |
-| その他資格 | なし | |
-| 得意分野（仮） | N5／初級会話／日本生活／接客／時間管理／職場マナー | Skill Matrix仮評価より |
-| 現在の目標資格 | JLPT N2 | |
-| 入社日 | 要確認（TBD） | |
+### 8.1 `Teacher_Master`（PK: `teacherId`）
 
-**初期レベル候補: T1（Basic Teacher）候補**
-根拠: N5指導実績、JFT合格、コンビニ接客での実務日本語運用経験。指導年数が浅いため、教授力面はT1相当からの育成を前提とする。
+v0.1のTeacher Master項目をそのまま採用し、Teacher Levelを1フィールドとして持たせる（Level履歴の専用シートはPhase1では作らない。Level変更イベントは `Teacher_Training_Log` に記録して代替する）。
 
----
-
-## 5. Teacher Skill Matrix
-
-### 5.1 評価軸（0〜5段階、共通スケール）
-
-| スコア | 意味 |
+| 列 | 内容 |
 |---|---|
-| 0 | 未評価／該当経験なし |
-| 1 | 見習いレベル（補助が必須） |
-| 2 | 基礎レベル（定型業務のみ単独可） |
-| 3 | 標準レベル（通常業務を単独遂行可） |
-| 4 | 熟練レベル（イレギュラー対応・他者への簡易アドバイス可） |
-| 5 | 指導者レベル（他教師への指導・研修設計に関与可） |
+| `teacherId` | PK |
+| 氏名／日本滞在年数／日本での学校／専攻／日本での職歴／日本語教師経験年数／最大担当人数／指導経験レベル／JLPT／JFT／その他資格／得意分野（仮）／現在の目標資格／入社日 | v0.1 §2と同一 |
+| `currentLevel` | T0〜T5（現在の確定レベル） |
+| `levelUpdatedDate` | 直近のLevel更新日 |
 
-### 5.2 カテゴリと項目
+### 8.2 `Teacher_Lesson_Status`（PK: `teacherId` + `lessonId`）
 
-**Japanese Ability**: Grammar / Vocabulary / Reading / Listening / Speaking / Writing / Pronunciation
-
-**Teaching Ability**: 教案理解 / 文法説明 / 語彙説明 / 発音指導 / 会話授業 / 板書 / 生徒への質問 / 宿題管理 / テスト実施 / クラス管理
-
-**Japan Work Education**: 日本文化 / 日本生活 / 時間管理 / 報連相 / 職場マナー / 接客 / 面接 / 日本企業理解
-
-### 5.3 「仮評価」と「確定評価」の分離（構造）
-
-| カラム | 内容 |
+| 列 | 内容 |
 |---|---|
-| `provisionalScore` | Profile（経歴）から推定した仮スコア |
-| `provisionalBasis` | 仮評価の根拠（経歴のどの部分か） |
-| `confirmedScore` | 診断テスト・実力試験・模擬授業観察後の確定スコア |
-| `confirmedDate` | 確定日 |
-| `assessor` | 評価者（試験官／観察者） |
-| `evidence` | 試験結果ID・模擬授業観察記録へのリンク |
+| `teacherId` / `lessonId` | PK |
+| `status` | `未研修` / `動画研修済` / `テスト合格` / `模擬授業合格` / `担当可能` / `再研修` |
+| `statusUpdatedDate` | 更新日 |
+| `updatedBy` | 更新した研修責任者 |
 
-**運用ルール**: `confirmedScore` が空のスキルはLesson Authorization判定や昇格判定に使用しない。仮評価はあくまで研修計画立案用。
+### 8.3 `Teacher_Training_Log`（PK: `teacherId` + `logId`）
 
-### 5.4 Madhu 仮評価（Profileベース、試験前）
+教師自身の学習実績・診断テスト結果・模擬授業結果・Level変更イベントをすべてこの1シートに集約する（v0.1のDevelopment Plan／Assessment RecordsをPhase1では統合）。
 
-| Japanese Ability | 仮 | | Teaching Ability | 仮 | | Japan Work Education | 仮 |
-|---|---|---|---|---|---|---|---|
-| Grammar | 3 | | 教案理解 | 3 | | 日本文化 | 5 |
-| Vocabulary | 3 | | 文法説明 | 3 | | 日本生活 | 5 |
-| Reading | 3 | | 語彙説明 | 3 | | 時間管理 | 4 |
-| Listening | 4 | | 発音指導 | 3 | | 報連相 | 4 |
-| Speaking | 4 | | 会話授業 | 4 | | 職場マナー | 4 |
-| Writing | 3 | | 板書 | 3 | | 接客 | 3 |
-| Pronunciation | 4 | | 生徒への質問 | 3 | | 面接 | 3 |
-| | | | 宿題管理 | 3 | | 日本企業理解 | 4 |
-| | | | テスト実施 | 3 | | | |
-| | | | クラス管理 | 4 | | | |
+| 列 | 内容 |
+|---|---|
+| `logId` | 連番 |
+| `teacherId` / `date` | 対象教師・日付 |
+| `logType` | `STUDY`（自己学習）／`TEST`（診断テスト）／`MOCK_LESSON`（模擬授業）／`LEVEL_CHANGE`（Level変更）／`RETRAINING`（再研修指示） |
+| `item` | 内容（例: `JLPT N2文法`, `教案理解度テスト D021-02`, `T1→T2`） |
+| `durationMinutes` | 学習時間（STUDYの場合） |
+| `result` | 合格/不合格・スコア等（TEST/MOCK_LESSONの場合） |
+| `note` | 自由記述 |
 
-根拠: 10年の在日実生活・N4指導実績（Japanese Ability上振れ）、ホテル勤務でのマネジメント経験（クラス管理・日本企業理解）。**JLPT未保有のためJapanese Abilityは全項目、日本語能力確認テストで確定評価に置き換える（§7-A）。**
+### 8.4 `Teacher_Daily_Log`（PK: `teacherId` + `sessionId`）
 
-### 5.5 Shanti 仮評価（Profileベース、試験前）
+| 列 | 内容 |
+|---|---|
+| `teacherId` / `sessionId` | PK |
+| `date` / `classId` / `lessonId` | セッション特定用（`sessionId`から導出可能だが検索性のため列としても保持） |
+| `preCheckDone` | 授業前確認の完了（Y/N・完了時刻） |
+| `score_lessonPrep` | 日次評価①教案準拠度（0〜5） |
+| `score_timeManagement` | 日次評価②時間管理（0〜5） |
+| `score_studentUnderstanding` | 日次評価③生徒の理解度・反応（0〜5） |
+| `score_classManagement` | 日次評価④クラス運営（0〜5） |
+| `score_selfStudy` | 日次評価⑤自己学習達成度（0〜5） |
+| `dailyReportText` | 自由記述（生徒の様子・困りごと・申し送り） |
+| `attendanceRef` / `gradeRef` | School OS側データへの参照キー（`sessionId`等）。Teacher OSでは値を持たず参照のみ |
 
-| Japanese Ability | 仮 | | Teaching Ability | 仮 | | Japan Work Education | 仮 |
-|---|---|---|---|---|---|---|---|
-| Grammar | 2 | | 教案理解 | 2 | | 日本文化 | 3 |
-| Vocabulary | 2 | | 文法説明 | 2 | | 日本生活 | 4 |
-| Reading | 2 | | 語彙説明 | 2 | | 時間管理 | 3 |
-| Listening | 3 | | 発音指導 | 2 | | 報連相 | 2 |
-| Speaking | 3 | | 会話授業 | 3 | | 職場マナー | 3 |
-| Writing | 2 | | 板書 | 2 | | 接客 | 4 |
-| Pronunciation | 3 | | 生徒への質問 | 2 | | 面接 | 2 |
-| | | | 宿題管理 | 2 | | 日本企業理解 | 2 |
-| | | | テスト実施 | 2 | | | |
-| | | | クラス管理 | 2 | | | |
-
-根拠: JFT合格・4.5年の在日生活（日本生活・接客が上振れ）、指導歴1年・N5経験のみ（Teaching Abilityは全体的に基礎〜標準未満）、報連相・面接は職務経験が浅く低め。
+**Phase1で作らないシート（将来Phase行き）**: `Teacher_Skill_Matrix`（25項目常設シート）、`Teacher_Level_History`（専用履歴）、`Assessment_Records`（専用シート）、`Teacher_Development_Plan`（専用シート）。これらの情報は当面 `Teacher_Training_Log` の `logType`/`item`/`note` で代替する。
 
 ---
 
-## 6. Teacher Level 昇格条件
+## 9. Madhu・Shanti 1週間運用例
 
-| レベル | 定義 | 担当可能範囲 | 昇格に必要な条件（すべて満たす） | 承認者 |
+Teacher Levelは週内では変更しない（節目でのみ確定）。一方でLesson Authorizationは週内でも進捗する、という分離が伝わる例にしている。
+
+### 9.1 Madhu（T2候補、目標 JLPT N2→N1）
+
+| 曜日 | 今日の授業 | 授業前確認 | 自分の研修 | 授業後Daily Report |
 |---|---|---|---|---|
-| **T0** Training | 研修中 | 単独授業不可（同席・補助のみ） | — | — |
-| **T1** Basic Teacher | 基礎教師 | N5・初級のみ（Lesson Authorization合格分のみ） | T0からの昇格: 教師研修一式修了 + 教案理解度テスト合格 + 模擬授業合格（N5レッスン） | 研修責任者 |
-| **T2** Standard Teacher | 標準教師 | N4まで（Lesson Authorization合格分のみ） | 日本語能力確認テストでN4相当以上を確定 + Teaching Ability確定評価平均3.0以上 + N5〜N4 Lessonでの実授業実績（一定コマ数）+ 生徒到達評価が基準未満でないこと | 研修責任者＋校長 |
-| **T3** Career Teacher | キャリア教師 | 職業日本語・日本文化・面接対策等を含む | 日本語能力確認テストでN3相当以上 + Japan Work Education確定評価平均4.0以上 + 模擬面接指導・模擬職業日本語授業の合格 | 校長 |
-| **T4** Senior Teacher | 指導教師 | 他教師の指導・OJT担当可 | T3実績が一定期間 + 他教師への模擬指導評価合格 + Teaching Ability確定評価平均4.0以上、全項目3以上 | 校長＋運営 |
-| **T5** Master Trainer | 教案・研修設計者 | 教案・教師研修そのものを改善提案・設計できる | T4実績が一定期間 + 教案改善提案の採用実績 + 研修設計レビュー合格 | 運営 |
+| 月 | Day21 Lesson2 | 教案確認 10分 | JLPT N2文法 20分 | 記入3分（理解度◎、時間管理○） |
+| 火 | Day21 Lesson3 | 教案確認 10分 | N2語彙 20分 | 記入3分 |
+| 水 | Day22 Lesson1（新規Lesson） | Teacher Training Video 15分（D022-01が動画研修済に更新） | N2読解 20分 | 記入3分。放課後、日本語能力確認テスト（§v0.1 7-A）受験→`Teacher_Training_Log`にTEST記録 |
+| 木 | Day22 Lesson1（研修責任者同席可） | 教案確認 10分 | N2聴解 20分 | 記入3分。D022-01が教案理解度テスト合格→`テスト合格`に更新 |
+| 金 | Day22 Lesson2 | 教案確認 10分 | 模擬授業練習 30分（社内） | 記入3分。水曜のテスト結果を踏まえ、研修責任者がJLPT相当N4以上を確認→**T2confirmed**（`Teacher_Master.currentLevel`更新、`LEVEL_CHANGE`ログ追加） |
 
-**昇格の原則**
+### 9.2 Shanti（T1候補、目標 JLPT N2）
 
-- **自動昇格は行わない。** すべて「試験合格」「模擬授業合格」「実績（コマ数・期間・生徒到達評価）」の3点セットが揃った時点で、人（承認者）が Teacher Level History に記録する。
-- 昇格判定はLesson Authorization Matrix（§9）の状態とは独立。Levelは「担当してよい範囲の上限」を定義するだけで、実際に教えられるのはLesson単位で許可されたものだけ。
-- **降格・再研修トリガー**（例）: 生徒到達評価が連続して基準を下回る／模擬授業の抜き打ち評価が基準未満／苦情等の品質インシデント。該当時はLevelを維持したままDaily OpsのTeacher Development Planに「再研修」タスクを強制付与する（Lesson Authorizationは個別Lessonごとに一時停止）。
+| 曜日 | 今日の授業 | 授業前確認 | 自分の研修 | 授業後Daily Report |
+|---|---|---|---|---|
+| 月 | Day8 Lesson1（担当可能） | 教案確認 10分 | N2語彙 20分 | 記入3分 |
+| 火 | Day8 Lesson2（担当可能） | 教案確認 10分 | N2文法 20分 | 記入3分。放課後、Day9 Lesson1の研修動画15分視聴（D009-01が`動画研修済`に更新） |
+| 水 | Day9 Lesson1（研修責任者同席・単独不可） | 教案理解度テスト受験（D009-01が`テスト合格`に更新） | N2聴解 20分 | 記入3分（同席者所見も記録） |
+| 木 | Day9 Lesson1（模擬授業実施） | 模擬授業評価 | N2読解 20分 | 記入3分。合格によりD009-01が`模擬授業合格`→研修責任者承認で`担当可能`に更新 |
+| 金 | Day9 Lesson1（初の単独担当） | 教案確認 10分 | JFT/N2総復習 20分 | 記入3分 |
 
----
+**この例で示していること**
 
-## 7. 教師能力診断テスト案
-
-Profileからの仮評価を「確定評価」に置き換えるためのテスト群。各テストの結果は Assessment Records に記録し、Skill Matrixの `confirmedScore` を更新する。
-
-### 7-A. 日本語能力確認テスト（Japanese Ability確定用）
-
-- **対象**: JLPT未保有の教師（例: Madhu）、または保有級が古い教師。
-- **構成**: 文法／語彙／読解／聴解（JLPT形式の模試 or 相当レベルの過去問演習）＋ 面接形式の会話力チェック ＋ 簡易作文。
-- **目的**: 「現時点の実力がN5〜N1のどのレベル相当か」を確定し、Skill MatrixのJapanese Ability各項目に反映。あわせて本人の公式資格取得（JLPT N2等）の学習計画（§7-D）につなげる。
-- **合格基準**: レベル相当の基準点＋会話面接での実用会話評価。
-
-### 7-B. 教授力実技試験（Teaching Ability確定用）
-
-- **教案理解度テスト**: 対象Lessonの教案を読み、指導目標・展開・想定質問への回答をペーパー/口頭で確認。
-- **模擬授業（Mock Lesson）**: 研修責任者・同僚を生徒役にした模擬授業を実施し、Teaching Abilityの10項目をルーブリックで評価（§5.2のスケール使用）。
-- **合格基準**: 平均3.0以上かつ最低項目2以上（Lesson単独担当の場合）。T3以降はより高い基準（§6参照）。
-
-### 7-C. 日本職場教育理解度テスト（Japan Work Education確定用）
-
-- **構成**: 報連相・時間管理・職場マナー・接客・面接想定問答のケーススタディ／ロールプレイ。
-- **目的**: 生徒に「日本の職場で通用する振る舞い」を教えられるかを確認。
-- **合格基準**: ケース対応の妥当性を研修責任者がルーブリック評価。
-
-### 7-D. 教師自身の資格学習（診断とは別軸、継続モニタリング）
-
-- JLPT N2/N1等、公式資格の学習進捗は Teacher Development Plan（§1.2, §8）で月次モニタリング。診断テストとは別に「今月の学習時間」「模試結果」を記録する。
-
-**テスト結果の反映フロー**
-
-```mermaid
-flowchart LR
-    T1[7-A/7-B/7-C 実施] --> R[Assessment Records に記録]
-    R --> S[Skill Matrix confirmedScore 更新]
-    S --> L{Level昇格条件
-    を再判定}
-    S --> A{Lesson Authorization
-    個別判定に反映}
-```
+- Madhuは既存Lessonの継続＋新規Lessonの研修が並行して進み、週末にTeacher Levelが確定する（Lesson Authorizationの進捗とLevel確定は別イベント）。
+- Shantiは1つのLesson（D009-01）が「未研修→動画研修済→テスト合格→模擬授業合格→担当可能」と1週間で状態遷移する様子を示している。Teacher Level（T1候補のまま）はこの週では変えていない。
+- 出席・生徒成績はどちらの例にも登場しない＝School OS参照のみで、Teacher OS側では入力させていない。
 
 ---
 
-## 8. 1日の教師運用フロー
+## 10. Teacher Master 初期Profile（v0.1から変更なし・再掲）
 
-### 8.1 フロー概要
+### Madhu
 
-```mermaid
-flowchart TD
-    A[出勤] --> B[Teacher OS Daily Dashboard 表示]
-    B --> C[今日教える授業を確認
-    Lesson Authorization済みのもの]
-    B --> D[今日の教師自身の学習内容を確認
-    Development Plan由来]
-    C --> E[授業前タスク
-    教案確認 / 研修動画]
-    D --> F[教師学習の実施
-    N2文法・語彙等]
-    E --> G[実授業の実施]
-    F --> G
-    G --> H[授業後タスク
-    Daily Report 提出]
-    H --> I[Student Outcome
-    School OSへ反映（参照連携）]
-    H --> J[Teacher Development Plan
-    実績更新]
-```
-
-### 8.2 表示イメージ（設計例、本文中の要求どおり）
-
-```
-Madhu
-今日の授業: Day 21 Lesson 2
-授業前: 教案確認 10分
-教師学習: JLPT N2文法 20分
-授業後: Daily Report 3分
-
-Shanti
-今日の授業: Day 8 Lesson 1
-授業前: Teacher Training Video 15分
-教師学習: N2語彙 20分
-授業後: Daily Report 3分
-```
-
-### 8.3 各要素の生成ロジック（設計）
-
-| 表示項目 | 生成元 |
+| 項目 | 値 |
 |---|---|
-| 今日の授業 | Lesson Authorization Matrix で「担当可能」ステータスのLessonのうち、当日のクラス割当（School OS側の時間割／クラス編成データ）と突合した結果 |
-| 授業前タスク | 対象Lessonの担当ステータスが「動画研修済」未満なら研修動画、「テスト合格」未満なら教案確認、を自動提示 |
-| 教師学習 | Teacher Development Planの当月計画から当日分を抽出（資格学習・研修動画・確認テスト・模擬授業・再研修のいずれか） |
-| 授業後タスク | Daily Report（生徒の様子・進捗・困りごとを3分程度で記入）。ここでの入力がStudent OutcomeとSkill Matrix再評価の材料になる |
+| Teacher ID | `OUKA-TCH-0001` |
+| 氏名 | Madhu Neupane |
+| 日本滞在年数 | 約10年 |
+| 日本での学校 | 日本語学校卒業／日本の大学卒業 |
+| 専攻 | Business Management |
+| 日本での職歴 | ホテル勤務（スタッフマネジメント経験あり） |
+| 日本語教師経験年数 | 約3年 |
+| 最大担当人数 | 約20名 |
+| 指導経験レベル | N4まで |
+| JLPT | 未保有（要受験・確定評価は診断テスト後） |
+| JFT／その他資格 | 情報なし（要確認） |
+| 現在の目標資格 | JLPT N2 → 将来的にN1 |
+| 入社日 | 要確認（TBD） |
+| `currentLevel`（初期値） | T2候補（確定はテスト後） |
 
-### 8.4 データの書き戻り先
+### Shanti
 
-- Daily Report → Daily Ops Log（教師OS） ＋ Student Outcome Reference（生徒の到達度、School OS Journeyと突合）
-- 教師学習の実施実績 → Teacher Development Plan の実績欄（今月の学習時間の集計に使用）
-
----
-
-## 9. 128日教材との接続方法
-
-> 128日教材そのもの（内容・ファイル）には触れない。Teacher OSは教材に**IDで参照するだけの参照レイヤー**を上から重ねる。
-
-### 9.1 Lesson ID 設計（案）
-
-```
-LESSON-D{day:3桁}-{seq:2桁}
-例: Day 21 の Lesson 2 → LESSON-D021-02
-```
-
-- `day`: 128日教材のDay番号（1〜128）
-- `seq`: その日の中でのLesson通し番号
-- 実際のカリキュラム側にLesson IDの割当が既にある場合はそれを優先し、本設計のIDは対応表（マッピングテーブル）として持つ（教材ファイルは書き換えない）。
-
-### 9.2 Teacher × Lesson 許可ステータス（状態機械）
-
-```mermaid
-stateDiagram-v2
-    [*] --> 未研修
-    未研修 --> 動画研修済: 研修動画視聴完了
-    動画研修済 --> テスト合格: 教案理解度テスト合格（7-B）
-    テスト合格 --> 模擬授業合格: 模擬授業評価合格（7-B）
-    模擬授業合格 --> 担当可能: 研修責任者承認
-    担当可能 --> 再研修: 品質インシデント/生徒到達評価低下
-    再研修 --> 動画研修済
-```
-
-- 状態は **Teacher ID × Lesson ID** の組で個別管理する。Teacher Levelが高くても、個別Lessonが「担当可能」になっていなければアサインしない（要求どおり、レベルによる一括許可はしない）。
-- 「今日の授業」（§8）は、この状態が「担当可能」のLessonの中からのみ表示・アサインされる設計とする。
-
-### 9.3 教材本体との接続点
-
-- 教材の実データ（配置場所・フォーマット）は現状リポジトリ内に存在しない（本リポジトリはホームページ用）。したがって本設計では**教材側のLesson一覧を提供するデータソースへの参照契約**のみを定義する:
-  - 必要な最小データ: `lessonId`, `day`, `title`, `objective`（指導目標）, `requiredSkillTags`（例: 文法説明・発音指導など、Skill Matrix項目と対応）
-  - Teacher OSはこのデータソースを**読み取り専用**で参照し、Lesson Authorization Matrixの行を初期生成する。
-- 教材の管理場所（Sheets／別リポジトリ等）が確定した時点で、上記契約に合わせたマッピング実装を別途行う（今回は設計のみ）。
-
----
-
-## 10. 既存 School OS との接続方法
-
-### 10.1 現状の School OS 構造（変更しない前提の再確認）
-
-- ホームページ → Apps Script Web App（`Code.gs`）→ Google Sheets（`Student Master` / `Journey` / `Interview & Matching` / `Company Inquiries` / `Contacts`）＋ Slack通知（`SlackNotifier.gs`）
-- 列マッピングは `SheetMapper.gs`、設定は `Config.gs`（`docs/school-os-integration.md`, `docs/data-schema.md` 参照）
-- `studentId` は Apps Script側で `OUKA-YYYYMM-XXXX` 形式で発行
-
-### 10.2 Teacher OS の位置づけ：並走する追加モジュール
-
-Teacher OSは既存の4ファイル（`Code.gs`/`Config.gs`/`SheetMapper.gs`/`SlackNotifier.gs`）を変更せず、**新規のシート・新規のApps Scriptファイル（実装フェーズで追加）として並走**させる。
-
-```mermaid
-flowchart LR
-    subgraph 既存 School OS（変更なし）
-        SM[Student Master]
-        JN[Journey]
-        IM[Interview and Matching]
-    end
-
-    subgraph Teacher OS（新規・追加）
-        TM[Teacher Master]
-        SK[Teacher Skill Matrix]
-        LV[Teacher Level History]
-        DP[Teacher Development Plan]
-        AR[Assessment Records]
-        LA[Lesson Authorization Matrix]
-        DL[Daily Ops Log]
-    end
-
-    JN -- studentId/lessonIdで参照のみ --> DL
-    JN -- studentId/lessonIdで参照のみ --> SK
-    DL --> AR
-    AR --> SK
-    SK --> LV
-```
-
-### 10.3 接続ルール
-
-| 項目 | ルール |
+| 項目 | 値 |
 |---|---|
-| ID体系 | `teacherId` は `OUKA-TCH-XXXX` として独自採番（`studentId`の採番方式に倣うが別シーケンス） |
-| Student側データの扱い | Teacher OSは `Journey`（生徒の到達度・進捗）を**参照専用**で読む。書き込みは行わない |
-| 新規シート | `Teacher Master` / `Teacher Skill Matrix` / `Teacher Level History` / `Teacher Development Plan` / `Assessment Records` / `Lesson Authorization Matrix` / `Daily Ops Log` を追加（既存シート名・列とは独立） |
-| 新規Apps Script | 既存4ファイルとは別ファイル（例: `TeacherOS_Code.gs` 等、実装フェーズで命名）として追加し、既存Web Appのエンドポイント・デプロイには影響を与えない |
-| Slack通知 | 既存の `#os-inbox` とは別チャンネル（例: `#teacher-os`）を想定。既存の安全項目限定ルール（住所・健康情報等を送らない）を踏襲 |
-| 生徒到達評価の接続 | `Journey` のステージ・テスト結果等を `studentId` + `lessonId` で突合し、Student Outcome Referenceとして Teacher OS 側に取り込む（コピーではなく参照/同期のみ、Student Master原本は不可侵） |
-
-### 10.4 非破壊の原則（明記）
-
-- 既存の `Code.gs` / `Config.gs` / `SheetMapper.gs` / `SlackNotifier.gs` は編集しない。
-- 既存シート（`Student Master` 等）の列追加・改変は行わない。
-- 128日教材ファイルは編集しない（§9.3のとおり参照契約のみ）。
-- ホームページ（`teachers.html` 等）の公開情報（`assets/js/teachers-data.js`）は生徒・保護者向けの別データであり、Teacher OSの内部データ（Skill Matrix等）とは別管理とする。将来的に「対外公開用プロフィール」を自動生成する場合も、Teacher Master → 公開用データへの**一方向変換**として設計し、逆方向の書き込みは行わない。
-
----
-
-## 11. 未確定事項・次のステップ（実装着手前に確認が必要）
-
-- Madhu / Shanti の入社日、JFT有無、その他資格、学歴詳細（要ヒアリング）
-- 128日教材の実データ所在（Sheets / 別リポジトリ / その他）とLesson一覧のフォーマット
-- 診断テスト（§7）の実施者・実施頻度・合格ラインの最終確定（本書は案）
-- Teacher Level昇格の承認フロー（誰が「研修責任者」「校長」役を担うかの実運用上の割当）
-- Teacher OS用シートの命名・格納スプレッドシート（既存「桜花_管理表」に追加タブとするか、別スプレッドシートにするか）
+| Teacher ID | `OUKA-TCH-0002` |
+| 氏名 | Shanti Paudel |
+| 日本滞在年数 | 約4年半 |
+| 日本での学校／専攻 | 情報なし（要ヒアリング） |
+| 日本での職歴 | コンビニ勤務（接客経験） |
+| 日本語教師経験年数 | 約1年 |
+| 最大担当人数 | 約10名 |
+| 指導経験レベル | N5 |
+| JLPT | 情報なし（未保有と推定、要確認） |
+| JFT | 合格 |
+| 現在の目標資格 | JLPT N2 |
+| 入社日 | 要確認（TBD） |
+| `currentLevel`（初期値） | T1候補 |
 
 ---
 
-*本書はTeacher OSの初期設計ドラフトです。実装（Apps Script追加、シート作成、UI構築等）は本書レビュー後の別フェーズで行います。*
+## 11. Teacher Level 昇格条件（v0.1から変更なし）
+
+| レベル | 定義 | 担当可能範囲 | 昇格条件（すべて満たす） |
+|---|---|---|---|
+| T0 Training | 研修中 | 単独授業不可 | — |
+| T1 Basic Teacher | 基礎教師 | N5・初級（Lesson Authorization合格分のみ） | 教師研修修了＋教案理解度テスト合格＋模擬授業合格（N5） |
+| T2 Standard Teacher | 標準教師 | N4まで | 日本語能力確認テストでN4相当以上確定＋実授業実績＋生徒到達評価が基準以上 |
+| T3 Career Teacher | キャリア教師 | 職業日本語・日本文化・面接対策も可 | 日本語能力確認テストN3相当以上＋関連実技合格 |
+| T4 Senior Teacher | 指導教師 | 他教師指導可 | T3実績＋指導模擬評価合格 |
+| T5 Master Trainer | 教案・研修設計者 | 教案・研修設計に関与可 | T4実績＋教案改善提案の採用実績 |
+
+自動昇格は行わない。判定は`Teacher_Training_Log`に蓄積されたTEST/MOCK_LESSON結果と`Teacher_Daily_Log`の週次・月次ロールアップを根拠に、研修責任者が手動で`Teacher_Master.currentLevel`を更新する。
+
+---
+
+## 12. 診断テスト（v0.1から変更なし、記録先のみ変更）
+
+- 7-A 日本語能力確認テスト／7-B 教授力実技試験（教案理解度テスト＋模擬授業）／7-C 日本職場教育理解度テスト、の3本立てはv0.1のまま。
+- Phase1では専用シートを作らず、結果はすべて `Teacher_Training_Log`（`logType = TEST` または `MOCK_LESSON`）に記録する。
+
+---
+
+## 13. Phase2以降に先送りする項目（明示）
+
+- Skill Matrix 25項目の常設シート化・確定評価の項目別管理
+- Teacher Level History／Assessment Records／Teacher Development Planの専用シート分離
+- Lesson Authorizationの状態遷移の自動化（現状は研修責任者の手動更新）
+- 生徒到達評価から教師再評価への自動フィードバックロジック
+- 教師公開プロフィール（`teachers.html`）への自動反映
+
+---
+
+## 14. 未確定事項（Phase1着手前に確認）
+
+- `classId` の発行元・既存データの有無（School OS側にクラス編成データが現状あるか）
+- 出席・生徒成績・授業実施時間の管理場所（School OS側のどのシート/仕組みか。無ければ整備が先か、Phase1では空欄参照のままにするか）
+- 128日教材のLesson一覧の実データ所在（`lessonId`マッピングの元データ）
+- Madhu/Shantiの入社日、JFT有無、その他資格、学歴詳細
+- 研修責任者・承認者の実運用上の担当者
+
+---
+
+*本書はPhase1向け簡素化版（v0.2）。実装（シート作成、Apps Script追加、UI構築）は本書レビュー後の別フェーズで行う。*
