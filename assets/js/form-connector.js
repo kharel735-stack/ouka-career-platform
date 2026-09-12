@@ -9,9 +9,11 @@
  *  ・どのURLも未設定のときは「送信完了」を絶対に表示しません。
  *    submit() は status:"PENDING" を返し、画面は「準備中」の案内を出します。
  *  ・studentId はブラウザでは確定しません（Apps Script側で発行）。
- *  ・POST は application/x-www-form-urlencoded（payload=JSON文字列）で送ります。
- *    → CORSプリフライトを避けるための「シンプルリクエスト」。Apps Script側は
- *      e.parameter.payload を JSON.parse します（apps-script/Code.gs 参照）。
+ *  ・POST は text/plain（中身は payload=JSON文字列）で送ります。
+ *    → CORSプリフライトを避ける「シンプルリクエスト」であり、かつ Safari / iPhone でも
+ *      Apps Script の返事を読める唯一の形です（下の postToAppsScript の注意書き参照）。
+ *      Apps Script側は e.postData.contents から payload= を取り出して JSON.parse します
+ *      （apps-script/Code.gs の parsePayload_ 参照）。
  * ==========================================================================*/
 
 window.OUKA_FORM = (function () {
@@ -56,10 +58,18 @@ window.OUKA_FORM = (function () {
     return params.length ? (base + join + params.join("&")) : base;
   }
 
-  /* ---- 方法B: Apps Script へ POST ---- */
+  /* ---- 方法B: Apps Script へ POST ----
+   * ⚠ Content-Type は必ず "text/plain" にすること。
+   *   Apps Script は POST を script.googleusercontent.com へ転送（302）して返します。
+   *   このとき "application/x-www-form-urlencoded" だと Safari / iPhone では
+   *   返事を読めずに固まり、実際は保存できているのに「送信に失敗しました」と
+   *   出てしまいます（2026-08-05 実機確認）。"text/plain" なら正常に返事が読めます。
+   *   中身は今までどおり "payload=<JSON>" 形式で、サーバー側の parsePayload_ が
+   *   どちらの形でも読めるようになっています。
+   * 送信の待ち時間は、ネパール側の回線が遅い場合を見て25秒。 */
   function postToAppsScript(data, timeoutMs) {
     var url = ep().appsScriptUrl;
-    timeoutMs = timeoutMs || 15000;
+    timeoutMs = timeoutMs || 25000;
     var body = "payload=" + encodeURIComponent(JSON.stringify(data));
 
     var controller = (typeof AbortController !== "undefined") ? new AbortController() : null;
@@ -67,21 +77,32 @@ window.OUKA_FORM = (function () {
 
     return fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+      headers: { "Content-Type": "text/plain;charset=UTF-8" },
       body: body,
       signal: controller ? controller.signal : undefined
     }).then(function (res) {
       if (timer) clearTimeout(timer);
+      /* Apps Script は、処理が終わってから script.googleusercontent.com へ
+         転送（302）して答えを返します。つまり転送先まで来ている時点で、
+         サーバー側の保存は終わっています。
+         この「答えのURL」は一度きりで、回線が遅いと 404 になることがあります。
+         そのときに「送信に失敗しました」と出すと、実際は届いているのに
+         利用者が何度も送り直すことになるため、SENT_UNCONFIRMED として返します。 */
+      var viaRedirect = /googleusercontent\.com/.test(res.url || "");
       return res.text().then(function (txt) {
         var json = null;
         try { json = JSON.parse(txt); } catch (e) {}
-        if (!res.ok) throw new Error("HTTP " + res.status);
         if (json && json.ok === false) throw new Error(json.error || "server error");
-        return {
-          status: "SENT",
-          studentId: (json && json.studentId) || "",
-          raw: json || txt
-        };
+        if (json) {
+          return {
+            status: "SENT",
+            studentId: json.studentId || "",
+            raw: json
+          };
+        }
+        /* 本文が読めなかった場合 */
+        if (viaRedirect) return { status: "SENT_UNCONFIRMED", studentId: "", raw: {} };
+        throw new Error("HTTP " + res.status);
       });
     }).catch(function (err) {
       if (timer) clearTimeout(timer);
@@ -93,7 +114,8 @@ window.OUKA_FORM = (function () {
 
   /* ---- 送信の入口 ----
    * 戻り値(Promise):
-   *   { status:"SENT", studentId }  … Apps Scriptが受理
+   *   { status:"SENT", studentId }  … Apps Scriptが受理（受付番号あり）
+   *   { status:"SENT_UNCONFIRMED" }  … 届いてはいるが、答えを読めなかった（受付番号なし）
    *   { status:"PENDING" }          … 送信先未設定（画面は「準備中」を表示）
    *   reject: Error(status:"ERROR")  … 通信失敗（Googleフォームへ誘導する）
    */
