@@ -1,0 +1,43 @@
+name: Apply production domain
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/apply-production-domain.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  replace-domain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Replace placeholder domain
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' f; do
+            sed -i 's|REPLACE-DOMAIN|abas-globalgroup.com|g' "$f"
+          done < <(find . \( -name '*.html' -o -name 'sitemap.xml' -o -name 'robots.txt' \) -not -path './_tools/*' -not -path './node_modules/*' -print0)
+      - name: Verify no production placeholder remains
+        shell: bash
+        run: |
+          if grep -RIl 'REPLACE-DOMAIN' --include='*.html' --include='sitemap.xml' --include='robots.txt' . | grep -v '^./_tools/'; then
+            echo 'REPLACE-DOMAIN remains in production files.' >&2
+            exit 1
+          fi
+      - name: Commit production URLs
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo 'No domain placeholders to replace.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- '*.html' sitemap.xml robots.txt 2>/dev/null || true
+          git commit -m 'Replace placeholder domain with abas-globalgroup.com'
+          git push
