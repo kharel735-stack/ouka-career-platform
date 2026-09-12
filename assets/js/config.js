@@ -27,11 +27,11 @@ window.OUKA_CONFIG = {
     assessmentFormUrl: "",
     interviewFormUrl: "",
     companyFormUrl: "",
-    appsScriptUrl: "",
+    appsScriptUrl: "https://script.google.com/macros/s/AKfycbwfExFWkpkGl6iQH8UTZ7ZriawY8N1E218IjllpsPDp4raRqqzZE1JxLtfcSunu1Lz9nA/exec",
     prefill: { baseUrl: "", entryMap: {} }
   },
 
-  integrations: { slackEnabled: false, apiEnabled: false },
+  integrations: { slackEnabled: false, apiEnabled: true },
 
   content: {
     enrollmentTotal: null,
