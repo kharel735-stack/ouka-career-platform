@@ -1,30 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 96" width="320" height="96" role="img" aria-label="OUKA Skill Training Center — Work to Japan">
-  <defs>
-    <radialGradient id="disc" cx="38%" cy="30%" r="80%">
-      <stop offset="0" stop-color="#e85c8a"/>
-      <stop offset="1" stop-color="#a9295c"/>
-    </radialGradient>
-    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#efd489"/>
-      <stop offset="50" stop-color="#c9a227"/>
-      <stop offset="1" stop-color="#9c7a16"/>
-    </linearGradient>
-  </defs>
-  <!-- 桜エンブレム -->
-  <g transform="translate(48 48)">
-    <circle r="42" fill="url(#disc)"/>
-    <circle r="42" fill="none" stroke="url(#gold)" stroke-width="2"/>
-    <circle r="37" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="1"/>
-    <text x="0" y="16" text-anchor="middle" fill="#fff"
-          font-family="'Hiragino Mincho ProN','Yu Mincho','Noto Serif JP',serif"
-          font-size="48" font-weight="700">桜</text>
-  </g>
-  <!-- ワードマーク -->
-  <text x="108" y="45" fill="#241d1f"
-        font-family="'Times New Roman',Georgia,'Noto Serif JP',serif"
-        font-size="41" font-weight="700" letter-spacing="7">OUKA</text>
-  <line x1="110" y1="57" x2="292" y2="57" stroke="url(#gold)" stroke-width="1.4"/>
-  <text x="110" y="75" fill="#a9295c"
-        font-family="'Helvetica Neue',Arial,sans-serif"
-        font-size="12.5" font-weight="700" letter-spacing="5.5">WORK TO JAPAN</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 569.8 133.0" width="570" height="133" role="img" aria-label="OUKA">
+  <title>OUKA ─ 横組み（標準）</title>
+  <desc>OUKA Skill Training Center の標章。OUKA の O と U を一体化した門。下が開いているのは、閉じた円ではなく「くぐって出ていく門」であるため。2026-09-03 代表決定 A案 THE GATE。</desc>
+  <g transform="translate(-15.70,-14.04) scale(0.82609)"><path d="M32 178 V70 Q32 30 72 30 H128 Q168 30 168 70 V178" fill="none" stroke="#12294B" stroke-width="26" stroke-linejoin="round"/></g><rect x="175.3" y="0.0" width="3.0" height="133.0" fill="#12294B"/><g transform="translate(219.8,16.5)"><g transform="translate(0.0,0)"><path fill="#12294B" fill-rule="evenodd" d="M39 0 H39 A39 39 0 0 1 78 39 V61 A39 39 0 0 1 39 100 H39 A39 39 0 0 1 0 61 V39 A39 39 0 0 1 39 0 Z M39.0 20.4 H39.0 A18.6 18.6 0 0 1 57.6 39.0 V60.99999999999999 A18.6 18.6 0 0 1 39.0 79.6 H39.0 A18.6 18.6 0 0 1 20.4 60.99999999999999 V39.0 A18.6 18.6 0 0 1 39.0 20.4 Z"/></g><g transform="translate(92.0,0)"><path fill="none" stroke="#12294B" stroke-width="20.4" stroke-linejoin="round" d="M10.2 0 V62 Q10.2 89.8 39 89.8 Q67.8 89.8 67.8 62 V0"/></g><g transform="translate(184.0,0)"><g fill="#12294B" stroke="#12294B" stroke-width="19.0" stroke-linecap="butt"><rect x="0" y="0" width="19.0" height="100" stroke="none"/><line x1="19" y1="54" x2="67" y2="7"/><line x1="19" y1="52" x2="67" y2="92"/></g></g><g transform="translate(272.0,0)"><g fill="#12294B"><path d="M0 100 L30 0 L48 0 L78 100 L59 100 L39 34 L19 100 Z"/><rect x="24" y="64" width="30" height="18"/></g></g></g>
 </svg>
