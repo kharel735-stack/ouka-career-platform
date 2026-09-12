@@ -1,24 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="OUKA">
-  <defs>
-    <linearGradient id="oukaPetal" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#f8bcd0"/>
-      <stop offset="1" stop-color="#e0688f"/>
-    </linearGradient>
-    <path id="oukaP" d="M32,33 C27,28 23.5,20 26,12.5 C27.5,8 30,9 32,14 C34,9 36.5,8 38,12.5 C40.5,20 37,28 32,33 Z"/>
-  </defs>
-  <g fill="url(#oukaPetal)" stroke="#cf4f7d" stroke-width="0.7" stroke-linejoin="round">
-    <use href="#oukaP"/>
-    <use href="#oukaP" transform="rotate(72 32 32)"/>
-    <use href="#oukaP" transform="rotate(144 32 32)"/>
-    <use href="#oukaP" transform="rotate(216 32 32)"/>
-    <use href="#oukaP" transform="rotate(288 32 32)"/>
-  </g>
-  <g fill="#c8a869">
-    <circle cx="32" cy="32" r="3.4"/>
-    <circle cx="32" cy="25.5" r="1.15"/>
-    <circle cx="38.2" cy="30" r="1.15"/>
-    <circle cx="35.8" cy="37.2" r="1.15"/>
-    <circle cx="28.2" cy="37.2" r="1.15"/>
-    <circle cx="25.8" cy="30" r="1.15"/>
-  </g>
+  <title>OUKA ─ シンボル（門）</title>
+  <desc>OUKA Skill Training Center の標章。藍地に白の門。図形は SOP/ロゴ_OUKA/svg/OUKA_symbol.svg（正本）から機械的に取り込んでいる。</desc>
+  <rect width="64" height="64" rx="8" fill="#12294B"/>
+  <g transform="translate(3.832,4.000) scale(0.42105)"><g transform="translate(-15.70,-14.04) scale(0.82609)"><path d="M32 178 V70 Q32 30 72 30 H128 Q168 30 168 70 V178" fill="none" stroke="#FFFFFF" stroke-width="26" stroke-linejoin="round"/></g></g>
 </svg>
