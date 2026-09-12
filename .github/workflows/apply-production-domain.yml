@@ -38,6 +38,6 @@ jobs:
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -- '*.html' sitemap.xml robots.txt 2>/dev/null || true
+          git add -A
           git commit -m 'Replace placeholder domain with abas-globalgroup.com'
           git push
