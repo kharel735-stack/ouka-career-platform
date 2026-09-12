@@ -43,7 +43,7 @@ window.OUKA_CONFIG = {
     CONSTRUCTION: "active",
     CAREGIVING: "active",
     AGRICULTURE: "active",
-    FOOD_SERVICE: "active",
+    FOOD_SERVICE: "paused",
     HOSPITALITY: "active",
     MANUFACTURING: "active",
     AUTO_MAINTENANCE: "active",
