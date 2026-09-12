@@ -1,70 +1,97 @@
-/* ============================================================================
- * premium.css  ―  導入画面（スプラッシュ）専用レイヤー。index.html のみで読込。
- * style.css（上質・高級路線）を土台に、最初の一枚「OUKA / Work to Japan」を表示。
- * ※ style.css と競合するオーバーライドは一切持たない（.splash 系のみ）。
- * ==========================================================================*/
+/* OUKA THE GATE restoration layer
+ * Source: existing 2026-09-03/09-06 THE GATE production design.
+ * This file intentionally overrides the older rose/black homepage presentation.
+ */
 
-body.ouka-splash-open{ overflow: hidden; }
+/* Old splash is not part of THE GATE production homepage. */
+body.ouka-splash-open{overflow:auto!important}
+.splash{display:none!important}
 
-.splash{
-  position: fixed; inset: 0; z-index: 3000;
-  display: grid; place-items: center; text-align: center; padding: 28px; color: #fff;
+:root{
+  --ouka-navy:#12294B;
+  --ouka-navy-900:#0B1A31;
+  --ouka-navy-700:#1C3E6B;
+  --ouka-navy-600:#27538D;
+  --ouka-navy-500:#3468AE;
+  --ouka-navy-050:#EDF1F7;
+  --ouka-navy-line:#C9D4E4;
+  --ouka-red:#C8362B;
+  --ouka-red-700:#A82A21;
+  --ouka-kinari:#F5F2EA;
+  --ouka-kinari-200:#E9E4D7;
+  --ouka-nezumi:#7A828E;
+  --ouka-sumi:#12161B;
+  --green-900:var(--ouka-navy);
+  --green-700:var(--ouka-navy-700);
+  --green-600:var(--ouka-navy-600);
+  --green-500:var(--ouka-navy-500);
+  --green-050:var(--ouka-navy-050);
+  --beige-100:var(--ouka-kinari);
+  --beige-200:var(--ouka-kinari-200);
+  --sakura:var(--ouka-navy-line);
+  --sakura-200:var(--ouka-navy-050);
+  --pink-600:var(--ouka-red);
+  --pink-700:var(--ouka-red-700);
+  --gold:var(--ouka-navy-600);
+  --gold-soft:var(--ouka-navy-line);
+  --ink:#16202E;
+  --ink-soft:#46536A;
+  --muted:var(--ouka-nezumi);
+  --line:#E2E7EF;
+  --cream:#FBFCFE;
+  --focus:var(--ouka-navy-600);
+}
+
+body{color:var(--ink);background:var(--cream)}
+h1,h2,h3{color:var(--ouka-navy)}
+a{color:var(--ouka-navy-700)}
+.section--beige{background:var(--ouka-kinari)}
+.section--green{background:var(--ouka-navy);color:#E4EBF4}
+
+.site-header{background:rgba(255,255,255,.94);border-bottom:1px solid var(--line)}
+.site-header::after{content:"";display:block;height:3px;background:linear-gradient(90deg,var(--ouka-navy) 0 calc(100% - 84px),var(--ouka-red) calc(100% - 84px) 100%);opacity:1}
+.brand__logo{height:42px;width:auto}
+.brand__ja{color:var(--ouka-navy);font-family:"Zen Kaku Gothic New","Noto Sans JP",sans-serif;font-weight:700}
+.nav-links a:hover{background:var(--ouka-navy-050);color:var(--ouka-navy-700)}
+.lang-switch{border-radius:4px}
+.lang-switch button[aria-pressed="true"]{background:var(--ouka-navy)}
+.nav-toggle span,.nav-toggle span::before,.nav-toggle span::after{background:var(--ouka-navy)}
+
+.btn{border-radius:6px}
+.btn--primary{background:var(--ouka-red);color:#fff;box-shadow:0 8px 22px rgba(200,54,43,.28)}
+.btn--primary:hover{background:var(--ouka-red-700);color:#fff}
+.btn--ghost{border-radius:6px;border-color:rgba(255,255,255,.55)}
+.btn--outline{border-color:var(--ouka-navy);color:var(--ouka-navy)}
+
+.hero{
+  position:relative;color:#fff;overflow:hidden;
   background:
-    linear-gradient(180deg, rgba(28,18,22,.90), rgba(18,11,13,.97)),
-    radial-gradient(1100px 520px at 80% -12%, rgba(200,68,122,.42), transparent 60%),
-    radial-gradient(900px 420px at 12% 112%, rgba(184,146,60,.22), transparent 60%),
-    #1c1216;
-  transition: opacity .7s ease, visibility .7s ease;
+    linear-gradient(120deg,rgba(11,26,49,.98),rgba(18,41,75,.96)),
+    #12294B;
 }
-.splash::before{
-  content:""; position:absolute; left:0; right:0; top:0; height:3px;
-  background: linear-gradient(90deg, transparent, #d9c07a 20%, #b8923c 50%, #d9c07a 80%, transparent);
-  opacity:.85;
+.hero::before{
+  content:"";position:absolute;right:-18%;bottom:-20%;width:min(60vw,520px);height:75%;
+  border:3px solid rgba(255,255,255,.13);border-bottom:0;border-radius:180px 180px 0 0;pointer-events:none
 }
-.splash.is-hidden{ opacity:0; visibility:hidden; }
+.hero::after{content:"";position:absolute;left:0;right:0;bottom:0;height:4px;background:linear-gradient(90deg,var(--ouka-navy) 0 calc(100% - 84px),var(--ouka-red) calc(100% - 84px) 100%);opacity:1}
+.hero__petals{display:none!important}
+.hero__ja{display:none!important}
+.hero__inner{padding:clamp(64px,10vw,124px) clamp(18px,4vw,32px) clamp(56px,8vw,96px);position:relative;z-index:2}
+.hero__tag{display:inline-block;font-size:.86rem;font-weight:700;color:#fff;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.28);border-left:3px solid var(--ouka-red);padding:9px 18px;border-radius:4px;margin-bottom:28px}
+.hero h1{font-family:"Zen Kaku Gothic New","Noto Sans JP",sans-serif;color:#fff;font-size:clamp(2.1rem,6.4vw,3.7rem);font-weight:700;letter-spacing:.02em;line-height:1.35}
+.hero__lead{color:#DCE5F0;max-width:680px}
+.hero__cta{gap:12px}
 
-.splash__inner{ max-width: 720px; }
-.splash__logo{
-  width: clamp(78px, 17vw, 112px); height:auto; margin: 0 auto 14px;
-  filter: drop-shadow(0 8px 22px rgba(0,0,0,.45)); animation: oukaFade 1s ease both;
-}
-.splash__brand{
-  font-family: "Cormorant Garamond","Noto Serif JP",Georgia,serif; font-weight:700; color:#fff;
-  font-size: clamp(52px, 15vw, 120px); line-height:1; margin:0;
-  letter-spacing:.18em; text-indent:.18em; animation: oukaRise 1s .05s ease both;
-}
-.splash__wtj{
-  font-family: "Cormorant Garamond","Noto Serif JP",Georgia,serif; color:#dcc488; font-weight:700;
-  text-transform:uppercase; letter-spacing:.5em; text-indent:.5em;
-  font-size: clamp(13px, 3.5vw, 22px); margin:16px 0 0; animation: oukaRise 1s .16s ease both;
-}
-.splash__rule{
-  display:block; width:64px; height:2px; margin:22px auto 0;
-  background: linear-gradient(90deg, transparent, #d9c07a, #b8923c, #d9c07a, transparent);
-  animation: oukaFade 1s .3s ease both;
-}
-.splash__jp{
-  font-family:"Noto Serif JP",serif; color:#f0dfe4; letter-spacing:.28em; text-indent:.28em;
-  margin:18px 0 0; font-size: clamp(12px,3vw,15px); animation: oukaFade 1s .38s ease both;
-}
-.splash__tag{
-  color:#c9b3b7; max-width:600px; margin:14px auto 0; line-height:2;
-  font-size: clamp(12px,3.1vw,14.5px); animation: oukaFade 1s .46s ease both;
-}
-.splash__enter{
-  appearance:none; cursor:pointer; margin-top:34px; font-family:"Noto Sans JP",sans-serif; font-weight:700;
-  font-size:15px; letter-spacing:.2em; text-indent:.2em; color:#241d1f; border:none; border-radius:999px;
-  padding:16px 44px; background: linear-gradient(135deg, #efd489, #c9a227);
-  box-shadow: 0 14px 34px rgba(184,146,60,.4); transition: transform .2s ease, filter .2s ease;
-  animation: oukaRise 1s .55s ease both;
-}
-.splash__enter:hover{ transform: translateY(-2px); filter: brightness(1.05); }
-.splash__enter:focus-visible{ outline:3px solid #dcc488; outline-offset:3px; }
-.splash__cue{ display:block; margin:26px auto 0; color:#dcc488; font-size:24px; animation: oukaBob 1.8s ease-in-out infinite; }
+.section-head .eyebrow{color:var(--ouka-navy-600)}
+.section-head .eyebrow::after{background:linear-gradient(90deg,var(--ouka-navy) 0 66%,var(--ouka-red) 66% 100%);height:3px}
 
-@keyframes oukaFade{ from{opacity:0} to{opacity:1} }
-@keyframes oukaRise{ from{opacity:0; transform:translateY(16px)} to{opacity:1; transform:none} }
-@keyframes oukaBob{ 0%,100%{ transform:translateY(0); opacity:.7 } 50%{ transform:translateY(7px); opacity:1 } }
-@media (prefers-reduced-motion: reduce){
-  .splash *{ animation: none !important; } .splash{ transition:none; }
+@media(max-width:1000px){
+  .brand__logo{height:34px}
+  .nav-links{background:#fff}
+}
+@media(max-width:640px){
+  .brand__logo{height:30px}
+  .brand__ja{display:none}
+  .hero::before{right:-35%;height:58%;width:min(96vw,460px);opacity:.8}
+  .lang-switch button{padding:7px 8px;font-size:.76rem}
 }
