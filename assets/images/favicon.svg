@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="桜花">
-  <rect width="64" height="64" rx="14" fill="#e85c8a"/>
-  <text x="32" y="45" text-anchor="middle" fill="#ffffff"
-        font-family="'Hiragino Mincho ProN','Yu Mincho','Noto Serif JP',serif"
-        font-size="42" font-weight="700">桜</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="OUKA">
+  <title>OUKA ─ シンボル（門）</title>
+  <desc>OUKA Skill Training Center の標章。藍地に白の門。図形は SOP/ロゴ_OUKA/svg/OUKA_symbol.svg（正本）から機械的に取り込んでいる。</desc>
+  <rect width="64" height="64" rx="8" fill="#12294B"/>
+  <g transform="translate(3.832,4.000) scale(0.42105)"><g transform="translate(-15.70,-14.04) scale(0.82609)"><path d="M32 178 V70 Q32 30 72 30 H128 Q168 30 168 70 V178" fill="none" stroke="#FFFFFF" stroke-width="26" stroke-linejoin="round"/></g></g>
 </svg>
