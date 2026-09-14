@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#12294B">
+<title>OUKA School OS</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header><div class="wrap"><b>OUKA</b> <span class="sub">School OS</span><span id="modeBadge" class="badge" hidden>TEST</span><span id="who" class="who"></span><button type="button" id="logoutBtn" class="ghost small" hidden>ログアウト</button></div></header>
+
+<main class="wrap" id="loginView"><div class="card"><h2>ログイン</h2><form id="loginForm" autocomplete="on" novalidate><label>ユーザー名<input type="text" id="fUsername" name="username" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="64" required></label><label>パスワード<input type="password" id="fPassword" name="password" autocomplete="current-password" maxlength="256" required></label><button type="submit" id="loginBtn">ログイン</button></form><p class="muted">パスワードはこのページにもOUKAサーバーにも保存されません。認証は Clerk が行い、権限はサーバー側で確認します。</p><p class="muted">アカウントは管理者が発行します。この画面から新規登録はできません。</p><div id="loginErr" class="err"></div></div></main>
+
+<!-- Role-aware portal shell. Existing OSes remain the source of truth. -->
+<main class="wrap" id="portalView" hidden>
+  <section class="portal-hero">
+    <p class="eyebrow">OUKA SCHOOL OPERATIONS</p>
+    <h1 id="portalRoleTitle">OUKA School OS</h1>
+    <p id="portalRoleNote" class="muted">利用できる業務を表示します。</p>
+  </section>
+  <section class="portal-grid">
+    <article class="portal-card primary" id="teacherPortalCard">
+      <div><span class="portal-no">01</span><h2>今日の授業</h2><p>出席・授業結果・日報まで、現在の教師日次フローをそのまま使用します。</p></div>
+      <button type="button" id="openTeacherFlow">開く</button>
+    </article>
+    <article class="portal-card locked"><div><span class="portal-no">02</span><h2>生徒</h2><p>Student OS の学習進捗・出席・テスト・Gateを統合します。</p></div><span class="coming">接続準備中</span></article>
+    <article class="portal-card locked"><div><span class="portal-no">03</span><h2>教材・カリキュラム</h2><p>Teacher OS / Lesson Unit / 今日の教材を接続します。</p></div><span class="coming">接続準備中</span></article>
+    <article class="portal-card locked"><div><span class="portal-no">04</span><h2>候補者・面接</h2><p>書類受付から評価・推薦・企業面接までを一つの流れにします。</p></div><span class="coming">接続準備中</span></article>
+    <article class="portal-card locked"><div><span class="portal-no">05</span><h2>日本就職・VISA</h2><p>Job Matching・COE・VISA・渡航・就職後フォローを接続します。</p></div><span class="coming">接続準備中</span></article>
+    <article class="portal-card locked"><div><span class="portal-no">06</span><h2>学校管理</h2><p>教師・学校状況・Finance・運用ログを権限に応じて表示します。</p></div><span class="coming">接続準備中</span></article>
+  </section>
+</main>
+
+<main class="wrap" id="flowView" hidden>
+  <div class="flow-toolbar"><button type="button" id="portalHomeBtn" class="ghost small">← ホーム</button><strong>教師・今日の記録</strong></div>
+  <ol class="stepper" id="stepper"><li data-step="today">今日の授業</li><li data-step="attendance">出席</li><li data-step="lesson">授業結果</li><li data-step="report">日報</li><li data-step="confirm">確認</li><li data-step="done">完了</li></ol>
+  <section class="card step" data-step="today"><h2>1. 今日の授業</h2><div id="todayPlan" class="plan muted">読み込み中…</div><div id="permWarn" class="warn" hidden></div><label>日付<input type="date" id="fDate"></label><label>クラス<input type="text" id="fClass" placeholder="1期A" autocomplete="off"></label><label>今日いくつ目のDayを実施したか<input type="text" id="fActualDay" placeholder="D014" autocomplete="off"><span class="hint" id="dayHint"></span></label><label class="inline" id="testWrap" hidden><input type="checkbox" id="fTestMode"><span>テストとして記録する（実学生と混ぜない）</span></label></section>
+  <section class="card step" data-step="attendance" hidden><h2>2. 出席</h2><p class="muted" id="rosterNote">名簿を読み込んでいます…</p><div class="addrow"><input type="text" id="newId" placeholder="生徒ID（S001）" autocomplete="off"><input type="text" id="newName" placeholder="名前（任意）" autocomplete="off"><button type="button" id="addStudent">追加</button></div><div id="rosterHint" class="hint"></div><div id="attList"></div><div class="tally" id="attTally"></div></section>
+  <section class="card step" data-step="lesson" hidden><h2>3. 授業結果</h2><label>科目<input type="text" id="fSubject" value="日本語"></label><label>範囲（課・テーマ）<input type="text" id="fRange" placeholder="みん日L5"></label><div class="two"><label>宿題を出した人数<input type="number" id="fHomework" inputmode="numeric" min="0"></label><label>小テスト平均<input type="number" id="fQuiz" inputmode="numeric" min="0" max="100"></label></div><div class="two"><label>時間超過（分）<input type="number" id="fOvertime" inputmode="numeric" min="0"></label><label>発話ラウンド<input type="number" id="fRounds" inputmode="numeric" min="0" step="1"><span class="hint">出席した全員が1回ずつ話せたら1。2周できたら2。</span></label></div><fieldset><legend>今日できなかった9ステップ（あれば）</legend><div class="chips" id="stepChips"></div></fieldset><label>特記事項<textarea id="fLessonNote" rows="2"></textarea></label></section>
+  <section class="card step" data-step="report" hidden><h2>4. 日報</h2><label>氏名<input type="text" id="fTeacherName" autocomplete="off"></label><label>① 何をした<textarea id="fWhat" rows="2"></textarea></label><label>② なぜそうした<textarea id="fWhy" rows="2"></textarea></label><label>③ 結果<textarea id="fResult" rows="2"></textarea></label><fieldset><legend>ACTION（教えた日本語を、その日のうちに使わせたか）</legend><label class="inline"><input type="radio" name="action" value="yes"><span>使わせた</span></label><label class="inline"><input type="radio" name="action" value="no"><span>できなかった</span></label></fieldset><label>④ 反省<textarea id="fReflect" rows="2"></textarea></label><label>⑤ 改善案<textarea id="fImprove" rows="2"></textarea></label></section>
+  <section class="card step" data-step="confirm" hidden><h2>5. 送る前に確認</h2><div id="summary"></div></section>
+  <section class="card step" data-step="send" hidden><h2>6. 送信中</h2><div id="sending" class="muted">保存しています…</div></section>
+  <section class="card step" data-step="done" hidden><h2>7. 完了</h2><div id="doneBox"></div><button type="button" id="againBtn" class="ghost">もう1件入力する</button></section>
+  <div id="errors" class="err"></div><nav class="nav" id="nav"><button type="button" id="backBtn" class="ghost">戻る</button><button type="button" id="nextBtn">次へ</button></nav>
+</main>
+<!-- 生徒本人の閲覧画面（入力・保存機能なし） -->
+<main class="wrap" id="studentView" hidden>
+  <section class="card">
+    <h2>今日の学習</h2>
+    <p class="muted">ここに表示されるのは、あなた本人の記録だけです。</p>
+    <div id="studentStatus" class="plan muted">読み込み中…</div>
+    <div id="studentErr" class="err"></div>
+  </section>
+</main>
+<script src="config.js"></script><script src="workflow.js"></script><script src="auth.js"></script><script src="portal.js"></script><script src="student.js"></script><script src="app.js"></script>
+</body></html>

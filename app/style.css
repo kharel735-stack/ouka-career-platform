@@ -1,0 +1,91 @@
+:root { --ink:#12294B; --red:#C8362B; --ok:#2e7d32; --line:#dcdfe6; --bg:#f7f8fa; --mut:#5b6472; }
+* { box-sizing: border-box; }
+body { margin:0; font: 16px/1.7 -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif; color:#1b1b1b; background:var(--bg); -webkit-text-size-adjust:100%; }
+.wrap { max-width: 720px; margin:0 auto; padding: 0 14px; }
+header { background:var(--ink); color:#fff; padding:12px 0; position:sticky; top:0; z-index:5; }
+header .wrap { display:flex; align-items:center; gap:6px; }
+header b { letter-spacing:.08em; }
+header .sub { color:#c9d3e4; font-size:13px; margin-left:6px; }
+header .who { margin-left:auto; font-size:13px; color:#c9d3e4; }
+.badge { background:var(--red); color:#fff; border-radius:4px; padding:1px 7px; font-size:12px; margin-left:8px; }
+main { padding-bottom: 92px; }
+.card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:16px; margin:14px 0; }
+h1 { font-size:25px; line-height:1.25; margin:4px 0 8px; color:var(--ink); }
+h2 { font-size:17px; margin:0 0 12px; }
+.muted { color:var(--mut); font-size:14px; }
+.hint { color:var(--mut); font-size:13px; display:block; margin-top:4px; }
+.err { color:var(--red); font-weight:600; margin:10px 0; white-space:pre-line; }
+.warn { background:#fff4e5; border:1px solid #e0a800; border-radius:8px; padding:10px; margin:10px 0; font-size:14px; }
+.ok { color:var(--ok); font-weight:700; }
+label { display:block; margin:12px 0; font-size:14px; color:var(--mut); }
+input[type=text], input[type=password], input[type=date], input[type=number], textarea, select { width:100%; font:inherit; padding:11px 12px; border:1px solid var(--line); border-radius:8px; background:#fff; color:#1b1b1b; margin-top:4px; }
+textarea { resize:vertical; }
+label.inline { display:flex; align-items:center; gap:8px; }
+label.inline input { width:auto; margin:0; }
+label.inline span { color:#1b1b1b; }
+fieldset { border:1px solid var(--line); border-radius:8px; margin:12px 0; padding:10px 12px; }
+legend { font-size:13px; color:var(--mut); padding:0 4px; }
+.two { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.stepper { display:flex; gap:4px; list-style:none; padding:0; margin:14px 0 0; overflow-x:auto; }
+.stepper li { font-size:12px; color:var(--mut); background:#fff; border:1px solid var(--line); border-radius:999px; padding:4px 10px; white-space:nowrap; }
+.stepper li.on { background:var(--ink); color:#fff; border-color:var(--ink); }
+.stepper li.done { color:var(--ok); border-color:var(--ok); }
+.addrow { display:grid; grid-template-columns:1fr 1fr auto; gap:8px; margin:10px 0; }
+.addrow input { margin:0; }
+button { font:inherit; padding:12px 18px; border-radius:8px; border:0; background:var(--ink); color:#fff; font-weight:600; cursor:pointer; }
+button.ghost { background:#fff; color:var(--ink); border:1px solid var(--line); }
+button.small { padding:6px 12px; font-size:13px; }
+button:disabled { opacity:.5; cursor:default; }
+.stu { border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin:10px 0; }
+.stu .top { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.stu .id { font-weight:700; }
+.stu .rm { background:none; color:var(--red); border:0; padding:4px 6px; font-size:13px; }
+.marks { display:flex; gap:6px; align-items:center; margin-top:8px; flex-wrap:wrap; }
+.marks span.lbl { font-size:13px; color:var(--mut); width:34px; }
+.marks button { padding:8px 14px; background:#fff; color:#1b1b1b; border:1px solid var(--line); font-weight:400; }
+.marks button.sel { background:var(--ink); color:#fff; border-color:var(--ink); }
+.extra { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
+.extra input { margin:0; }
+.tally { font-size:14px; color:var(--mut); margin-top:10px; }
+.chips { display:flex; flex-wrap:wrap; gap:6px; }
+.chips button { padding:7px 12px; background:#fff; color:#1b1b1b; border:1px solid var(--line); font-weight:400; font-size:13px; }
+.chips button.sel { background:var(--red); color:#fff; border-color:var(--red); }
+.sumrow { display:flex; justify-content:space-between; gap:12px; padding:7px 0; border-bottom:1px dotted var(--line); }
+.sumrow:last-child { border-bottom:0; }
+.sumrow .k { color:var(--mut); font-size:14px; }
+.sumrow .v { font-weight:600; }
+.nav { position:fixed; left:0; right:0; bottom:0; background:#fff; border-top:1px solid var(--line); padding:10px 14px calc(10px + env(safe-area-inset-bottom)); display:flex; gap:10px; }
+.nav button { flex:1; }
+
+.student-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.student-item { border:1px solid var(--line); border-radius:9px; padding:10px; }
+.student-item .k { display:block; color:var(--mut); font-size:13px; }
+.student-item .v { display:block; font-weight:700; margin-top:3px; overflow-wrap:anywhere; }
+
+/* School OS portal shell */
+.portal-hero { padding:26px 2px 10px; }
+.eyebrow { margin:0; font-size:11px; font-weight:800; letter-spacing:.13em; color:var(--mut); }
+.portal-grid { display:grid; gap:10px; padding-bottom:20px; }
+.portal-card { background:#fff; border:1px solid var(--line); border-radius:14px; padding:16px; display:flex; justify-content:space-between; align-items:flex-end; gap:14px; min-height:142px; }
+.portal-card.primary { border-color:#b9c7dc; box-shadow:0 5px 18px rgba(18,41,75,.07); }
+.portal-card h2 { color:var(--ink); margin:3px 0 4px; }
+.portal-card p { margin:0; color:var(--mut); font-size:13px; line-height:1.55; }
+.portal-no { font-size:11px; font-weight:800; letter-spacing:.1em; color:#8b95a4; }
+.portal-card button { white-space:nowrap; }
+.portal-card.locked { background:#fafbfc; }
+.coming { white-space:nowrap; font-size:11px; font-weight:700; color:#7a8492; border:1px solid var(--line); border-radius:999px; padding:4px 8px; }
+.flow-toolbar { display:flex; align-items:center; gap:10px; padding-top:14px; }
+.flow-toolbar strong { color:var(--ink); font-size:14px; }
+
+@media (min-width:721px){
+  .nav { max-width:720px; margin:0 auto; border-radius:12px 12px 0 0; }
+  .portal-grid { grid-template-columns:1fr 1fr; }
+}
+@media (max-width:520px){
+  header .sub { display:none; }
+  header .who { max-width:45%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .portal-card { min-height:128px; padding:14px; }
+  .portal-card button { padding:10px 13px; }
+  .two, .addrow { grid-template-columns:1fr; }
+  .student-grid { grid-template-columns:1fr; }
+}
