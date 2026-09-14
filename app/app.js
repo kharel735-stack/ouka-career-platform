@@ -25,6 +25,8 @@
   var S = window.OukaStudent;
   var CFG = window.OUKA_APP || {};
   var clerkReady = null;          /* Clerk の読み込みが終わったことを表す Promise */
+  var loginStarted = false;       /* set once onLogin runs; boot() must not also restore that session */
+  var codeStep = null;            /* pending second-factor step: { submit(code), cancel() } */
   var session = null;
   var state = null;
   var step = 'today';
@@ -88,15 +90,21 @@
     if (!chk.ok) return Promise.reject(new Error(chk.errors.join(' / ')));
 
     return freshToken().then(function (token) {
-      if (!token) { toLogin('ログインの有効期限が切れました。もう一度ログインしてください。'); 
-                    throw new Error('セッションがありません'); }
+      if (!token) { toLogin('ログインの有効期限が切れました。もう一度ログインしてください。');
+                    throw A.sessionError('no_session_token'); }
       /* ★buildBody は Password を含む本文を作れない（見つけたら例外で止まる）。 */
       var body = A.buildBody(token, action, extra || {});
       return fetch(CFG.appLayerUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(body)
-      }).then(function (r) { return r.json(); })
+      }).then(function (r) {
+        /* Classify transport failures where they happen, so a later client-side
+           exception is never mistaken for a network problem. */
+        return r.json().then(null, function () { throw A.requestError('APP_LAYER_ERROR', 'bad_json'); });
+      }, function () {
+        throw A.requestError('UPSTREAM_UNREACHABLE', 'app_layer_fetch');
+      })
         .then(function (res) {
           /* セッション切れは全画面共通でログインへ戻す */
           if (A.isExpired(res)) toLogin(A.mapServerError(res).message);
@@ -118,8 +126,81 @@
     if (b) { b.disabled = !!on; b.textContent = on ? 'ログイン中…' : 'ログイン'; }
   }
 
+  /* ---- second factor (Clerk needs_second_factor, e.g. new-device e-mail code) ----
+     Shows the code form, sends the code to Clerk, keeps the form open on a wrong
+     code, and resolves with the completed sign-in. The code is never stored,
+     logged or sent to the App Layer. */
+  function showCodeForm(on, hint) {
+    show($('loginForm'), !on);
+    show($('codeForm'), on);
+    $('codeHint').textContent = on ? (hint || '') : '';
+    $('fCode').value = '';
+    var b = $('codeBtn');
+    if (b) { b.disabled = false; b.textContent = '確認'; }
+    if (on && $('fCode').focus) $('fCode').focus();
+  }
+
+  function secondFactor(clerk, res) {
+    var plan = A.secondFactorPlan(res);
+    if (!plan) return Promise.reject(A.signInStatusError(res));
+    var signIn = (res && typeof res.attemptSecondFactor === 'function') ? res : clerk.client.signIn;
+    var prepared = plan.prepare
+      ? Promise.resolve(signIn.prepareSecondFactor(plan.prepare)).then(null, function (err) {
+          var m = A.mapSecondFactorError(err);
+          throw A.sessionError('second_factor_prepare:' + (m.detail || 'unknown'));
+        })
+      : Promise.resolve();
+    return prepared.then(function () {
+      setBusy(false);
+      showCodeForm(true, plan.message);
+      return new Promise(function (resolve, reject) {
+        codeStep = {
+          submit: function (raw) {
+            var v = A.validateCode(raw);
+            $('fCode').value = '';
+            if (!v.ok) { $('loginErr').textContent = v.error; return; }
+            $('loginErr').textContent = '';
+            var b = $('codeBtn');
+            if (b) { b.disabled = true; b.textContent = '確認中…'; }
+            Promise.resolve(signIn.attemptSecondFactor({ strategy: plan.strategy, code: v.code })).then(function (done) {
+              codeStep = null;
+              showCodeForm(false);
+              setBusy(true);
+              resolve(done);
+            }, function (err) {
+              var m = A.mapSecondFactorError(err);
+              if (b) { b.disabled = false; b.textContent = '確認'; }
+              if (m.retry) { $('loginErr').textContent = A.formatError(m); return; }
+              codeStep = null;
+              showCodeForm(false);
+              reject({ oukaCategory: m.category, detail: m.detail, message: m.message });
+            });
+          },
+          cancel: function () {
+            codeStep = null;
+            showCodeForm(false);
+            reject(A.sessionError('second_factor_cancelled'));
+          }
+        };
+      });
+    });
+  }
+
+  function onCode(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (codeStep) codeStep.submit($('fCode').value);
+  }
+
+  function onCodeCancel() {
+    if (codeStep) codeStep.cancel();
+    var c = window.Clerk;
+    if (c && c.signOut) c.signOut();
+  }
+
   /* ログイン画面へ戻す。セッション切れ・ログアウトの共通の出口。 */
   function toLogin(message) {
+    codeStep = null;
+    if ($('codeForm')) showCodeForm(false);
     session = null;
     state = null;
     clearSecretField();
@@ -132,8 +213,17 @@
     setBusy(false);
   }
 
-  /* ★Username + Password。Password はここでだけ触り、Clerk へ渡したら参照を切る。
-     変数にも state にも LocalStorage にも残さない。 */
+  /* The ONE login handler (auth consolidation 2026-09-14).
+     1. Authentication (Clerk): signIn.create({ identifier, password }) — the
+        supported ClerkJS v5 password call. Do NOT pass strategy to create().
+        Any status other than 'complete' is a SESSION_CREATION_FAILED with the
+        Clerk status as detail; it is never reported as a wrong password.
+     2. Activate the session and wait until clerk.session is visible.
+     3. Authorization (OUKA): api('session') -> App Layer -> APP_ROLE.
+        NO_ROLE and other authorization errors come back from the server and are
+        shown by onSession with their own code.
+     The password is only held for the create() call, then released and cleared
+     from the field. Nothing is written to storage or the console. */
   function onLogin(e) {
     if (e && e.preventDefault) e.preventDefault();
     $('loginErr').textContent = '';
@@ -146,34 +236,43 @@
     if (!clerkReady) { secret = null; $('loginErr').textContent = 'ログイン基盤を読み込めていません。画面を読み込み直してください。'; return; }
 
     setBusy(true);
+    loginStarted = true;
+    var phase = 'authentication';
     clerkReady.then(function (clerk) {
-      /* Clerk へ渡したらすぐ手放す（この関数を抜けた後どこにも残らない）。 */
-      var p = clerk.client.signIn.create({
-        strategy: 'password', identifier: v.username, password: secret
-      });
-      secret = null;
-      clearSecretField();
-      return p.then(function (res) {
-        if (!res || res.status !== 'complete') {
-          throw { errors: [{ code: 'form_password_incorrect' }] };
+      var p;
+      try {
+        p = clerk.client.signIn.create({ identifier: v.username, password: secret });
+      } finally {
+        secret = null;
+        clearSecretField();
+      }
+      return Promise.resolve(p).then(function (res) {
+        /* A correct password can still require a one-time code (new device). */
+        return (res && res.status === 'needs_second_factor') ? secondFactor(clerk, res) : res;
+      }).then(function (res) {
+        if (!res || res.status !== 'complete' || !res.createdSessionId) {
+          throw A.signInStatusError(res);
         }
-        return clerk.setActive({ session: res.createdSessionId });
+        return Promise.resolve(clerk.setActive({ session: res.createdSessionId }))
+          .then(null, function () { throw A.sessionError('set_active_failed'); });
       }, function (err) {
-        /* ★すでにログイン済みは失敗ではない（AUTH-CHANGE-01 実機修正）。
-           エラーで終わらせず、その既存セッションのまま認証を続ける。 */
+        /* Already signed in is not a failure: continue with that session. */
         if (!A.isAlreadySignedIn(err)) throw err;
+      }).then(function () {
         return waitForSession(clerk, SESSION_WAIT_MS).then(function (sess) {
-          if (!sess) throw err;
+          if (!sess) throw A.sessionError('no_active_session');
         });
       });
     }).then(function () {
+      phase = 'authorization';
       return api('session', {});
     }).then(onSession).catch(function (err) {
       secret = null;
       clearSecretField();
       setBusy(false);
-      var m = A.mapSignInError(err);
-      $('loginErr').textContent = m.message;
+      var m = phase === 'authentication' ? A.mapSignInError(err) : A.mapRequestError(err);
+      if (err && err.oukaCategory && err.message) m.message = err.message;
+      $('loginErr').textContent = A.formatError(m);
     });
   }
 
@@ -189,8 +288,9 @@
   function onSession(s) {
     setBusy(false);
     if (!s || !s.ok) {
-      /* ★NO_ROLE のとき権限の情報は何も出さない。出せるのは「登録されていない」だけ。 */
-      $('loginErr').textContent = A.mapServerError(s).message;
+      /* Authorization result from the App Layer (NO_ROLE etc.). Shown with its
+         own code; never reported as a wrong password. No role details leak. */
+      $('loginErr').textContent = A.formatError(A.mapServerError(s));
       return;
     }
     session = s;
@@ -521,6 +621,9 @@
   /* ---------------------------------------------------- 起動 */
   function wire() {
     $('loginForm').addEventListener('submit', onLogin);
+    $('codeBtn').addEventListener('click', onCode);
+    $('fCode').addEventListener('keydown', function (e) { if (e.key === 'Enter') onCode(e); });
+    $('codeCancel').addEventListener('click', onCodeCancel);
     $('logoutBtn').addEventListener('click', onLogout);
     $('nextBtn').addEventListener('click', onNext);
     $('backBtn').addEventListener('click', function () { collect(); goto(W.prevStep(step)); });
@@ -579,13 +682,16 @@
          ★復元を少し待つ（一度きりの判定では取りこぼす）。 */
       return waitForSession(clerk, SESSION_WAIT_MS).then(function (sess) {
         if (!sess) return;                       /* 未ログイン＝ログイン画面のまま */
+        if (loginStarted) return;                /* the login handler owns this session */
         return api('session', {}).then(onSession).catch(function (e) {
           /* ★黙って止まらない。理由を画面に出す（実機で原因が見えなかったため）。 */
-          $('loginErr').textContent = '自動ログインに失敗しました: ' + e.message;
+          $('loginErr').textContent = '自動ログインに失敗しました: ' + A.formatError(A.mapRequestError(e));
         });
       });
     }).catch(function (e) {
-      $('loginErr').textContent = e.message;
+      /* ClerkJS could not be loaded or initialised. */
+      $('loginErr').textContent = A.formatError({ message: e && e.message ? e.message : 'ログイン基盤を読み込めませんでした',
+                                                  category: A.CATEGORY.CLERK_ERROR, detail: 'clerk_load_failed' });
       $('loginBtn').disabled = true;
     });
   }

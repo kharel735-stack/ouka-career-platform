@@ -11,7 +11,7 @@
 <body>
 <header><div class="wrap"><b>OUKA</b> <span class="sub">School OS</span><span id="modeBadge" class="badge" hidden>TEST</span><span id="who" class="who"></span><button type="button" id="logoutBtn" class="ghost small" hidden>ログアウト</button></div></header>
 
-<main class="wrap" id="loginView"><div class="card"><h2>ログイン</h2><form id="loginForm" autocomplete="on" novalidate><label>ユーザー名<input type="text" id="fUsername" name="username" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="64" required></label><label>パスワード<input type="password" id="fPassword" name="password" autocomplete="current-password" maxlength="256" required></label><button type="submit" id="loginBtn">ログイン</button></form><p class="muted">パスワードはこのページにもOUKAサーバーにも保存されません。認証は Clerk が行い、権限はサーバー側で確認します。</p><p class="muted">アカウントは管理者が発行します。この画面から新規登録はできません。</p><div id="loginErr" class="err"></div></div></main>
+<main class="wrap" id="loginView"><div class="card"><h2>ログイン</h2><form id="loginForm" autocomplete="on" novalidate><label>ユーザー名<input type="text" id="fUsername" name="username" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="64" required></label><label>パスワード<input type="password" id="fPassword" name="password" autocomplete="current-password" maxlength="256" required></label><button type="submit" id="loginBtn">ログイン</button></form><div id="codeForm" hidden><p id="codeHint" class="muted"></p><label>確認コード<input type="text" id="fCode" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="12"></label><button type="button" id="codeBtn">確認</button> <button type="button" id="codeCancel" class="ghost">ログイン画面に戻る</button></div><p class="muted">パスワードはこのページにもOUKAサーバーにも保存されません。認証は Clerk が行い、権限はサーバー側で確認します。</p><p class="muted">アカウントは管理者が発行します。この画面から新規登録はできません。</p><div id="loginErr" class="err"></div></div></main>
 
 <!-- Role-aware portal shell. Existing OSes remain the source of truth. -->
 <main class="wrap" id="portalView" hidden>
@@ -54,5 +54,5 @@
     <div id="studentErr" class="err"></div>
   </section>
 </main>
-<script src="config.js"></script><script src="workflow.js"></script><script src="auth.js"></script><script src="portal.js"></script><script src="student.js"></script><script src="clerk-password-compat.js?v=20260914"></script><script src="app.js"></script>
+<script src="config.js"></script><script src="workflow.js"></script><script src="auth.js"></script><script src="portal.js"></script><script src="student.js"></script><script src="app.js"></script>
 </body></html>

@@ -131,7 +131,140 @@
     return ALREADY_SIGNED_IN.indexOf(clerkErrorCode(err)) >= 0;
   }
 
+  /* ------------------------------------------------ diagnostic categories
+     Authentication  = "Is this a valid Clerk user?"      (Clerk, in the browser)
+     Authorization   = "Does this user have an OUKA role?" (App Layer -> APP_ROLE)
+     Every failure shown on screen carries exactly one category below plus a
+     short machine-readable detail (a Clerk error code, a Clerk sign-in status
+     or an App Layer error code). Details never contain typed input, passwords,
+     tokens, e-mail addresses or free-text messages from Clerk or the server. */
+  var CATEGORY = {
+    USER_NOT_FOUND: 'USER_NOT_FOUND',
+    INVALID_PASSWORD: 'INVALID_PASSWORD',
+    INVALID_CODE: 'INVALID_CODE',
+    CLERK_ERROR: 'CLERK_ERROR',
+    SESSION_CREATION_FAILED: 'SESSION_CREATION_FAILED',
+    NO_ROLE: 'NO_ROLE',
+    APP_LAYER_ERROR: 'APP_LAYER_ERROR',
+    UPSTREAM_UNREACHABLE: 'UPSTREAM_UNREACHABLE',
+    CLIENT_ERROR: 'CLIENT_ERROR'
+  };
+
+  /* Authorization failures returned by the Auth Layer through the App Layer.
+     They are reported with their own explicit code, never as a password error. */
+  var AUTHZ_ERRORS = ['NO_ROLE', 'ACCOUNT_DISABLED', 'ROLE_EXPIRED', 'DUPLICATE_ACCOUNT',
+                      'BAD_ROLE', 'NO_STUDENT_ID', 'FORBIDDEN'];
+
+  /* Keep only identifier-like characters so nothing sensitive can leak. */
+  function safeDetail(v) {
+    var s = String(v === undefined || v === null ? '' : v);
+    return /^[A-Za-z0-9_.:\-]{1,60}$/.test(s) ? s : '';
+  }
+
+  /* A local (non-Clerk) failure raised by app.js during session creation. */
+  function sessionError(detail) {
+    return { oukaCategory: CATEGORY.SESSION_CREATION_FAILED, detail: safeDetail(detail) || 'unknown' };
+  }
+
+  /* Clerk answered but did not finish the sign-in (e.g. needs_second_factor,
+     needs_new_password). Carry the status only. */
+  function signInStatusError(res) {
+    var st = res && res.status ? safeDetail(res.status) : '';
+    if (res && res.status === 'complete' && !res.createdSessionId) st = 'complete_without_session';
+    return sessionError(st ? 'sign_in_status:' + st : 'empty_sign_in_response');
+  }
+
+  /* ------------------------------------------------ second factor (2026-09-14)
+     Clerk can answer a correct password with status 'needs_second_factor', for
+     example when it does not recognise the browser (new-device protection) and
+     sends a one-time code by e-mail. This is part of authentication, not a
+     failure. Supported strategies, in order of preference: */
+  var SECOND_FACTORS = ['email_code', 'totp', 'phone_code'];
+
+  /* What the screen needs for the code step, or null when no supported factor
+     is offered (then the sign-in stays SESSION_CREATION_FAILED as before).
+     hint is Clerk's masked identifier (e.g. a***@example.com) and is checked
+     against a strict pattern so no raw address is ever shown. */
+  function secondFactorPlan(res) {
+    if (!res || res.status !== 'needs_second_factor') return null;
+    var list = res.supportedSecondFactors || [];
+    for (var i = 0; i < SECOND_FACTORS.length; i++) {
+      for (var j = 0; j < list.length; j++) {
+        var f = list[j] || {};
+        if (f.strategy !== SECOND_FACTORS[i]) continue;
+        var prepare = null;
+        if (f.strategy === 'email_code') prepare = f.emailAddressId ? { strategy: 'email_code', emailAddressId: f.emailAddressId } : { strategy: 'email_code' };
+        if (f.strategy === 'phone_code') prepare = f.phoneNumberId ? { strategy: 'phone_code', phoneNumberId: f.phoneNumberId } : { strategy: 'phone_code' };
+        var masked = String(f.safeIdentifier || '');
+        var hint = /^[A-Za-z0-9*._+\-]{1,64}@?[A-Za-z0-9*._\-]{0,64}$/.test(masked) && masked.indexOf('*') >= 0 ? masked : '';
+        var where = f.strategy === 'email_code' ? '登録メールアドレス' : f.strategy === 'phone_code' ? '登録電話番号' : '認証アプリ';
+        return {
+          strategy: f.strategy,
+          prepare: prepare,
+          hint: hint,
+          message: f.strategy === 'totp'
+            ? '認証アプリに表示されている6桁のコードを入れてください。'
+            : where + (hint ? '（' + hint + '）' : '') + 'に6桁の確認コードを送りました。届いたコードを入れてください。'
+        };
+      }
+    }
+    return null;
+  }
+
+  /* The code itself: 6 digits. Error text never contains the typed value. */
+  function validateCode(code) {
+    var c = trim(code).replace(/\s+/g, '');
+    if (!c) return { ok: false, error: '確認コードを入れてください。' };
+    if (!/^[0-9]{6}$/.test(c)) return { ok: false, error: '確認コードは6桁の数字です。' };
+    return { ok: true, code: c };
+  }
+
+  /* attemptSecondFactor() failures. retry=true keeps the code screen open. */
+  function mapSecondFactorError(err) {
+    var code = clerkErrorCode(err);
+    var status = err && (err.status || err.statusCode);
+    if (code === 'form_code_incorrect' || code === 'form_param_format_invalid') {
+      return { retry: true, category: CATEGORY.INVALID_CODE, detail: safeDetail(code), message: '確認コードが違います。もう一度入れてください。' };
+    }
+    if (code === 'verification_expired') {
+      return { retry: false, category: CATEGORY.SESSION_CREATION_FAILED, detail: code, message: '確認コードの期限が切れました。もう一度ログインしてください。' };
+    }
+    if (status === 429 || code === 'too_many_requests' || code === 'verification_failed') {
+      return { retry: false, category: CATEGORY.CLERK_ERROR, detail: safeDetail(code) || 'too_many_requests', message: '確認の試行が多すぎます。少し時間をおいてからログインし直してください。' };
+    }
+    if (status === 0 || code === 'network_error') {
+      return { retry: true, category: CATEGORY.UPSTREAM_UNREACHABLE, detail: 'network_error', message: '通信に失敗しました。電波と回線を確かめてください。' };
+    }
+    return { retry: false, category: CATEGORY.CLERK_ERROR, detail: safeDetail(code) || 'unknown', message: 'ログインできませんでした。もう一度お試しください。' };
+  }
+
+  /* One line for the screen: Japanese message + [CATEGORY: detail]. */
+  function formatError(m) {
+    if (!m) return '';
+    var tag = m.category ? ' [' + m.category + (m.detail && m.detail !== m.category ? ': ' + m.detail : '') + ']' : '';
+    return String(m.message || '') + tag;
+  }
+
   function mapSignInError(err) {
+    if (err && err.oukaCategory) {
+      var d = safeDetail(err.detail);
+      var msgs = {
+        SESSION_CREATION_FAILED: 'ログインを完了できませんでした。管理者に連絡してください。',
+        UPSTREAM_UNREACHABLE: '通信に失敗しました。電波と回線を確かめてください。'
+      };
+      return { code: err.oukaCategory, category: err.oukaCategory, detail: d,
+               message: msgs[err.oukaCategory] || 'ログインできませんでした。もう一度お試しください。' };
+    }
+    var r = mapSignInErrorBase_(err);
+    r.detail = safeDetail(r.code);
+    if (r.code === 'form_identifier_not_found') r.category = CATEGORY.USER_NOT_FOUND;
+    else if (r.code === 'form_password_incorrect') r.category = CATEGORY.INVALID_PASSWORD;
+    else if (r.code === 'network_error') r.category = CATEGORY.UPSTREAM_UNREACHABLE;
+    else r.category = CATEGORY.CLERK_ERROR;
+    return r;
+  }
+
+  function mapSignInErrorBase_(err) {
     var code = clerkErrorCode(err);
     var status = err && (err.status || err.statusCode);
     var map = {
@@ -141,7 +274,9 @@
       form_param_nil:            'ユーザー名とパスワードを入れてください。',
       session_exists:            'すでにログインしています。画面を読み込み直してください。',
       user_locked:               'このアカウントは一時的にロックされています。管理者に連絡してください。',
-      identifier_already_signed_in: 'すでにログインしています。画面を読み込み直してください。'
+      identifier_already_signed_in: 'すでにログインしています。画面を読み込み直してください。',
+      form_password_pwned:       'このパスワードは安全ではないと判定されました。管理者に連絡してください。',
+      needs_new_password:        'パスワードの再設定が必要です。管理者に連絡してください。'
     };
     if (map[code]) return { code: code, message: map[code] };
     if (status === 429 || code === 'too_many_requests') {
@@ -166,10 +301,46 @@
   }
 
   function mapServerError(res) {
+    var r = mapServerErrorBase_(res);
+    var code = res ? String(res.error === undefined ? '' : res.error) : '';
+    r.detail = safeDetail(code) || (res ? 'unknown' : 'no_response');
+    if (AUTHZ_ERRORS.indexOf(code) >= 0) r.category = code;              /* authorization */
+    else if (code === 'UPSTREAM_UNREACHABLE') r.category = CATEGORY.UPSTREAM_UNREACHABLE;
+    else r.category = CATEGORY.APP_LAYER_ERROR;
+    return r;
+  }
+
+  /* A transport failure classified at the fetch call (see app.js api()). */
+  function requestError(category, detail) {
+    return { oukaCategory: CATEGORY[category] || CATEGORY.APP_LAYER_ERROR, detail: safeDetail(detail) || 'unknown' };
+  }
+
+  /* Anything that failed after authentication. Transport failures arrive
+     pre-classified; any other exception is a client-side bug and is labelled
+     CLIENT_ERROR so it is never mistaken for a network or password problem. */
+  function mapRequestError(err) {
+    if (err && err.oukaCategory) {
+      var d = safeDetail(err.detail);
+      var msgs = {
+        UPSTREAM_UNREACHABLE: 'サーバーに接続できませんでした。電波と回線を確かめてください。',
+        APP_LAYER_ERROR: 'サーバーの応答を読めませんでした。',
+        SESSION_CREATION_FAILED: 'ログインの有効期限が切れました。もう一度ログインしてください。'
+      };
+      return { expired: false, category: err.oukaCategory, detail: d,
+               message: msgs[err.oukaCategory] || 'ログインできませんでした。もう一度お試しください。' };
+    }
+    return { expired: false, category: CATEGORY.CLIENT_ERROR,
+             detail: safeDetail(err && err.name ? err.name : '') || 'exception',
+             message: '画面の処理でエラーが起きました。画面を読み込み直してください。' };
+  }
+
+  function mapServerErrorBase_(res) {
     if (!res) return { expired: false, message: '応答がありません。' };
     var code = String(res.error === undefined ? '' : res.error);
     var map = {
-      NO_ROLE:           'このアカウントはまだ登録されていません。管理者に連絡してください。',
+      NO_ROLE:           'ログインはできましたが、このアカウントにはOUKAの権限が登録されていません。管理者に連絡してください。',
+      NO_STUDENT_ID:     'ログインはできましたが、このアカウントに生徒IDが登録されていません。管理者に連絡してください。',
+      FORBIDDEN:         'このアカウントにはこの操作の権限がありません。管理者に連絡してください。',
       ACCOUNT_DISABLED:  'このアカウントは停止されています。管理者に連絡してください。',
       ROLE_EXPIRED:      'このアカウントの有効期間が切れています。管理者に連絡してください。',
       DUPLICATE_ACCOUNT: 'アカウントが二重に登録されています。管理者に連絡してください。',
@@ -177,12 +348,13 @@
       IDENTITY_BAD_AZP:  'この画面のアドレスからはログインできません。管理者に連絡してください。',
       IDENTITY_NO_AZP:   'この画面のアドレスからはログインできません。管理者に連絡してください。',
       IDENTITY_BAD_ISS:  'ログイン設定が正しくありません。管理者に連絡してください。',
-      IDENTITY_NOT_CONFIGURED: 'サーバーのログイン設定が終わっていません。管理者に連絡してください。'
+      IDENTITY_NOT_CONFIGURED: 'サーバーのログイン設定が終わっていません。管理者に連絡してください。',
+      UPSTREAM_UNREACHABLE: 'サーバー内部の接続に失敗しました。時間をおいてやり直してください。'
     };
     if (isExpired(res)) {
       return { expired: true, message: 'ログインの有効期限が切れました。もう一度ログインしてください。' };
     }
-    return { expired: false, message: map[code] || ('ログインできませんでした（' + (code || '不明') + '）。') };
+    return { expired: false, message: map[code] || ('ログインできませんでした（' + (safeDetail(code) || '不明') + '）。') };
   }
 
   /* --------------------------------------------------- 送ってよい形を作る */
@@ -260,6 +432,16 @@
     isAlreadySignedIn: isAlreadySignedIn,
     mapSignInError: mapSignInError,
     mapServerError: mapServerError,
+    mapRequestError: mapRequestError,
+    requestError: requestError,
+    formatError: formatError,
+    sessionError: sessionError,
+    signInStatusError: signInStatusError,
+    SECOND_FACTORS: SECOND_FACTORS,
+    secondFactorPlan: secondFactorPlan,
+    validateCode: validateCode,
+    mapSecondFactorError: mapSecondFactorError,
+    CATEGORY: CATEGORY,
     isExpired: isExpired,
     buildBody: buildBody,
     findForbidden: findForbidden,
