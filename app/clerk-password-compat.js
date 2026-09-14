@@ -1,10 +1,8 @@
 /* Clerk username/password bridge — 2026-09-14
  *
- * app.js still contains the older one-call SignIn API.  This bridge owns only
- * the login form submit event and performs Clerk's current two-step flow:
- *   1) create sign-in with identifier
- *   2) attempt password first factor
- *   3) set the created session active
+ * Owns the login form submit event so app.js's older sign-in call does not run.
+ * Clerk's supported legacy JS password flow accepts identifier + password in a
+ * single signIn.create() call.  Do NOT add strategy:'password' to create().
  *
  * The password is never persisted or sent to OUKA Apps Script.
  */
@@ -29,6 +27,9 @@
     }
     if (code === 'user_locked') {
       return 'このアカウントは一時的にロックされています。管理者に連絡してください。';
+    }
+    if (code === 'session_exists' || code === 'identifier_already_signed_in') {
+      return 'すでにログインしています。画面を読み込み直してください。';
     }
     return 'ログインできませんでした。もう一度お試しください。' + (code ? ' [' + code + ']' : '');
   }
@@ -75,28 +76,26 @@
       var localPassword = password;
       password = null;
 
-      Promise.resolve(clerk.client.signIn.create({ identifier: username }))
-        .then(function (attempt) {
-          if (!attempt || typeof attempt.attemptFirstFactor !== 'function') {
-            throw new Error('password_factor_unavailable');
-          }
-          var p = attempt.attemptFirstFactor({
-            strategy: 'password',
-            password: localPassword
-          });
+      /* Clerk documented password flow: identifier + password in create(). */
+      Promise.resolve(clerk.client.signIn.create({
+        identifier: username,
+        password: localPassword
+      }))
+        .then(function (result) {
           localPassword = null;
           passEl.value = '';
-          return p;
-        })
-        .then(function (result) {
-          if (!result || result.status !== 'complete' || !result.createdSessionId) {
-            throw new Error('sign_in_not_complete');
+
+          if (!result) throw { code: 'sign_in_empty' };
+          if (result.status === 'needs_second_factor') {
+            throw { code: 'needs_second_factor' };
+          }
+          if (result.status !== 'complete' || !result.createdSessionId) {
+            throw { code: 'sign_in_not_complete' };
           }
           return clerk.setActive({ session: result.createdSessionId });
         })
         .then(function () {
-          /* app.js already knows how to restore an existing Clerk session and
-             then ask OUKA App Layer for the user's role.  Reload into that path. */
+          /* app.js restores the active Clerk session, then asks App Layer for role. */
           window.location.reload();
         })
         .catch(function (err) {
