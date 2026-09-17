@@ -1,0 +1,288 @@
+/* ============================================================================
+ * brand-gate.css ― OUKA ブランド「THE GATE（門）」の表現層（2026-09-03）
+ * ----------------------------------------------------------------------------
+ * 正本：SOP/ロゴ_OUKA/00_ブランドガイドライン.md
+ *
+ * 考え方
+ *   ロゴの門は「入口」であり「通過点」である（下を閉じていない＝くぐって出ていく）。
+ *   だからこの層では **門の絵を貼らない**。門の“構造”だけをUIへ移す。
+ *     ・敷居（しきい）＝ 帯の上下に走る細い罫（藍が主・先端が朱＝進む向き）
+ *     ・柱と肩       ＝ 上だけ角を丸めた枠（.gate-frame）
+ *     ・通過         ＝ 左→右の道（.gate-path）と Before / After（.gate-sides）
+ *   色は藍が土台、朱は「意思・行動」だけ（面積5%以下）。
+ *
+ * style.css の後に読み込む。既存クラスの見た目は壊さず、上に足すだけ。
+ * ==========================================================================*/
+
+/* ------------------------------------------------------------------
+ * 0) 共通：門の敷居
+ * ----------------------------------------------------------------*/
+.gate-sill { height: 4px; border: 0; background: var(--gate-rule); border-radius: 2px; }
+
+/* ------------------------------------------------------------------
+ * 1) ヘッダー ― ロゴは正本SVG（シンボル｜縦罫｜OUKA）。CSSで詰めない・触らない
+ * ----------------------------------------------------------------*/
+.site-header { border-bottom: 1px solid var(--line); }
+.brand__logo { height: 42px; width: auto; }
+/* 保護余白＝文字高の0.5倍。校名テキストがロゴに寄りすぎないようにする */
+.brand { gap: 16px; }
+.brand__ja {
+  font-family: var(--serif); font-weight: 700; color: var(--ouka-navy);
+  letter-spacing: .04em; font-size: .78rem;
+}
+.brand__text { padding-left: 2px; }
+.nav-links a { border-radius: 4px; }
+.nav-links a:hover { background: var(--ouka-navy-050); color: var(--ouka-navy-700); }
+/* 現在のページ（.is-current）は門の柱のように下に藍の線 */
+.nav-links a[aria-current="page"] { color: var(--ouka-navy); box-shadow: inset 0 -2px 0 var(--ouka-navy); }
+.lang-switch { border-radius: 4px; }
+.lang-switch button { white-space: nowrap; }   /* 「日本語」が縦に割れるのを防ぐ */
+.lang-switch button[aria-pressed="true"] { background: var(--ouka-navy); }
+
+/* ロゴ自体に校名が入っているので、幅が足りない時は和文の校名テキストを省く。
+ * ロゴが横長（569.8:133）になったぶん、ヘッダーが横にあふれないよう段階的に外す。 */
+/* 校名テキストを隠す時は、style.css の .brand__text{min-width:9.5em} も解除する
+ * （空の箱が残ってナビを押し出さないように） */
+@media (max-width: 1599px) {
+  .brand__ja { display: none; }
+  .brand__text { min-width: 0; padding-left: 0; }
+}
+@media (max-width: 1000px) and (min-width: 641px) {
+  .brand__ja { display: block; }     /* ナビが引き出しに入る幅では校名を戻す */
+}
+@media (max-width: 1000px) {
+  .brand__logo { height: 34px; }
+  .nav-links { inset: 74px 0 auto 0; }
+}
+/* 小さい端末：ロゴだけを残す（最小90px／24mm の規定は下回らない） */
+@media (max-width: 640px) {
+  .brand__logo { height: 30px; }     /* 幅 約129px */
+  .brand { gap: 10px; }
+  /* 言語切替は nowrap にしているぶん幅が要る。狭い画面では詰めて
+   * ヘッダー1行に収める（横スクロールを出さない） */
+  .lang-switch button { padding: 7px 8px; font-size: .76rem; }
+  .nav-actions { gap: 8px; }
+}
+@media (max-width: 380px) {
+  .brand__logo { height: 26px; }     /* 幅 約111px。90px の下限は超えている */
+  .lang-switch button { padding: 6px 6px; font-size: .72rem; }
+  .nav-actions { gap: 6px; }
+  .nav-toggle { width: 42px; height: 42px; }
+}
+
+/* ------------------------------------------------------------------
+ * 2) ボタン ― 角丸を落として「門・柱」の直線的な性格に寄せる
+ *    朱は主要CTAだけ（＝門を通る決意）。他は藍・白。
+ * ----------------------------------------------------------------*/
+.btn { border-radius: 6px; letter-spacing: .03em; }
+.btn--primary { position: relative; }
+.btn--green { background: var(--ouka-navy); }
+.btn--outline { border-width: 1.5px; }
+.btn--ghost { border-radius: 6px; }
+
+/* ------------------------------------------------------------------
+ * 3) ヒーロー ― THE GATE がいちばん伝わる場所
+ *    背景に「門の肩」だけを大きく置く（絵ではなく構造。透明度は低く）。
+ * ----------------------------------------------------------------*/
+/* .hero__inner は padding を「上下 0 左右」で指定していたため .container の左右余白が
+ * 消え、狭い画面で文字が画面の端に当たっていた（既存の不具合）。左右を戻す。 */
+.hero__inner {
+  position: relative; z-index: 2;
+  padding-left: clamp(18px, 4vw, 32px); padding-right: clamp(18px, 4vw, 32px);
+}
+.hero__gate {
+  position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 1;
+}
+/* 門の柱＋肩：上だけ角丸の太い枠を、右側から画面外へ抜けるように置く */
+.hero__gate::before {
+  content: ""; position: absolute;
+  right: -6%; bottom: -14%; width: min(46vw, 560px); height: min(86%, 620px);
+  border: 3px solid rgba(255,255,255,.16);
+  border-bottom: 0;
+  border-radius: 190px 190px 0 0;
+}
+.hero__gate::after {
+  content: ""; position: absolute;
+  right: 4%; bottom: -14%; width: min(30vw, 360px); height: min(62%, 440px);
+  border: 3px solid rgba(255,255,255,.10);
+  border-bottom: 0;
+  border-radius: 130px 130px 0 0;
+}
+/* 中間幅（タブレット）：内側の柱は消し、外側の柱は右へ逃がす */
+@media (max-width: 1024px) {
+  .hero__gate::after { display: none; }
+  .hero__gate::before {
+    right: -18%; width: min(56vw, 430px); border-color: rgba(255,255,255,.13);
+  }
+}
+/* 狭い画面：門の柱が本文の上を横切らないよう、外側へ逃がして薄くする */
+@media (max-width: 760px) {
+  .hero__gate::after { display: none; }
+  .hero__gate::before {
+    right: -34%; bottom: -10%; width: min(96vw, 460px); height: min(58%, 380px);
+    border-color: rgba(255,255,255,.11); border-radius: 150px 150px 0 0;
+  }
+}
+
+/* ヒーローの通過ライン（Nepal → OUKA → Japan） */
+.hero__path {
+  margin: 30px 0 0; padding: 0; list-style: none;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px;
+  font-family: var(--display); letter-spacing: .16em; text-transform: uppercase;
+  font-size: .82rem; font-weight: 700; color: rgba(255,255,255,.72);
+}
+.hero__path li { display: inline-flex; align-items: center; gap: 14px; }
+.hero__path li:not(:last-child)::after { content: "→"; color: rgba(255,255,255,.45); letter-spacing: 0; }
+.hero__path .is-here {
+  color: #fff; background: rgba(255,255,255,.10); border: 1px solid rgba(255,255,255,.34);
+  border-left: 3px solid var(--ouka-red); padding: 6px 14px; border-radius: 4px;
+}
+
+/* ------------------------------------------------------------------
+ * 4) 見出し ― eyebrow は「柱」を左に立てる（中央寄せの帯はそのまま）
+ * ----------------------------------------------------------------*/
+.section-head h2 { font-family: var(--serif); font-weight: 700; }
+
+/* ------------------------------------------------------------------
+ * 5) 門をくぐる物語（トップの GATE セクション）
+ *    こちら側（いまの自分）→ 門の中で身につけるもの → 向こう側（日本で働く自分）
+ * ----------------------------------------------------------------*/
+.gate { background: var(--ouka-navy); color: #E4EBF4; position: relative; overflow: hidden; }
+.gate::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 4px; background: var(--gate-rule); }
+.gate .section-head h2 { color: #fff; }
+.gate .section-head p { color: #C3D2E4; }
+.gate .section-head .eyebrow { color: #A9BFDA; }
+.gate .section-head .eyebrow::after { background: linear-gradient(90deg, rgba(255,255,255,.75) 0 66%, var(--ouka-red) 66% 100%); }
+
+.gate-sides {
+  display: grid; gap: clamp(14px, 2.4vw, 22px);
+  grid-template-columns: 1fr auto 1fr; align-items: stretch;
+  max-width: 1000px; margin: 0 auto;
+}
+.gate-side {
+  background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.16);
+  border-radius: 10px; padding: clamp(20px, 2.6vw, 28px);
+}
+.gate-side--after {
+  background: rgba(255,255,255,.10); border-color: rgba(255,255,255,.30);
+  border-top: 3px solid var(--ouka-red);
+}
+.gate-side b {
+  display: block; font-family: var(--display); font-size: .74rem; font-weight: 700;
+  letter-spacing: .18em; text-transform: uppercase; color: #A9BFDA; margin-bottom: 12px;
+}
+.gate-side--after b { color: #fff; }
+.gate-side ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 9px; }
+.gate-side li { font-size: .95rem; line-height: 1.75; color: #DCE5F0; display: flex; gap: 10px; }
+.gate-side li::before { content: "―"; flex: none; opacity: .55; }
+.gate-side--after li::before { content: "→"; color: var(--ouka-red); opacity: 1; }
+
+/* 中央＝門そのもの。上だけ角丸の枠＝くぐる場所（下は開いている） */
+.gate-arch {
+  display: grid; place-items: end center; min-width: clamp(120px, 18vw, 210px);
+  padding-bottom: 4px;
+}
+.gate-arch__shape {
+  width: 100%; height: 100%; min-height: 200px;
+  border: 3px solid rgba(255,255,255,.55); border-bottom: 0;
+  border-radius: clamp(34px, 30%, 76px) clamp(34px, 30%, 76px) 0 0;
+  display: grid; place-items: center; align-content: center; gap: 6px;
+  padding: 18px 10px 22px; text-align: center;
+}
+/* 門の中はシンボル単体（ガイドライン §3：正式4ロックアップ以外を作らない）。
+ * 文字と組み合わせないため、span 用の指定は置かない。 */
+.gate-arch__shape img { width: clamp(38px, 4.4vw, 52px); height: auto; opacity: .95; }
+@media (max-width: 860px) {
+  .gate-sides { grid-template-columns: 1fr; }
+  .gate-arch { min-height: 0; padding: 4px 0; }
+  .gate-arch__shape { min-height: 124px; width: min(280px, 80%); margin: 0 auto; border-radius: 46px 46px 0 0; }
+}
+
+/* 門の中で身につけるもの（6つ）＝「門を通れる人材を育てる」 */
+.gate-skills {
+  display: grid; gap: 10px; grid-template-columns: repeat(3, minmax(0, 1fr));
+  max-width: 1000px; margin: clamp(22px, 3vw, 34px) auto 0; padding: 0; list-style: none;
+}
+@media (max-width: 860px) { .gate-skills { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .gate-skills { grid-template-columns: 1fr; } }
+.gate-skills li {
+  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.16);
+  border-left: 3px solid rgba(255,255,255,.45);
+  border-radius: 6px; padding: 13px 15px; line-height: 1.6;
+}
+.gate-skills b { display: block; color: #fff; font-size: .98rem; }
+.gate-skills small { display: block; color: #B7C7DC; font-size: .82rem; margin-top: 3px; }
+.gate-note {
+  max-width: 1000px; margin: 22px auto 0; color: #B7C7DC; font-size: .88rem; line-height: 1.8;
+}
+
+/* ------------------------------------------------------------------
+ * 6) カード ― 「門の柱」を上に1本。朱は使わない（面積を守る）
+ * ----------------------------------------------------------------*/
+.card { border-radius: 10px; }
+.card--pillar { border-top: 3px solid var(--ouka-navy); border-image: none; }
+a.card--pillar:hover { border-top-color: var(--ouka-red); }
+.pillar-more { color: var(--ouka-navy-700); }
+a.card--pillar:hover .pillar-more { color: var(--ouka-red); }
+.strength-list li, .faq details, .form-card, .contact-card,
+.assess-cta-box, .fee-includes .box, .notice { border-radius: 10px; }
+.job-chip { border-radius: 6px; }
+
+/* ------------------------------------------------------------------
+ * 7) 企業向けの帯 ― 学生の導線と混ざらないよう地を生成りに保つ
+ * ----------------------------------------------------------------*/
+.biz-band { background: var(--ouka-kinari); border-top: 1px solid var(--line); }
+.biz-band .eyebrow {
+  font-family: var(--display); font-size: .78rem; font-weight: 700; letter-spacing: .2em;
+  text-transform: uppercase; color: var(--ouka-navy-600);
+}
+
+/* ------------------------------------------------------------------
+ * 8) フッター ― 和文サブ「桜花」はここだけ明朝で小さく添える
+ *    （主ロゴは OUKA。桜花花紋は印章用途なのでWebの主ロゴには出さない）
+ * ----------------------------------------------------------------*/
+.site-footer .brand { align-items: center; gap: 18px; flex-wrap: wrap; }
+.site-footer .brand__logo { height: 30px; }
+.site-footer .brand .name small { color: #9FB2C8; font-size: .78rem; letter-spacing: .02em; }
+.wafu { font-family: var(--mincho); letter-spacing: .16em; }
+
+/* ------------------------------------------------------------------
+ * 9) 下層ページの見出し帯 ― 門をくぐった先の各部屋
+ * ----------------------------------------------------------------*/
+.result-hero { background: var(--ouka-navy); position: relative; }
+.result-hero::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: var(--gate-rule); }
+.result-hero h1 { font-family: var(--serif); }
+
+/* ------------------------------------------------------------------
+ * 10) 印刷 ― 門の装飾は落として中身だけ残す
+ * ----------------------------------------------------------------*/
+@media print {
+  .hero__gate, .gate-arch, .hero__path { display: none !important; }
+  .gate { background: #fff !important; color: #000 !important; }
+  .gate .section-head h2, .gate .section-head p { color: #000 !important; }
+  .gate-side, .gate-skills li { border-color: #999 !important; background: #fff !important; }
+  .gate-side li, .gate-skills small { color: #000 !important; }
+  .gate-skills b { color: #000 !important; }
+}
+
+/* ------------------------------------------------------------------
+ * 11) 公開前QA（Ver.1.0）で見つかった狭い画面の折り返し
+ *     英語は語が長く、nowrap 指定のまま縮まないため横スクロールが出ていた。
+ *     デザインは変えず、狭い画面でだけ折り返しを許す。
+ * ----------------------------------------------------------------*/
+/* 320px 級の端末：最小幅指定と nowrap が残っていた2箇所だけ緩める
+ * （390px 以上の見た目は変わらない） */
+@media (max-width: 360px) {
+  .fee-table td.amt { white-space: normal; }                 /* トップの学費表 */
+  .cands { grid-template-columns: minmax(0, 1fr); }          /* 企業ページの候補者カード */
+  .jobcards, .cost-grid, .stats { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 560px) {
+  /* 学費ページ：項目名も <b> のため nowrap が効いて縮まなかった。
+   * 項目名だけ折り返しを許し、金額（b > span）は1行のまま保つ。 */
+  .cost-lines li { flex-wrap: wrap; }
+  .cost-lines b { white-space: normal; }
+  .cost-lines b > span { white-space: nowrap; }
+  .svc { white-space: normal; }            /* 企業ページ：提供状況バッジ */
+}

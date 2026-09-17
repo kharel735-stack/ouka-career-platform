@@ -1,0 +1,13 @@
+# 桜花スキルトレーニングセンター（OUKA Skill Training Center） — robots.txt
+# _tools/build-seo.py が生成。手で編集しない。
+
+User-agent: *
+Allow: /
+
+# 公開不要な作業用ディレクトリ（アップロードしない想定だが念のため）
+Disallow: /_tools/
+Disallow: /docs/
+Disallow: /apps-script/
+Disallow: /*.zip$
+
+Sitemap: https://abas-globalgroup.com/sitemap.xml

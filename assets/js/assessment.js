@@ -73,6 +73,42 @@
     return value;
   }
 
+  /* ---------- 条件によって出す／隠す（showIf）----------
+   * 設問に showIf: { qid: "japaneseLevel", notIn: ["NONE","HIRAGANA"] } と書くと、
+   * その条件を満たすときだけ表示します（in / notIn のどちらでも書けます）。
+   * ★隠れている設問は「必須」を見ません。答えも保存しません
+   *   （例：日本語未経験の人に JLPT を聞かない。空欄のまま送られるのも防ぐ）。
+   * 2026-08-05 代表指示で追加。 */
+  function isVisible(field) {
+    var c = field.showIf;
+    if (!c) return true;
+    var v = state.answers[c.qid];
+    if (c.in)    return c.in.indexOf(v) >= 0;
+    if (c.notIn) return v != null && v !== "" && c.notIn.indexOf(v) < 0;
+    return true;
+  }
+
+  /* いま見えている設問だけを返す。あわせて、隠れた設問の答えは消す */
+  function visibleFields(step) {
+    if (!step.fields) return [];
+    var out = [];
+    step.fields.forEach(function (f) {
+      if (isVisible(f)) out.push(f);
+      else if (state.answers[f.id] !== undefined) {
+        delete state.answers[f.id];          /* 隠れた項目の答えは残さない */
+        save();
+      }
+    });
+    return out;
+  }
+
+  /* この設問の答えが変わると、表示・非表示が変わる設問があるか */
+  function controlsOthers(qid) {
+    var step = STEPS[state.step];
+    if (!step || !step.fields) return false;
+    return step.fields.some(function (f) { return f.showIf && f.showIf.qid === qid; });
+  }
+
   /* ---------- フィールド描画 ---------- */
   function el(tag, attrs, html) {
     var e = document.createElement(tag);
@@ -224,6 +260,9 @@
     var q = document.querySelector('.q[data-qid="' + id + '"]');
     if (q) q.classList.remove("has-error");
     save();
+    /* この答えで出し分けが変わる設問があるときは、その場で描き直す
+       （例：日本語レベルを「未経験」にすると JLPT・JFT が消える） */
+    if (controlsOthers(id)) renderStep();
   }
 
   /* ---------- ステップ描画 ---------- */
@@ -243,7 +282,7 @@
       if (step.noticeKey) {
         container.appendChild(el("div", { "class": "notice notice--warn", style: "margin-bottom:8px" }, OUKA.escapeHtml(OUKA.t(step.noticeKey))));
       }
-      step.fields.forEach(function (f) { container.appendChild(renderField(f)); });
+      visibleFields(step).forEach(function (f) { container.appendChild(renderField(f)); });
     }
 
     updateProgress();
@@ -313,7 +352,8 @@
     var step = STEPS[state.step];
     if (step.isConfirm) return true;
     var firstError = null;
-    step.fields.forEach(function (f) {
+    var shown = visibleFields(step);
+    shown.forEach(function (f) {
       if (!f.required) return;
       var v = state.answers[f.id];
       var ok = (f.type === "consent") ? (v === true || v === "true") : (v !== undefined && v !== null && v !== "");
@@ -329,7 +369,7 @@
       } else if (q) { q.classList.remove("has-error"); }
     });
     // 追加の形式チェック（メール・電話）
-    step.fields.forEach(function (f) {
+    shown.forEach(function (f) {
       var v = state.answers[f.id];
       if (!v) return;
       var q = document.querySelector('.q[data-qid="' + f.id + '"]');

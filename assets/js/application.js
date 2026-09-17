@@ -122,6 +122,9 @@
   }
 
   function showCarryover() {
+    // 診断を受けていない場合は、先に診断を受けてもらう案内を出す
+    var need = document.getElementById("need-assessment");
+    if (need) need.hidden = !!result;
     if (!result) return;
     var box = document.getElementById("carryover");
     var jobsWrap = document.getElementById("carryover-jobs");
@@ -207,6 +210,11 @@
     fieldErr("a_phone", !phone || !OUKA.isPhone(phone));
     var email = document.getElementById("a_email").value.trim();
     fieldErr("a_email", email && !OUKA.isEmail(email));
+    // 2026-08-24 追加：企業へ出すのに必要な項目を必須にする
+    ["a_dob", "a_gender", "a_address", "a_jpLevel", "a_job1", "a_guardianPhone"].forEach(function (id) {
+      var el = document.getElementById(id);
+      fieldErr(id, !el || !String(el.value || "").trim());
+    });
     fieldErr("a_consent", !document.getElementById("a_consent").checked);
     return ok;
   }
@@ -221,8 +229,8 @@
   function contactFallbackHtml() {
     var s = OUKA.cfg.school || {};
     var parts = [];
-    if (s.phone) parts.push('<a href="tel:' + OUKA.escapeHtml(s.phone) + '">' + OUKA.t("common.phone") + "：" + OUKA.escapeHtml(s.phone) + "</a>");
-    if (s.whatsapp) parts.push('<a href="https://wa.me/' + OUKA.escapeHtml(s.whatsapp.replace(/[^0-9]/g, "")) + '" target="_blank" rel="noopener">WhatsApp：' + OUKA.escapeHtml(s.whatsapp) + "</a>");
+    if (s.phone) parts.push('<a href="tel:' + OUKA.escapeHtml((s.phoneTel || s.phone).replace(/[^0-9+]/g, "")) + '">' + OUKA.t("common.phone") + "：" + OUKA.escapeHtml(s.phone) + "</a>");
+    if (s.whatsapp) parts.push('<a href="https://wa.me/' + OUKA.escapeHtml((s.whatsappIntl || s.whatsapp).replace(/[^0-9]/g, "")) + '" target="_blank" rel="noopener">WhatsApp：' + OUKA.escapeHtml(s.whatsapp) + "</a>");
     if (s.email) parts.push('<a href="mailto:' + OUKA.escapeHtml(s.email) + '">' + OUKA.t("common.email") + "：" + OUKA.escapeHtml(s.email) + "</a>");
     return parts.length ? ("<div style='margin-top:8px'>" + parts.join(" ／ ") + "</div>") : "";
   }

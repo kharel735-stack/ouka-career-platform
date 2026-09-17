@@ -16,8 +16,8 @@
   html, body { background: #fff !important; color: #000 !important; font-size: 11pt; }
   a { color: #000 !important; text-decoration: none !important; }
 
-  .result-hero { background: #fff !important; color: #000 !important; padding: 0 0 8mm !important; text-align: left !important; border-bottom: 2px solid #0f3d2e; }
-  .result-hero h1 { color: #0f3d2e !important; font-size: 18pt; }
+  .result-hero { background: #fff !important; color: #000 !important; padding: 0 0 8mm !important; text-align: left !important; border-bottom: 2px solid #12294B; }
+  .result-hero h1 { color: #12294B !important; font-size: 18pt; }
   .result-hero .meta { color: #333 !important; }
 
   .result-wrap { max-width: 100% !important; padding: 0 !important; }
@@ -26,7 +26,7 @@
     border: 1px solid #bbb !important; box-shadow: none !important; padding: 6mm !important;
     margin-top: 5mm !important; break-inside: avoid; page-break-inside: avoid;
   }
-  .result-block h2 { font-size: 12pt; color: #0f3d2e !important; }
+  .result-block h2 { font-size: 12pt; color: #12294B !important; }
 
   .top-job, .detail-card, .score-bar, .pill-list li { break-inside: avoid; page-break-inside: avoid; }
   .top-job .rank { -webkit-print-color-adjust: exact; print-color-adjust: exact; }

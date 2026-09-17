@@ -21,6 +21,10 @@ window.OUKA_I18N = {
   ja: {
     common: {
       langName: "日本語",
+      brandJa: "桜花スキルトレーニングセンター",
+      lumpSum: "一括",
+      legalName: "法人名 / Legal name",
+
       free: "無料",
       required: "必須",
       optional: "任意",
@@ -40,6 +44,7 @@ window.OUKA_I18N = {
       consultNow: "入学相談をする",
       forCompanies: "企業の方はこちら",
       phone: "電話",
+      landline: "固定電話",
       whatsapp: "WhatsApp",
       email: "メール",
       address: "住所",
@@ -48,6 +53,7 @@ window.OUKA_I18N = {
     },
 
     nav: {
+      home: "ホーム",
       about: "学校について",
       education: "教育内容",
       visa: "ビザ・在留資格",
@@ -66,10 +72,36 @@ window.OUKA_I18N = {
       menu: "メニュー"
     },
 
+    /* THE GATE（門）＝ブランドの核心。2026-09-03 ロゴ確定にあわせて追加 */
+    gate: {
+      pathNepal: "Nepal",
+      pathOuka: "OUKA ― 門",
+      pathJapan: "Japan",
+      heading: "OUKAは、日本への「門」です",
+      lead: "門をくぐるのは自分の足です。OUKAは門を開け、くぐれるところまで育てます。",
+      beforeLabel: "門のこちら側",
+      before1: "ネパールでの生活。日本で働いた経験はない",
+      before2: "日本語はまだ十分ではない",
+      before3: "日本の職場で何を求められるか分からない",
+      before4: "将来への不安がある",
+      afterLabel: "門の向こう側",
+      after1: "日本語で指示を受け、報告できる",
+      after2: "職種の基礎と安全のルールが身についている",
+      after3: "時間・挨拶・報連相が当たり前にできる",
+      after4: "日本で働き、10年先まで相談できる相手がいる",
+      s1: "日本語", s1s: "ひらがなから、仕事で使う会話まで",
+      s2: "仕事の技能", s2s: "職種の基礎・道具・安全",
+      s3: "職場の文化", s3s: "時間厳守・挨拶・報連相・清掃",
+      s4: "生活のルール", s4s: "住まい・交通・お金・病院・ごみ",
+      s5: "面接の準備", s5s: "受け答え・姿勢・想定質問の反復",
+      s6: "日本で働く準備", s6s: "評価・書類・渡日までの段取り",
+      note: "OUKAは、誰でも無条件に日本へ送る会社ではありません。門を開けることと、その門を通れる人材を育てることの両方が役割です。就職・渡日・ビザ取得を保証するものではありません。"
+    },
+
     hero: {
       title1: "日本で働く夢を、",
       title2: "現実に変える。",
-      lead: "桜花スキルトレーニングセンターは、日本語だけを教える学校ではありません。仕事の基本・報連相・面接・日本での生活と職場のルールまでを、現場のリズムで一体的に学びます。ネパール・ガイダコットから、日本企業で長く信頼される即戦力（Work to Japan）を育て、渡日後10年までを見据えて一人ひとりに伴走します。",
+      lead: "桜花スキルトレーニングセンターは、日本語だけを教える学校ではありません。仕事の基本・報連相・面接・日本での生活と職場のルールまでを、現場のリズムで一体的に学びます。ネパール・ガイダコットから、特定技能・育成就労で日本就職を目指す人を受け入れ、日本企業で長く信頼される即戦力（Work to Japan）を育て、渡日後10年までを見据えて一人ひとりに伴走します。",
       tagline: "私たちは日本語を教える学校ではありません。日本企業で長く活躍できる人材を育てる教育機関です。"
     },
 
@@ -86,7 +118,7 @@ window.OUKA_I18N = {
 
     about: {
       heading: "学校について",
-      body: "桜花スキルトレーニングセンター（OUKA Skill Training Center）は、ネパール・ガイダコットにある人材育成機関です。私たちは「日本語を教える学校」ではなく、「日本企業で長く活躍できる人材を育てる教育機関」を掲げています。日本語教育に加えて、仕事の基本・報連相・面接・日本での生活と職場のルールまでを一体で学び、教室の中だけでなく現場のリズム（時間厳守・挨拶・清掃・安全・チーム作業）で身につけます。企業さまには「N4です」ではなく「建設適性◯点」のように、人物を数字で見える化してご紹介します。就職・ビザ・渡日・永住などを保証するものではなく、それぞれの目標に向けて条件を満たせるよう、入学から渡日後までていねいに相談・支援を続けます。"
+      body: "桜花（おうか）スキルトレーニングセンター（OUKA Skill Training Center）は、ネパール・ガイダコットにある、日本就職のための人材育成機関です。私たちは「日本語を教える学校（日本語学校）」ではなく、「日本企業で長く活躍できる人材を育てる教育機関」を掲げています。日本語教育に加えて、仕事の基本・報連相・面接・日本での生活と職場のルールまでを一体で学び、教室の中だけでなく現場のリズム（時間厳守・挨拶・清掃・安全・チーム作業）で身につけます。特定技能・育成就労での日本就職を目指す方には、日本語（JLPT・JFT-Basic）と建設現場の実技を並行して訓練します。企業さまには「N4です」ではなく「建設適性◯点」のように、人物を数字で見える化してご紹介します。就職・ビザ・渡日・永住などを保証するものではなく、それぞれの目標に向けて条件を満たせるよう、入学から渡日後までていねいに相談・支援を続けます。"
     },
 
     pillars: {
@@ -124,7 +156,7 @@ window.OUKA_I18N = {
       m1: "STEP 0", step1: "無料適性診断・お問い合わせ", d1: "スマホで5〜10分。まずは向いている仕事の方向性を確認します。",
       m2: "0か月目", step2: "面談・入学相談", d2: "日本語力・経験・希望・費用を確認し、学習の計画を一緒に決めます。",
       m3: "入学時", step3: "入学・レベルチェック", d3: "現在の日本語・体力・適性をチェックし、一人ひとりの到達目標を設定します。",
-      m4: "1〜6か月", step4: "日本語＋職業＋生活の教育", d4: "週5日・9:00〜16:30。現場のリズムで、日本語・現場訓練・職場ルールを一体で学びます。",
+      m4: "1〜6か月", step4: "日本語＋職業＋生活の教育", d4: "週5日・10:00〜16:30。現場のリズムで、日本語・現場訓練・職場ルールを一体で学びます。",
       m5: "5〜6か月", step5: "適性評価・面接練習", d5: "「建設適性◯点」のように人物を評価し、日本企業の面接を想定して繰り返し練習します。",
       m6: "6〜8か月", step6: "企業面接・マッチング", d6: "希望と適性に合う日本企業と面接。内定後、在留資格・ビザの手続きへ進みます。",
       m7: "8〜12か月", step7: "渡日準備・出発", d7: "渡航・生活の準備を整え、日本へ出発。渡日直前まで無料で補習します。",
@@ -191,7 +223,7 @@ window.OUKA_I18N = {
     },
 
     footer: {
-      tagline: "日本企業で長く活躍できる人材を育てる教育機関",
+      tagline: "ネパール発・日本就職のための人材育成機関（桜花／おうか／OUKA）",
       privacy: "個人情報の取扱い",
       terms: "利用規約",
       copyright: "© 2026 Ouka Skill Training Center Pvt. Ltd."
@@ -251,10 +283,28 @@ window.OUKA_I18N = {
     },
 
     application: {
+      needAssessment: "先に適性診断を受けてください。",
+      needAssessmentNote: "診断を受けると、学歴・日本語・経験・希望などが自動で入り、ここでの入力が減ります。企業へお出しできる情報もそろいます。",
       title: "入学・面談のお申し込み",
       intro: "診断を受けた方は、入力済みの情報が自動で反映されます（同じことを何度も入力する必要はありません）。",
       fromAssessment: "適性診断の結果を引き継いでいます。",
       course: "希望コース",
+      f_fullName: "氏名 / Full name",
+      f_fullNameRoman: "氏名（ローマ字） / Full name (Roman)",
+      f_dob: "生年月日 / Date of birth",
+      f_age: "年齢 / Age",
+      f_gender: "性別 / Gender",
+      f_nationality: "国籍 / Nationality",
+      f_phone: "電話番号 / Phone",
+      f_email: "メールアドレス / Email",
+      f_address: "現住所 / Address",
+      f_guardianName: "保護者氏名 / Guardian name",
+      f_guardianPhone: "保護者電話 / Guardian phone",
+      f_jpLevel: "日本語レベル / Japanese level",
+      f_job1: "希望職種 第1 / Preferred 1",
+      f_job2: "希望職種 第2 / Preferred 2",
+      f_job3: "希望職種 第3 / Preferred 3",
+
       interviewDate: "希望面談日時",
       interviewMethod: "面談方法",
       methodVisit: "来校",
@@ -469,6 +519,10 @@ window.OUKA_I18N = {
   en: {
     common: {
       langName: "English",
+      brandJa: "OUKA Skill Training Center",
+      lumpSum: "lump sum",
+      legalName: "Legal name",
+
       free: "Free",
       required: "Required",
       optional: "Optional",
@@ -488,6 +542,7 @@ window.OUKA_I18N = {
       consultNow: "Book a consultation",
       forCompanies: "For companies",
       phone: "Phone",
+      landline: "Landline",
       whatsapp: "WhatsApp",
       email: "Email",
       address: "Address",
@@ -496,6 +551,7 @@ window.OUKA_I18N = {
     },
 
     nav: {
+      home: "Home",
       about: "About",
       education: "Education",
       visa: "Visas",
@@ -512,6 +568,32 @@ window.OUKA_I18N = {
       faq: "FAQ",
       lang: "Language",
       menu: "Menu"
+    },
+
+    /* THE GATE ― the core of the brand */
+    gate: {
+      pathNepal: "Nepal",
+      pathOuka: "OUKA ― The Gate",
+      pathJapan: "Japan",
+      heading: "OUKA is your gate to Japan",
+      lead: "You walk through the gate yourself. OUKA opens it — and trains you until you can pass through.",
+      beforeLabel: "This side of the gate",
+      before1: "Life in Nepal, with no work experience in Japan",
+      before2: "Japanese is not yet good enough",
+      before3: "Unsure what a Japanese workplace expects",
+      before4: "Uncertain about the future",
+      afterLabel: "The other side of the gate",
+      after1: "Can take instructions and report back in Japanese",
+      after2: "Knows the basics of the trade and the safety rules",
+      after3: "Punctuality, greetings and reporting come naturally",
+      after4: "Working in Japan, with someone to consult for 10 years",
+      s1: "Japanese language", s1s: "From hiragana to conversation used at work",
+      s2: "Job skills", s2s: "Trade basics, tools and safety",
+      s3: "Work culture", s3s: "Punctuality, greetings, reporting, cleaning",
+      s4: "Life skills", s4s: "Housing, transport, money, hospitals, rubbish",
+      s5: "Interview preparation", s5s: "Answers, posture and repeated mock questions",
+      s6: "Japan work readiness", s6s: "Assessment, documents and pre-departure steps",
+      note: "OUKA does not send everyone to Japan unconditionally. Our role is both to open the gate and to develop people who can pass through it. Employment, travel to Japan and visa approval are not guaranteed."
     },
 
     hero: {
@@ -572,7 +654,7 @@ window.OUKA_I18N = {
       m1: "STEP 0", step1: "Free aptitude check / inquiry", d1: "5-10 minutes on your phone. See the direction of jobs that may suit you.",
       m2: "Month 0", step2: "Consultation", d2: "We review your Japanese, experience, wishes, and fees, and plan your studies together.",
       m3: "Enrollment", step3: "Enrollment & level check", d3: "We check your Japanese, strength, and aptitude, and set your personal goals.",
-      m4: "Months 1-6", step4: "Japanese + vocational + life education", d4: "5 days/week, 9:00-16:30. Japanese, on-site training, and workplace rules at the rhythm of a real site.",
+      m4: "Months 1-6", step4: "Japanese + vocational + life education", d4: "5 days/week, 10:00-16:30. Japanese, on-site training, and workplace rules at the rhythm of a real site.",
       m5: "Months 5-6", step5: "Aptitude evaluation & interview practice", d5: "Evaluated as 'construction aptitude ◯ points' and coached for Japanese company interviews.",
       m6: "Months 6-8", step6: "Company interview & matching", d6: "Interview with suitable Japanese companies, then residence-status / visa procedures.",
       m7: "Months 8-12", step7: "Preparation & departure", d7: "Prepare for travel and life, then depart for Japan. Free review until just before departure.",
@@ -698,10 +780,28 @@ window.OUKA_I18N = {
     },
 
     application: {
+      needAssessment: "Please take the aptitude assessment first.",
+      needAssessmentNote: "The assessment fills in your education, Japanese level, experience and preferences automatically, so you type less here — and we get what companies need to see.",
       title: "Enrollment / consultation application",
       intro: "If you took the aptitude check, your entries are filled in automatically — no need to re-enter.",
       fromAssessment: "Your aptitude check result has been carried over.",
       course: "Preferred course",
+      f_fullName: "Full name",
+      f_fullNameRoman: "Full name (Roman letters)",
+      f_dob: "Date of birth",
+      f_age: "Age",
+      f_gender: "Gender",
+      f_nationality: "Nationality",
+      f_phone: "Phone number",
+      f_email: "Email address",
+      f_address: "Current address",
+      f_guardianName: "Guardian’s name",
+      f_guardianPhone: "Guardian’s phone",
+      f_jpLevel: "Japanese level",
+      f_job1: "Preferred job type 1",
+      f_job2: "Preferred job type 2",
+      f_job3: "Preferred job type 3",
+
       interviewDate: "Preferred date/time",
       interviewMethod: "Consultation method",
       methodVisit: "In person",
@@ -918,6 +1018,10 @@ window.OUKA_I18N = {
   ne: {
     common: {
       langName: "नेपाली",
+      brandJa: "ओउका स्किल ट्रेनिङ सेन्टर",
+      lumpSum: "एकमुष्ट",
+      legalName: "कानुनी नाम / Legal name",
+
       free: "निःशुल्क",
       required: "आवश्यक",
       optional: "वैकल्पिक",
@@ -937,6 +1041,7 @@ window.OUKA_I18N = {
       consultNow: "भर्ना परामर्श",
       forCompanies: "कम्पनीहरूका लागि",
       phone: "फोन",
+      landline: "ल्यान्डलाइन",
       whatsapp: "WhatsApp",
       email: "इमेल",
       address: "ठेगाना",
@@ -944,6 +1049,7 @@ window.OUKA_I18N = {
       contactStaff: "स्टाफलाई सम्पर्क गर्नुहोस्"
     },
     nav: {
+      home: "गृहपृष्ठ",
       about: "विद्यालयबारे",
       education: "शिक्षा",
       visa: "भिसा",
@@ -961,6 +1067,32 @@ window.OUKA_I18N = {
       lang: "भाषा",
       menu: "मेनु"
     },
+    /* THE GATE ― ब्रान्डको मूल */
+    gate: {
+      pathNepal: "नेपाल",
+      pathOuka: "OUKA ― ढोका",
+      pathJapan: "जापान",
+      heading: "OUKA जापान जाने ढोका हो",
+      lead: "ढोका आफैं पार गर्नुपर्छ। OUKA ढोका खोल्छ, र पार गर्न सक्ने बनाउँछ।",
+      beforeLabel: "ढोकाको यो पट्टि",
+      before1: "नेपालको जीवन। जापानमा काम गरेको अनुभव छैन",
+      before2: "जापानी भाषा अझै पर्याप्त छैन",
+      before3: "जापानी कार्यस्थलले के खोज्छ थाहा छैन",
+      before4: "भविष्यको चिन्ता छ",
+      afterLabel: "ढोकाको त्यो पट्टि",
+      after1: "जापानी भाषामा निर्देशन बुझ्न र रिपोर्ट गर्न सक्ने",
+      after2: "पेसाको आधार र सुरक्षाका नियम सिकेको",
+      after3: "समयपालन, अभिवादन, रिपोर्टिङ स्वाभाविक भएको",
+      after4: "जापानमा काम, र १० वर्षसम्म सल्लाह लिन सक्ने साथ",
+      s1: "जापानी भाषा", s1s: "हिरागाना देखि कामको कुराकानीसम्म",
+      s2: "कामको सीप", s2s: "पेसाको आधार, औजार र सुरक्षा",
+      s3: "कार्यस्थलको संस्कृति", s3s: "समयपालन, अभिवादन, रिपोर्टिङ, सफाई",
+      s4: "जीवनका नियम", s4s: "बास, यातायात, पैसा, अस्पताल, फोहोर",
+      s5: "अन्तर्वार्ता तयारी", s5s: "उत्तर, हाउभाउ र अभ्यास प्रश्न",
+      s6: "जापानमा काम गर्ने तयारी", s6s: "मूल्यांकन, कागजात र प्रस्थानसम्मको तयारी",
+      note: "OUKA सबैलाई बिनाशर्त जापान पठाउने कम्पनी होइन। ढोका खोल्ने र त्यो ढोका पार गर्न सक्ने जनशक्ति तयार गर्ने — दुवै हाम्रो भूमिका हो। रोजगारी, जापान जाने वा भिसाको ग्यारेन्टी गरिँदैन।"
+    },
+
     hero: {
       title1: "जापानमा काम गर्ने सपनालाई,",
       title2: "यथार्थमा बदल्नुहोस्।",
@@ -1125,10 +1257,28 @@ window.OUKA_I18N = {
       scoreUnit: "अंक"
     },
     application: {
+      needAssessment: "पहिले योग्यता मूल्याङ्कन गर्नुहोस्।",
+      needAssessmentNote: "मूल्याङ्कन गरेपछि शिक्षा, जापानी भाषा, अनुभव र इच्छा स्वतः भरिन्छ — यहाँ कम लेख्नुपर्छ, र कम्पनीलाई देखाउने जानकारी पनि पुग्छ।",
       title: "भर्ना / परामर्श आवेदन",
       intro: "जाँच लिनुभएको भए, भरिएको जानकारी स्वतः आउँछ (पटक-पटक लेख्नु पर्दैन)।",
       fromAssessment: "योग्यता जाँचको नतिजा जोडिएको छ।",
       course: "इच्छाएको कोर्स",
+      f_fullName: "पूरा नाम / Full name",
+      f_fullNameRoman: "पूरा नाम (रोमन अक्षर) / Full name (Roman)",
+      f_dob: "जन्म मिति / Date of birth",
+      f_age: "उमेर / Age",
+      f_gender: "लिङ्ग / Gender",
+      f_nationality: "राष्ट्रियता / Nationality",
+      f_phone: "फोन नम्बर / Phone",
+      f_email: "इमेल ठेगाना / Email",
+      f_address: "हालको ठेगाना / Address",
+      f_guardianName: "अभिभावकको नाम / Guardian name",
+      f_guardianPhone: "अभिभावकको फोन / Guardian phone",
+      f_jpLevel: "जापानी स्तर / Japanese level",
+      f_job1: "इच्छाएको पेसा १ / Preferred 1",
+      f_job2: "इच्छाएको पेसा २ / Preferred 2",
+      f_job3: "इच्छाएको पेसा ३ / Preferred 3",
+
       interviewDate: "इच्छाएको परामर्श मिति/समय",
       interviewMethod: "परामर्श तरिका",
       methodVisit: "विद्यालय आउने",

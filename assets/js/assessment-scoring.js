@@ -33,6 +33,30 @@
   var EDU = { MASTER: 1, BACHELOR: 1, DIPLOMA: 0.7, UPPER_SEC: 0.4, LOWER_SEC: 0.2, OTHER: 0.3 };
   var JP_HIGH = { N3_PLUS: 1, N4_PASS: 0.85, N4_LEVEL: 0.65, N5_PASS: 0.45, N5_LEVEL: 0.3, HIRAGANA: 0.12, NONE: 0 };
 
+  /* ---- 日本語の要件（2026-08-05 代表指示）--------------------------------
+   * 職種ごとに「どのくらい日本語が要るか」は違います。ここでは
+   *   ・現在の日本語レベル（japaneseLevel）
+   *   ・JLPTの取得状況（jlptStatus）
+   *   ・ひらがな／カタカナが読めるか
+   * を職種ごとに別の重みで加点します。値は 0〜1（1が満点）。
+   *
+   *   介護       … JLPT N4以上で満点。ひらがな・カタカナが読めることも重視
+   *   外食       … JLPT N5以上あれば満点
+   *   建設       … 日本語未経験でも可（ここで差がつきにくい配点にする）
+   *   製造       … N5相当以上で加点
+   *   ホテル     … N4以上で大幅加点
+   *   通訳・事務 … N3以上で大幅加点
+   * ---------------------------------------------------------------------- */
+  var JLPT_N4 = { N1: 1, N2: 1, N3: 1, N4: 1, N5: 0.4, NONE: 0 };   /* N4以上で満点（介護・ホテル） */
+  var JLPT_N5 = { N1: 1, N2: 1, N3: 1, N4: 1, N5: 1,   NONE: 0 };   /* N5以上で満点（外食） */
+  var JLPT_N3 = { N1: 1, N2: 1, N3: 1, N4: 0.5, N5: 0.2, NONE: 0 }; /* N3以上で満点（通訳・事務） */
+
+  var JP_N5_UP = { N3_PLUS: 1, N4_PASS: 1, N4_LEVEL: 0.9, N5_PASS: 0.8, N5_LEVEL: 0.7, HIRAGANA: 0.2, NONE: 0 };
+  var JP_N4_UP = { N3_PLUS: 1, N4_PASS: 1, N4_LEVEL: 0.85, N5_PASS: 0.5, N5_LEVEL: 0.35, HIRAGANA: 0.1, NONE: 0 };
+  var JP_ANY   = { N3_PLUS: 1, N4_PASS: 1, N4_LEVEL: 1, N5_PASS: 1, N5_LEVEL: 1, HIRAGANA: 0.9, NONE: 0.8 };
+
+  var KANA = { YES: 1, SOME: 0.6, NO: 0 };   /* ひらがな・カタカナが読めるか */
+
   /* --- 職種定義 --- */
   var JOBS = [
     {
@@ -42,7 +66,9 @@
         L("likeActive"), L("outdoorOk"), L("tempOk"), L("likeTools"), L("heightOk"),
         L("teamwork"), L("followRules"), L("punctual"), L("reportFail"), L("dirtyOk"),
         M("expConstruction", YSN, 1.5), M("canLiftHeavy", YSN), M("canStandLong", YSN),
-        M("canOutdoorWork", YSN), M("heightResist", YSN)
+        M("canOutdoorWork", YSN), M("heightResist", YSN),
+        /* 建設：日本語未経験でも受け入れる（ここでは差がつきにくい配点） */
+        M("japaneseLevel", JP_ANY, 0.6), M("canReadHiragana", KANA, 0.4)
       ],
       neededJp: { ja: "N5〜N4を目安（安全のことばと指示が分かること）", en: "Around N5–N4 (understand safety words and instructions)" },
       why: { ja: "体を動かす仕事・屋外・道具の扱い・チームでの安全作業への適性がうかがえます。", en: "You show aptitude for active, outdoor, tool-based work and safe teamwork." },
@@ -54,7 +80,10 @@
       factors: [
         L("likeCare", 1.3), L("elderlyOk", 1.2), L("listenCalm"), L("talkStrangers"),
         L("repetitiveOk"), L("studyDaily"), L("followRules"), L("reportFail"), L("dirtyOk"),
-        M("expCaregiving", YSN, 1.5), M("canNightShift", YSN), M("canStandLong", YSN)
+        M("expCaregiving", YSN, 1.5), M("canNightShift", YSN), M("canStandLong", YSN),
+        /* 介護：JLPT N4以上を重視。ひらがな・カタカナが読めること */
+        M("japaneseLevel", JP_N4_UP, 1.6), M("jlptStatus", JLPT_N4, 1.4),
+        M("canReadHiragana", KANA, 1.0), M("canReadKatakana", KANA, 0.8)
       ],
       neededJp: { ja: "N4以上が望ましい（利用者との会話・記録が必要）", en: "N4 or above preferred (conversation and records with users)" },
       why: { ja: "人の世話・傾聴・落ち着いた対応への適性がうかがえます。介護は日本語の会話力も大切です。", en: "You show aptitude for caring, listening, and calm support. Conversation skills matter in caregiving." },
@@ -80,7 +109,10 @@
         L("likeCookServe", 1.3), L("talkStrangers"), L("busyCalm", 1.2), L("teamwork"),
         L("detailWork"), L("punctual"),
         M("canConverse", YSN), M("canStandLong", YSN), M("canNightShift", YSN),
-        M("expFood", YSN, 1.5)
+        M("expFood", YSN, 1.5),
+        /* 外食：JLPT N5以上あれば十分 */
+        M("japaneseLevel", JP_N5_UP, 1.0), M("jlptStatus", JLPT_N5, 1.0),
+        M("canReadHiragana", KANA, 0.6)
       ],
       neededJp: { ja: "N4を目安（接客・注文のやりとり）", en: "Around N4 (serving and taking orders)" },
       why: { ja: "接客・料理・忙しい環境での落ち着き・チームワークへの適性がうかがえます。", en: "You show aptitude for serving, cooking, staying calm when busy, and teamwork." },
@@ -92,7 +124,10 @@
       factors: [
         L("likeCookServe"), L("talkStrangers", 1.2), L("teamwork"), L("detailWork", 1.2),
         L("busyCalm"), L("punctual"), L("followRules"),
-        M("canConverse", YSN), M("canStandLong", YSN), M("canNightShift", YSN)
+        M("canConverse", YSN), M("canStandLong", YSN), M("canNightShift", YSN),
+        /* ホテル：N4以上で大幅加点（接客のことばが要る） */
+        M("japaneseLevel", JP_N4_UP, 1.8), M("jlptStatus", JLPT_N4, 1.6),
+        M("canReadHiragana", KANA, 0.8)
       ],
       neededJp: { ja: "N4を目安（接客・案内のことば）", en: "Around N4 (guest service and guidance)" },
       why: { ja: "接客・丁寧な作業・チームワーク・落ち着いた対応への適性がうかがえます。", en: "You show aptitude for guest service, careful work, teamwork, and calm handling." },
@@ -104,7 +139,9 @@
       factors: [
         L("repetitiveOk", 1.3), L("detailWork", 1.2), L("likeTools"), L("followRules"),
         L("teamwork"), L("punctual"), L("busyCalm"),
-        M("canStandLong", YSN), M("canNightShift", YSN), M("expManufacturing", YSN, 1.5)
+        M("canStandLong", YSN), M("canNightShift", YSN), M("expManufacturing", YSN, 1.5),
+        /* 製造：N5相当以上で加点 */
+        M("japaneseLevel", JP_N5_UP, 1.2), M("canReadHiragana", KANA, 0.6)
       ],
       neededJp: { ja: "N5〜N4を目安（作業手順・安全のことば）", en: "Around N5–N4 (procedures and safety words)" },
       why: { ja: "正確な反復作業・細かい作業・道具の扱い・安全とチームワークへの適性がうかがえます。", en: "You show aptitude for accurate repetitive work, detail, tools, safety, and teamwork." },
@@ -140,7 +177,9 @@
       factors: [
         M("japaneseLevel", JP_HIGH, 2), L("readComprehend", 1.3), L("talkStrangers"),
         L("detailWork", 1.2), L("interestPC"), L("listenCalm"),
-        M("expPC", YSN), M("education", EDU)
+        M("expPC", YSN), M("education", EDU),
+        /* 通訳・事務：N3以上で大幅加点 */
+        M("jlptStatus", JLPT_N3, 2.0), M("canReadHiragana", KANA, 0.5)
       ],
       neededJp: { ja: "N3以上が望ましい（読み書き・会話・通訳）", en: "N3 or above preferred (read/write, conversation, interpretation)" },
       why: { ja: "日本語の読み書き・会話、正確な事務作業、パソコンへの適性がうかがえます。", en: "You show aptitude for Japanese reading/writing, conversation, accurate office work, and PC use." },

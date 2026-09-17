@@ -135,7 +135,17 @@
     var clearBtn = document.getElementById("btn-clear");
     clearBtn.textContent = (lang() === "en" ? "Delete temporary saved data on this device" : "この端末の一時保存データを削除する");
     clearBtn.addEventListener("click", function () {
-      if (confirm(lang() === "en" ? "Delete saved answers and result from this device?" : "この端末に保存された回答と結果を削除しますか？")) {
+      /* まだ学校へ送れていない場合は、消すと再送できなくなることを伝える。
+         （送信状態は assessment-lead.js が localStorage に残している） */
+      var st = null;
+      try { st = JSON.parse(localStorage.getItem(STORAGE_KEY + "_send_status") || "null"); } catch (e) {}
+      var unsent = !st || st.status !== "SENT";
+      var warn = unsent
+        ? (lang() === "en"
+            ? "\n\nYour data has not been sent to the school yet. If you delete it now, it cannot be sent again."
+            : "\n\nまだ学校へ送信できていません。ここで削除すると、もう一度送ることはできません。")
+        : "";
+      if (confirm((lang() === "en" ? "Delete saved answers and result from this device?" : "この端末に保存された回答と結果を削除しますか？") + warn)) {
         try { localStorage.removeItem(RESULT_KEY); localStorage.removeItem(STORAGE_KEY); } catch (e) {}
         window.location.href = "index.html";
       }

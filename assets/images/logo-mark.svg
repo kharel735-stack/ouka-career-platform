@@ -1,6 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="OUKA">
-  <title>OUKA ─ シンボル（門）</title>
-  <desc>OUKA Skill Training Center の標章。藍地に白の門。図形は SOP/ロゴ_OUKA/svg/OUKA_symbol.svg（正本）から機械的に取り込んでいる。</desc>
-  <rect width="64" height="64" rx="8" fill="#12294B"/>
-  <g transform="translate(3.832,4.000) scale(0.42105)"><g transform="translate(-15.70,-14.04) scale(0.82609)"><path d="M32 178 V70 Q32 30 72 30 H128 Q168 30 168 70 V178" fill="none" stroke="#FFFFFF" stroke-width="26" stroke-linejoin="round"/></g></g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="64" height="64" role="img" aria-label="桜花">
+  <title>桜花花紋</title>
+  <defs>
+    <path id="p" d="M0 0 C -16 -14, -26 -34, -24 -50 C -22 -62, -12 -68, -5 -60 C -3 -57.5, -2 -56.5, 0 -54 C 2 -56.5, 3 -57.5, 5 -60 C 12 -68, 22 -62, 24 -50 C 26 -34, 16 -14, 0 0 Z"/>
+    <mask id="nuki"><rect width="200" height="200" fill="#fff"/>
+      <g transform="translate(100,100)" stroke="#000" stroke-linecap="round" fill="#000">
+        <circle r="9"/>
+        <g stroke-width="4.4"><line y2="-54" transform="rotate(36)"/><line y2="-54" transform="rotate(108)"/><line y2="-54" transform="rotate(180)"/><line y2="-54" transform="rotate(252)"/><line y2="-54" transform="rotate(324)"/></g>
+        <g stroke-width="3.2"><line y2="-34"/><line y2="-34" transform="rotate(72)"/><line y2="-34" transform="rotate(144)"/><line y2="-34" transform="rotate(216)"/><line y2="-34" transform="rotate(288)"/></g>
+      </g>
+    </mask>
+  </defs>
+  <g mask="url(#nuki)"><g transform="translate(100,100) scale(1.28)" fill="#E79BB1">
+    <use href="#p"/><use href="#p" transform="rotate(72)"/><use href="#p" transform="rotate(144)"/>
+    <use href="#p" transform="rotate(216)"/><use href="#p" transform="rotate(288)"/>
+  </g></g>
 </svg>

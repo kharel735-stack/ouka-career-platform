@@ -34,9 +34,20 @@ window.OUKA = (function () {
   function setLang(lang) {
     if (availableLangs().indexOf(lang) < 0) lang = defaultLang();
     try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
+    /* ?lang=… 付きの共有リンクから来た人でも切替ボタンが効くように、
+       アドレス側の指定も選んだ言語に書き換える（getLang は URL を最優先するため） */
+    try {
+      var u = new URL(location.href);
+      if (u.searchParams.get("lang") && u.searchParams.get("lang") !== lang) {
+        u.searchParams.set("lang", lang);
+        history.replaceState(null, "", u.toString());
+      }
+    } catch (e) {}
     document.documentElement.setAttribute("lang", lang);
     applyI18n();
     syncLangButtons(lang);
+    // 住所など config 由来の文言も言語で変わるので、貼り直す
+    try { applyConfig(); } catch (e) {}
     document.dispatchEvent(new CustomEvent("ouka:langchange", { detail: { lang: lang } }));
   }
 
@@ -104,14 +115,21 @@ window.OUKA = (function () {
       if (v) { el.textContent = v; }
       else if (el.hasAttribute("data-config-hide-empty")) { hide(el); }
     });
-    // 電話リンク
-    setLinks("[data-tel]", function (el) {
-      var v = s.phone || ""; return v ? "tel:" + v : "";
+    // 電話リンク（Mobile）：発信は phoneTel（国番号つき）を優先。無ければ表示用の phone
+    setLinks("[data-tel]", function () {
+      var v = s.phoneTel || s.phone || "";
+      return v ? "tel:" + v.replace(/[^0-9+]/g, "") : "";
     });
-    setLinks("[data-landline]", function () { var v = s.landline || ""; return v ? "tel:" + v : ""; });
-    // WhatsApp
+    // 固定電話：発信は landlineTel（国番号つき）を優先。無ければ表示用の landline を使う
+    setLinks("[data-landline]", function () {
+      var v = s.landlineTel || s.landline || "";
+      return v ? "tel:" + v.replace(/[^0-9+]/g, "") : "";
+    });
+    // WhatsApp：wa.me は「国番号＋先頭0を除いた番号」の数字のみ。
+    // 表示用の whatsapp（+81-09017583522）から機械的に作ると 0 が残って繋がらないため、
+    // whatsappIntl（819017583522）を優先して使う。
     setLinks("[data-whatsapp]", function () {
-      var v = (s.whatsapp || "").replace(/[^0-9]/g, "");
+      var v = (s.whatsappIntl || s.whatsapp || "").replace(/[^0-9]/g, "");
       return v ? "https://wa.me/" + v : "";
     });
     // メール
@@ -124,7 +142,11 @@ window.OUKA = (function () {
     fillText("[data-show='landline']", s.landline);
     fillText("[data-show='whatsapp']", s.whatsapp);
     fillText("[data-show='email']", s.email);
-    fillText("[data-show='address-ja']", s.addressJa);
+    // 住所は表示言語に合わせる（ネパール語のときは日本語の住所を出さない）
+    var lang = document.documentElement.getAttribute("lang") || "ja";
+    fillText("[data-show='address-ja']",
+             lang === "ne" ? (s.addressNe || s.addressEn) :
+             lang === "en" ? (s.addressEn || s.addressJa) : s.addressJa);
     fillText("[data-show='address-en']", s.addressEn);
   }
 

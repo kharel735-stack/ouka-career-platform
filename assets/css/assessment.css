@@ -108,7 +108,7 @@
  * ==========================================================================*/
 .result-hero { background: var(--green-900); color:#fff; padding: clamp(28px,6vw,52px) 0; text-align:center; }
 .result-hero h1 { color:#fff; font-size: clamp(1.6rem,5vw,2.4rem); }
-.result-hero .meta { color:#cfe0d8; font-size: .95rem; }
+.result-hero .meta { color:#C8D6E8; font-size: .95rem; }
 .result-wrap { max-width: 860px; margin: 0 auto; padding: 0 clamp(16px,4vw,24px) 64px; }
 
 .result-block { background:#fff; border:1px solid var(--line); border-radius: var(--radius); padding: clamp(20px,4vw,32px); margin-top: 24px; box-shadow: var(--shadow-sm); }
