@@ -61,7 +61,7 @@
   var JOBS = [
     {
       code: "CONSTRUCTION",
-      name: { ja: "建設", en: "Construction" },
+      name: { ja: "建設（電気・配管・土木・解体等）", en: "Construction (electrical/plumbing/civil/demolition)" },
       factors: [
         L("likeActive"), L("outdoorOk"), L("tempOk"), L("likeTools"), L("heightOk"),
         L("teamwork"), L("followRules"), L("punctual"), L("reportFail"), L("dirtyOk"),
@@ -91,7 +91,7 @@
     },
     {
       code: "AGRICULTURE",
-      name: { ja: "農業", en: "Agriculture" },
+      name: { ja: "農業・畜産", en: "Agriculture / Livestock" },
       factors: [
         L("outdoorOk", 1.2), L("earlyOk"), L("likeActive"), L("likeNature", 1.2),
         L("repetitiveOk"), L("tempOk"), L("dirtyOk"),
@@ -135,7 +135,7 @@
     },
     {
       code: "MANUFACTURING",
-      name: { ja: "製造", en: "Manufacturing" },
+      name: { ja: "工場・製造", en: "Factory / Manufacturing" },
       factors: [
         L("repetitiveOk", 1.3), L("detailWork", 1.2), L("likeTools"), L("followRules"),
         L("teamwork"), L("punctual"), L("busyCalm"),
@@ -146,6 +146,32 @@
       neededJp: { ja: "N5〜N4を目安（作業手順・安全のことば）", en: "Around N5–N4 (procedures and safety words)" },
       why: { ja: "正確な反復作業・細かい作業・道具の扱い・安全とチームワークへの適性がうかがえます。", en: "You show aptitude for accurate repetitive work, detail, tools, safety, and teamwork." },
       prepare: { ja: "作業手順の日本語と、正確さ・時間厳守・安全の習慣を練習しましょう。", en: "Practice procedure Japanese and accuracy, punctuality, and safety habits." }
+    },
+    {
+      code: "BUILDING_CLEANING",
+      name: { ja: "ビルクリーニング", en: "Building Cleaning" },
+      factors: [
+        L("repetitiveOk", 1.3), L("detailWork", 1.2), L("dirtyOk", 1.2), L("followRules"),
+        L("punctual"), L("reportFail"), L("teamwork"),
+        M("canStandLong", YSN, 1.2), M("canNightShift", YSN), M("canConverse", YSN),
+        M("japaneseLevel", JP_N5_UP, 0.8), M("canReadHiragana", KANA, 0.5)
+      ],
+      neededJp: { ja: "N5〜N4を目安（清掃手順・薬剤・安全表示のことば）", en: "Around N5–N4 (cleaning procedures, chemicals and safety signs)" },
+      why: { ja: "正確な反復作業、細部への注意、ルール遵守、立ち仕事への適性がうかがえます。", en: "You show aptitude for accurate repetitive work, attention to detail, rules and standing work." },
+      prepare: { ja: "清掃用具・薬剤・危険表示、報告の日本語を練習しましょう。", en: "Practice Japanese for cleaning tools, chemicals, hazard signs and reporting." }
+    },
+    {
+      code: "DRIVING_TRANSPORT",
+      name: { ja: "運転・運送", en: "Driving / Transport" },
+      factors: [
+        L("followRules", 1.4), L("punctual", 1.3), L("reportFail"), L("listenCalm"),
+        L("teamwork"), L("busyCalm"),
+        M("expDriving", YSN, 2.0), M("canConverse", YSN, 1.0),
+        M("japaneseLevel", JP_N4_UP, 1.2), M("canReadHiragana", KANA, 0.6)
+      ],
+      neededJp: { ja: "N4前後を目安（安全指示・標識・報告連絡の理解を重視）", en: "Around N4 (safety instructions, signs and reporting)" },
+      why: { ja: "運転経験、ルール遵守、時間管理、落ち着いた報告への適性がうかがえます。", en: "You show aptitude through driving experience, rule compliance, time management and calm reporting." },
+      prepare: { ja: "日本の交通・安全用語、報連相、仕事で使う読み取りを練習しましょう。", en: "Practice Japanese traffic/safety terms, reporting and work-related reading." }
     },
     {
       code: "AUTO_MAINTENANCE",
