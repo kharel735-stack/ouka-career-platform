@@ -105,17 +105,19 @@ window.OUKA_CONFIG = {
     CAREGIVING:           "active",
     AGRICULTURE:          "active",
     FOOD_SERVICE:         "active",
-    HOSPITALITY:          "active",
+    HOSPITALITY:          "hidden",
     MANUFACTURING:        "active",
-    AUTO_MAINTENANCE:     "active",
-    IT_ENGINEERING:       "active",
-    OFFICE_INTERPRETATION:"active"
+    AUTO_MAINTENANCE:     "hidden",
+    IT_ENGINEERING:       "hidden",
+    OFFICE_INTERPRETATION:"hidden",
+    BUILDING_CLEANING:    "active",
+    DRIVING_TRANSPORT:    "active"
   },
 
   behavior: {
     defaultLang: "ne",   // ★初回訪問はネパール語で表示（日本語/英語へはヘッダーで切替）
     availableLangs: ["ja", "en", "ne"],
-    assessmentVersion: "v1.0",
+    assessmentVersion: "v1.1",
     applicationSource: "OUKA_WEBSITE",
     storageKey: "ouka_assessment_v1"
   }
