@@ -91,6 +91,25 @@
     var __c = String(answers.privacyConsent || "").toUpperCase();
     d.privacyConsent = (__c === "YES" || __c === "TRUE") ? "YES" : "NO";
 
+    /* Lead Masterに専用列がまだない重要回答は、既存の「備考」列へ構造化して残す。
+       本番Apps Scriptの列構成を変更せず、回答消失を防ぐための互換レイヤー。 */
+    var extraKeys = [
+      "pastJobs","qualifications","goodTasks","weakTasks",
+      "expManufacturing","expDriving","expPC","expTeam","expOutdoor","expNightShift","expStanding",
+      "studyDaysPerWeek","canHomeworkDaily","canOnline","hasSmartphone","hasInternet",
+      "canSharedLiving","routeInterest","preferredJob2","preferredJob3"
+    ];
+    var extraParts = [];
+    extraKeys.forEach(function (k) {
+      var v = answers[k];
+      if (Array.isArray(v)) v = v.join(",");
+      if (v !== undefined && v !== null && String(v).trim() !== "") extraParts.push(k + "=" + String(v));
+    });
+    if (extraParts.length) {
+      var originalGoal = String(d.futureGoal || "").trim();
+      d.futureGoal = (originalGoal ? originalGoal + "\n" : "") + "[OUKA_EXTRA_DATA] " + extraParts.join(" | ");
+    }
+
     d.formType = "ASSESSMENT";
     d.applicationSource = (CFG.behavior && CFG.behavior.applicationSource) || "OUKA_WEBSITE";
     d.assessmentVersion = (CFG.behavior && CFG.behavior.assessmentVersion) || "";
