@@ -73,7 +73,7 @@ window.OUKA_QUESTIONS = {
         { id: "phone",         type: "tel",    required: true,  label: { ja: "電話番号", en: "Phone number" } },
         { id: "whatsapp",      type: "tel",    required: true, label: { ja: "WhatsApp番号", en: "WhatsApp number" } },
         { id: "email",         type: "email",  required: false, label: { ja: "メールアドレス", en: "Email" } },
-        { id: "emergencyContact", type: "text", required: false, label: { ja: "緊急連絡先", en: "Emergency contact" } },
+        { id: "emergencyContact", type: "text", required: true, label: { ja: "緊急連絡先", en: "Emergency contact" } },
         { id: "guardianName",  type: "text",   required: true, label: { ja: "保護者氏名", en: "Guardian name" } },
         { id: "guardianPhone", type: "tel",    required: true, label: { ja: "保護者電話番号", en: "Guardian phone" } },
         { id: "passportStatus", type: "radio", required: true, label: { ja: "パスポートの有無", en: "Passport" },
@@ -149,17 +149,17 @@ window.OUKA_QUESTIONS = {
             { value: "2_3", label: { ja: "2〜3時間", en: "2–3h" } },
             { value: "O3",  label: { ja: "3時間以上", en: "Over 3h" } }
           ] },
-        { id: "studyDaysPerWeek", type: "select", required: false, label: { ja: "週に勉強できる日数", en: "Study days per week" },
+        { id: "studyDaysPerWeek", type: "select", required: true, label: { ja: "週に勉強できる日数", en: "Study days per week" },
           options: [
             { value: "1_2", label: { ja: "1〜2日", en: "1–2 days" } },
             { value: "3_4", label: { ja: "3〜4日", en: "3–4 days" } },
             { value: "5_6", label: { ja: "5〜6日", en: "5–6 days" } },
             { value: "7",   label: { ja: "毎日",   en: "Every day" } }
           ] },
-        { id: "canHomeworkDaily", type: "radio", required: false, label: { ja: "宿題を毎日できますか", en: "Can you do homework daily?" }, options: OUKA_OPT.yesNo },
-        { id: "canOnline",        type: "radio", required: false, label: { ja: "オンライン授業を受けられますか", en: "Can you attend online classes?" }, options: OUKA_OPT.yesNo },
-        { id: "hasSmartphone",    type: "radio", required: false, label: { ja: "スマートフォンを持っていますか", en: "Do you have a smartphone?" }, options: OUKA_OPT.yesNo },
-        { id: "hasInternet",      type: "radio", required: false, label: { ja: "インターネット環境がありますか", en: "Do you have internet access?" }, options: OUKA_OPT.yesNo }
+        { id: "canHomeworkDaily", type: "radio", required: true, label: { ja: "宿題を毎日できますか", en: "Can you do homework daily?" }, options: OUKA_OPT.yesNo },
+        { id: "canOnline",        type: "radio", required: true, label: { ja: "オンライン授業を受けられますか", en: "Can you attend online classes?" }, options: OUKA_OPT.yesNo },
+        { id: "hasSmartphone",    type: "radio", required: true, label: { ja: "スマートフォンを持っていますか", en: "Do you have a smartphone?" }, options: OUKA_OPT.yesNo },
+        { id: "hasInternet",      type: "radio", required: true, label: { ja: "インターネット環境がありますか", en: "Do you have internet access?" }, options: OUKA_OPT.yesNo }
       ]
     },
 
@@ -188,7 +188,7 @@ window.OUKA_QUESTIONS = {
             { value: "LEFT",      label: { ja: "中退",   en: "Left before finishing" } }
           ] },
         { id: "currentJob",     type: "text",     required: true, label: { ja: "現在の仕事", en: "Current job" } },
-        { id: "pastJobs",       type: "textarea", required: false, label: { ja: "過去の職歴", en: "Past work history" } },
+        { id: "pastJobs",       type: "textarea", required: true, label: { ja: "過去の職歴（ない場合は「なし」）", en: "Past work history (write None if none)" } },
         { id: "experienceYears", type: "select", required: true, label: { ja: "職務経験年数", en: "Years of work experience" },
           options: [
             { value: "NONE", label: { ja: "なし",     en: "None" } },
@@ -204,13 +204,13 @@ window.OUKA_QUESTIONS = {
         { id: "expManufacturing", type: "radio", required: true, label: { ja: "製造の経験", en: "Manufacturing experience" }, options: OUKA_OPT.yesSomeNo },
         { id: "expDriving",       type: "radio", required: true, label: { ja: "運転の経験（免許）", en: "Driving experience (license)" }, options: OUKA_OPT.yesSomeNo },
         { id: "expPC",            type: "radio", required: true, label: { ja: "パソコンの経験", en: "PC experience" }, options: OUKA_OPT.yesSomeNo },
-        { id: "qualifications",   type: "textarea", required: false, label: { ja: "資格（あれば）", en: "Qualifications (if any)" } },
-        { id: "goodTasks",        type: "textarea", required: false, label: { ja: "得意な作業", en: "Tasks you are good at" } },
-        { id: "weakTasks",        type: "textarea", required: false, label: { ja: "苦手な作業", en: "Tasks you find hard" } },
-        { id: "expTeam",      type: "radio", required: false, label: { ja: "チームで働いた経験", en: "Teamwork experience" }, options: OUKA_OPT.yesNo },
-        { id: "expOutdoor",   type: "radio", required: false, label: { ja: "屋外作業の経験", en: "Outdoor work experience" }, options: OUKA_OPT.yesNo },
-        { id: "expNightShift", type: "radio", required: false, label: { ja: "夜勤の経験", en: "Night-shift experience" }, options: OUKA_OPT.yesNo },
-        { id: "expStanding",  type: "radio", required: false, label: { ja: "長時間立って働いた経験", en: "Long standing-work experience" }, options: OUKA_OPT.yesNo }
+        { id: "qualifications",   type: "textarea", required: true, label: { ja: "資格・免許・合格試験（ない場合は「なし」）", en: "Qualifications, licenses and passed skill tests (write None if none)" } },
+        { id: "goodTasks",        type: "textarea", required: true, label: { ja: "得意な作業・具体的な職種（建設なら電気・配管・土木・解体など）", en: "Tasks/specific trade you are good at (e.g. electrical, plumbing, civil, demolition)" } },
+        { id: "weakTasks",        type: "textarea", required: true, label: { ja: "苦手な作業・避けたい作業（ない場合は「なし」）", en: "Tasks you find difficult or want to avoid (write None if none)" } },
+        { id: "expTeam",      type: "radio", required: true, label: { ja: "チームで働いた経験", en: "Teamwork experience" }, options: OUKA_OPT.yesNo },
+        { id: "expOutdoor",   type: "radio", required: true, label: { ja: "屋外作業の経験", en: "Outdoor work experience" }, options: OUKA_OPT.yesNo },
+        { id: "expNightShift", type: "radio", required: true, label: { ja: "夜勤の経験", en: "Night-shift experience" }, options: OUKA_OPT.yesNo },
+        { id: "expStanding",  type: "radio", required: true, label: { ja: "長時間立って働いた経験", en: "Long standing-work experience" }, options: OUKA_OPT.yesNo }
       ]
     },
 
@@ -237,15 +237,15 @@ window.OUKA_QUESTIONS = {
         { id: "talkStrangers",  type: "likert", required: true, label: { ja: "知らない人とも話せる", en: "I can talk with people I don't know" } },
         { id: "busyCalm",       type: "likert", required: true, label: { ja: "忙しい時間でも落ち着いて動ける", en: "I stay calm when it's busy" } },
         { id: "teamwork",       type: "likert", required: true, label: { ja: "チームで協力できる", en: "I can cooperate in a team" } },
-        { id: "followOrders",   type: "likert", label: { ja: "上司の指示を守れる", en: "I can follow a supervisor's instructions" } },
+        { id: "followOrders",   type: "likert", required: true, label: { ja: "上司の指示を守れる", en: "I can follow a supervisor's instructions" } },
         { id: "punctual",       type: "likert", required: true, label: { ja: "時間を守れる", en: "I keep time / am punctual" } },
-        { id: "askQuestions",   type: "likert", label: { ja: "分からないことを質問できる", en: "I can ask when I don't understand" } },
+        { id: "askQuestions",   type: "likert", required: true, label: { ja: "分からないことを質問できる", en: "I can ask when I don't understand" } },
         { id: "reportFail",     type: "likert", required: true, label: { ja: "失敗したときに報告できる", en: "I can report when I make a mistake" } },
         { id: "studyDaily",     type: "likert", required: true, label: { ja: "毎日勉強を続けられる", en: "I can keep studying every day" } },
         { id: "followRules",    type: "likert", required: true, label: { ja: "日本のルールを守る意思がある", en: "I intend to follow the rules in Japan" } },
-        { id: "liveApart",      type: "likert", label: { ja: "家族と離れて生活できる", en: "I can live apart from my family" } },
-        { id: "workLong3y",     type: "likert", label: { ja: "3年以上日本で働きたい", en: "I want to work in Japan for 3+ years" } },
-        { id: "valueSkill",     type: "likert", label: { ja: "収入だけでなく技能習得も大切だと思う", en: "Not just income — gaining skills matters to me" } },
+        { id: "liveApart",      type: "likert", required: true, label: { ja: "家族と離れて生活できる", en: "I can live apart from my family" } },
+        { id: "workLong3y",     type: "likert", required: true, label: { ja: "3年以上日本で働きたい", en: "I want to work in Japan for 3+ years" } },
+        { id: "valueSkill",     type: "likert", required: true, label: { ja: "収入だけでなく技能習得も大切だと思う", en: "Not just income — gaining skills matters to me" } },
         { id: "interestPC",     type: "likert", required: true, label: { ja: "パソコンを使う仕事に興味がある", en: "I'm interested in computer-based work" } },
         { id: "likeLogic",      type: "likert", required: true, label: { ja: "計算や論理的に考えることが好き", en: "I like calculation and logical thinking" } },
         { id: "readComprehend", type: "likert", required: true, label: { ja: "文章を読んで理解することが得意", en: "I'm good at reading and understanding text" } },
@@ -269,7 +269,7 @@ window.OUKA_QUESTIONS = {
             { value: "SOME", label: { ja: "少し不安がある", en: "A little uneasy" } },
             { value: "NO",   label: { ja: "とても不安がある", en: "Very uneasy" } }
           ] },
-        { id: "bloodResist",   type: "radio", required: false, label: { ja: "血を見ることへの抵抗", en: "Comfort with seeing blood" },
+        { id: "bloodResist",   type: "radio", required: true, label: { ja: "血を見ることへの抵抗", en: "Comfort with seeing blood" },
           options: [
             { value: "YES",  label: { ja: "抵抗はない",   en: "Comfortable" } },
             { value: "SOME", label: { ja: "少し苦手",     en: "A little" } },
@@ -289,7 +289,7 @@ window.OUKA_QUESTIONS = {
         { id: "preferredJob1", type: "jobselect", required: true, label: { ja: "希望職種（第1希望）", en: "Preferred job (1st)" } },
         { id: "preferredJob2", type: "jobselect", required: true, label: { ja: "希望職種（第2希望）", en: "Preferred job (2nd)" } },
         { id: "preferredJob3", type: "jobselect", required: false, label: { ja: "希望職種（第3希望）", en: "Preferred job (3rd)" } },
-        { id: "preferredLocation", type: "text", required: false, label: { ja: "希望勤務地（あれば）", en: "Preferred work location (if any)" } },
+        { id: "preferredLocation", type: "text", required: true, label: { ja: "希望勤務地（こだわらない場合は「どこでも可」）", en: "Preferred work location (write Anywhere if no preference)" } },
         { id: "routeInterest", type: "checkbox", required: true,
           label: { ja: "日本へ行く方法として考えているもの（いくつでも）",
                    en: "Which routes to Japan are you considering? (choose any)",
@@ -318,7 +318,7 @@ window.OUKA_QUESTIONS = {
         { id: "canNightShiftPref", type: "radio", required: true, label: { ja: "夜勤は可能ですか", en: "Night shifts possible?" }, options: OUKA_OPT.yesNo },
         { id: "canOvertime",       type: "radio", required: true, label: { ja: "残業は可能ですか", en: "Overtime possible?" }, options: OUKA_OPT.yesNo },
         { id: "canDorm",           type: "radio", required: true, label: { ja: "寮生活は可能ですか", en: "Dormitory living possible?" }, options: OUKA_OPT.yesNo },
-        { id: "canSharedLiving",   type: "radio", required: false, label: { ja: "共同生活は可能ですか", en: "Shared living possible?" }, options: OUKA_OPT.yesNo },
+        { id: "canSharedLiving",   type: "radio", required: true, label: { ja: "共同生活は可能ですか", en: "Shared living possible?" }, options: OUKA_OPT.yesNo },
         { id: "desiredDepartureDate", type: "select", required: true, label: { ja: "日本へ行きたい時期", en: "When you'd like to go to Japan" },
           options: [
             { value: "ASAP",    label: { ja: "できるだけ早く", en: "As soon as possible" } },
@@ -333,14 +333,14 @@ window.OUKA_QUESTIONS = {
             { value: "3_5", label: { ja: "3〜5年",  en: "3–5 years" } },
             { value: "O5",  label: { ja: "5年以上", en: "Over 5 years" } }
           ] },
-        { id: "futureGoal",  type: "textarea", required: false, label: { ja: "将来の目標", en: "Future goal" } },
+        { id: "futureGoal",  type: "textarea", required: true, label: { ja: "将来の目標", en: "Future goal" } },
         { id: "familyConsent", type: "radio", required: true, label: { ja: "家族の同意はありますか", en: "Do you have your family's consent?" },
           options: [
             { value: "YES",        label: { ja: "はい",       en: "Yes" } },
             { value: "DISCUSSING", label: { ja: "相談中",     en: "Discussing" } },
             { value: "NO",         label: { ja: "いいえ",     en: "No" } }
           ] },
-        { id: "needTuitionConsult", type: "radio", required: false, label: { ja: "学費の支払相談が必要ですか", en: "Do you need to discuss tuition payment?" }, options: OUKA_OPT.yesNo },
+        { id: "needTuitionConsult", type: "radio", required: true, label: { ja: "学費の支払相談が必要ですか", en: "Do you need to discuss tuition payment?" }, options: OUKA_OPT.yesNo },
         { id: "interviewRequested", type: "radio", required: true, label: { ja: "無料面談を希望しますか", en: "Would you like a free consultation?" }, options: OUKA_OPT.yesNo }
       ]
     },
