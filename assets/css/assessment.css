@@ -61,6 +61,17 @@
 .opt-btn:has(input:checked) { border-color: var(--pink-600); background: var(--sakura-200); box-shadow: 0 0 0 1px var(--pink-600) inset; }
 .opt-btn input:focus-visible ~ .dot { outline: 3px solid var(--sakura); outline-offset: 2px; }
 
+/* ---- 複数選択（checkbox） ---- */
+.opt-btn .check {
+  width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--muted);
+  flex: none; display: grid; place-items: center;
+}
+.opt-btn input:checked ~ .check { border-color: var(--pink-600); background: var(--pink-600); }
+.opt-btn input:checked ~ .check::after {
+  content: "✓"; color: #fff; font-size: 15px; font-weight: 800; line-height: 1;
+}
+.opt-btn input:focus-visible ~ .check { outline: 3px solid var(--sakura); outline-offset: 2px; }
+
 /* ---- likert（5段階） ---- */
 .likert { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 6px; }
 .likert label {
