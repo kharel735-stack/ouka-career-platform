@@ -65,6 +65,13 @@
     }
     var opts = field.options;
     if (field.type === "jobselect") opts = jobSelectOptions();
+    if (field.type === "checkbox" && Array.isArray(value)) {
+      if (!value.length) return "—";
+      return value.map(function (v) {
+        var foundCb = (opts || []).filter(function (o) { return o.value === v; })[0];
+        return foundCb ? L(foundCb.label) : v;
+      }).join(" / ");
+    }
     if (opts) {
       var found = opts.filter(function (o) { return o.value === value; })[0];
       if (found) return L(found.label);
@@ -232,6 +239,48 @@
       return group;
     }
 
+    if (t === "checkbox") {
+      var cbGroup = el("div", { "class": "opt-btn-group checkbox-group", role: "group" });
+      var selected = Array.isArray(val) ? val.slice() : [];
+
+      field.options.forEach(function (o) {
+        var id = "f_" + field.id + "_" + o.value;
+        var label = el("label", { "class": "opt-btn", "for": id });
+        var input = el("input", { type: "checkbox", id: id, name: field.id, value: o.value });
+
+        if (selected.indexOf(o.value) >= 0) input.setAttribute("checked", "checked");
+
+        input.addEventListener("change", function () {
+          var current = Array.isArray(state.answers[field.id]) ? state.answers[field.id].slice() : [];
+
+          if (input.checked) {
+            if (o.value === "UNSURE") {
+              current = ["UNSURE"];
+              cbGroup.querySelectorAll('input[type="checkbox"]').forEach(function (x) {
+                if (x !== input) x.checked = false;
+              });
+            } else {
+              current = current.filter(function (v) { return v !== "UNSURE"; });
+              var unsure = cbGroup.querySelector('input[value="UNSURE"]');
+              if (unsure) unsure.checked = false;
+              if (current.indexOf(o.value) < 0) current.push(o.value);
+            }
+          } else {
+            current = current.filter(function (v) { return v !== o.value; });
+          }
+
+          setAnswer(field.id, current);
+        });
+
+        label.appendChild(input);
+        label.appendChild(el("span", { "class": "check", "aria-hidden": "true" }));
+        label.appendChild(el("span", null, OUKA.escapeHtml(L(o.label))));
+        cbGroup.appendChild(label);
+      });
+
+      return cbGroup;
+    }
+
     if (t === "likert") {
       var box = el("div", null, "");
       var lk = el("div", { "class": "likert", role: "radiogroup" });
@@ -286,7 +335,7 @@
   }
 
   function setAnswer(id, value) {
-    if (value === "" || value === null || value === undefined) delete state.answers[id];
+    if (value === "" || value === null || value === undefined || (Array.isArray(value) && value.length === 0)) delete state.answers[id];
     else state.answers[id] = value;
     // エラー表示解除
     var q = document.querySelector('.q[data-qid="' + id + '"]');
@@ -388,14 +437,18 @@
     shown.forEach(function (f) {
       if (!f.required) return;
       var v = state.answers[f.id];
-      var ok = (f.type === "consent") ? (v === true || v === "true") : (v !== undefined && v !== null && v !== "");
+      var ok = (f.type === "consent")
+        ? (v === true || v === "true")
+        : (f.type === "checkbox")
+          ? (Array.isArray(v) && v.length > 0)
+          : (v !== undefined && v !== null && v !== "");
       var q = document.querySelector('.q[data-qid="' + f.id + '"]');
       if (!ok) {
         if (q) {
           q.classList.add("has-error");
           var err = q.querySelector(".q__err");
           if (err) err.textContent = (f.type === "consent") ? OUKA.t("assessment.requiredConsent")
-                    : (f.type === "radio" || f.type === "select" ? OUKA.t("errors.selectOne") : OUKA.t("errors.required"));
+                    : (f.type === "radio" || f.type === "select" || f.type === "checkbox" ? OUKA.t("errors.selectOne") : OUKA.t("errors.required"));
         }
         if (!firstError) firstError = q;
       } else if (q) { q.classList.remove("has-error"); }
