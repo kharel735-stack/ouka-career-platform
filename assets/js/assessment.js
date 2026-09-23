@@ -137,28 +137,60 @@
     return wrap;
   }
 
+  function normalizeBirthDate(value) {
+    var digits = String(value || "").replace(/\D/g, "").slice(0, 8);
+    if (digits.length <= 4) return digits;
+    if (digits.length <= 6) return digits.slice(0, 4) + "-" + digits.slice(4);
+    return digits.slice(0, 4) + "-" + digits.slice(4, 6) + "-" + digits.slice(6);
+  }
+
+  function isValidBirthDate(value) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ""));
+    if (!m) return false;
+    var y = Number(m[1]), mo = Number(m[2]), d = Number(m[3]);
+    var now = new Date();
+    if (y < 1900 || y > now.getFullYear()) return false;
+    var dt = new Date(y, mo - 1, d);
+    if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return false;
+    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return dt <= today;
+  }
+
   function buildControl(field) {
     var val = state.answers[field.id];
     var t = field.type;
 
     if (t === "text" || t === "roman" || t === "tel" || t === "email" || t === "date" || t === "number") {
+      var isBirthDate = field.id === "dateOfBirth";
       var input = el("input", {
-        type: (t === "roman" ? "text" : (t === "number" ? "number" : t)),
+        type: isBirthDate ? "text" : (t === "roman" ? "text" : (t === "number" ? "number" : t)),
         id: "f_" + field.id, name: field.id
       });
       if (t === "roman") input.setAttribute("autocapitalize", "characters");
+      if (isBirthDate) {
+        input.setAttribute("inputmode", "numeric");
+        input.setAttribute("autocomplete", "bday");
+        input.setAttribute("placeholder", "YYYY-MM-DD");
+        input.setAttribute("maxlength", "10");
+        input.setAttribute("aria-label", L(field.label) + " YYYY-MM-DD");
+      }
       if (field.readonly) input.setAttribute("readonly", "readonly");
       if (val == null && field.defaultValue != null && !field.readonly) val = field.defaultValue;
       if (val != null) input.value = val;
-      input.addEventListener("input", function () { setAnswer(field.id, input.value); });
-      // 生年月日→年齢自動計算
-      if (field.id === "dateOfBirth") {
-        input.addEventListener("change", function () {
-          var age = OUKA.calcAge(input.value);
+
+      if (isBirthDate) {
+        input.addEventListener("input", function () {
+          var formatted = normalizeBirthDate(input.value);
+          if (input.value !== formatted) input.value = formatted;
+          setAnswer(field.id, formatted);
+
+          var age = isValidBirthDate(formatted) ? OUKA.calcAge(formatted) : "";
           setAnswer("age", age === "" ? "" : String(age));
           var ageInput = document.getElementById("f_age");
           if (ageInput) ageInput.value = age;
         });
+      } else {
+        input.addEventListener("input", function () { setAnswer(field.id, input.value); });
       }
       return input;
     }
@@ -375,6 +407,10 @@
       var q = document.querySelector('.q[data-qid="' + f.id + '"]');
       if (f.type === "email" && !OUKA.isEmail(v)) { markErr(q, OUKA.t("errors.email")); if (!firstError) firstError = q; }
       if (f.type === "tel" && !OUKA.isPhone(v)) { markErr(q, OUKA.t("errors.phone")); if (!firstError) firstError = q; }
+      if (f.id === "dateOfBirth" && !isValidBirthDate(v)) {
+        markErr(q, L({ ja: "生年月日を YYYY-MM-DD で正しく入力してください。", en: "Enter a valid date of birth as YYYY-MM-DD." }));
+        if (!firstError) firstError = q;
+      }
     });
     if (firstError) { firstError.scrollIntoView({ behavior: "smooth", block: "center" }); return false; }
     return true;
