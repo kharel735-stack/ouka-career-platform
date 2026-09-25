@@ -371,7 +371,7 @@
       if (!appLoaded) {
         appLoaded = true;
         var el = document.createElement("script");
-        el.src = "app.js";
+        el.src = "app.js" + (CFG.appVersion ? "?v=" + CFG.appVersion : "");   /* 古い app.js を使わせない */
         el.onload = function () { flush(); };
         document.body.appendChild(el);
       }
