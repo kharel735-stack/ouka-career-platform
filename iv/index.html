@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>OUKA PLATFORM</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="online.css">
+</head>
+<body data-screen="home">
+<!-- ログイン（本番 /app/ と同じ Clerk のアカウント。パスワードはどこにも保存しない） -->
+<section class="login" id="loginView">
+  <div class="login-card">
+    <h1><b>OUKA</b> PLATFORM</h1>
+    <p class="muted">ログインしてください / कृपया लगइन गर्नुहोस्</p>
+    <form id="loginForm" autocomplete="on">
+      <label>ユーザー名（Username）<input id="fUsername" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>
+      <label>パスワード（Password）<input id="fPassword" name="password" type="password" autocomplete="current-password" required></label>
+      <button class="btn btn-primary btn-xl" id="loginBtn" type="submit">ログイン</button>
+    </form>
+    <form id="codeForm" hidden>
+      <p id="codeHint"></p>
+      <label>確認コード（6桁）<input id="fCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6"></label>
+      <button class="btn btn-primary btn-xl" id="codeBtn" type="submit">確認</button>
+      <button class="btn" id="codeCancel" type="button">やめる</button>
+    </form>
+    <p class="login-err" id="loginErr" role="alert"></p>
+    <p class="muted small">アカウントは学校が発行します。わからない時は先生に聞いてください。</p>
+  </div>
+</section>
+
+<div id="appShell" hidden>
+  <header class="topbar">
+    <a class="brand" href="#/"><b>OUKA</b> PLATFORM</a>
+    <span class="head-name" id="headName"></span>
+    <nav class="bar-nav">
+      <span class="sync-badge" id="syncBadge" hidden></span>
+      <span class="who" id="who"></span>
+      <a class="btn btn-sm" href="#/candidates">候補者</a><a class="btn btn-sm" href="#/results">全結果</a><a class="btn btn-sm" id="homeBtn" href="#/">ホーム</a>
+      <button class="btn btn-sm" id="logoutBtn" type="button">ログアウト</button>
+    </nav>
+  </header>
+  <main id="view"></main>
+  <div class="modal" id="modal" hidden></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</div>
+<noscript>JavaScriptを有効にしてください。</noscript>
+<!-- 教材の中身（Day1〜128・546問・先生の勉強）はここに無い。ログインしてから受け口から受け取る -->
+<script src="data/questions.js"></script>
+<script src="data/candidates.js"></script>
+<script src="data/fields.js"></script>
+<script src="data/videos.js"></script>
+<script src="data/emergency.js"></script>
+<script src="config.js"></script>
+<script src="auth.js"></script>
+<script src="online.js"></script>
+</body>
+</html>

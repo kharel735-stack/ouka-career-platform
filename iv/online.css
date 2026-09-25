@@ -1,0 +1,29 @@
+/* オンライン版だけの見た目（ログイン画面・送信の表示）。本体の見た目は style.css のまま */
+/* hidden を付けた物は必ず消す（display を持つ .btn や form が hidden に勝つため） */
+[hidden] { display: none !important; }
+.login { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; background: var(--bg); }
+.login-card { width: 100%; max-width: 420px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 28px 22px; }
+.login-card h1 { margin: 0 0 6px; color: var(--ai); font-size: 26px; }
+.login-card form { display: flex; flex-direction: column; gap: 14px; margin-top: 18px; }
+.login-card label { display: flex; flex-direction: column; gap: 6px; font-weight: 700; }
+.login-card input { font-size: 18px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; }
+.login-err { color: var(--shu); white-space: pre-line; min-height: 1.2em; font-weight: 700; }
+.who { color: #fff; font-size: 14px; align-self: center; white-space: nowrap; }
+.sync-badge { align-self: center; font-size: 13px; padding: 4px 8px; border-radius: 999px; background: rgba(255,255,255,.18); color: #fff; white-space: nowrap; }
+.sync-badge.sync-wait { background: var(--shu); }
+@media (max-width: 700px) {
+  .topbar { flex-wrap: wrap; height: auto; min-height: var(--bar-h); }
+  .bar-nav { flex-wrap: wrap; justify-content: flex-end; }
+  .who { font-size: 12px; }
+}
+/* スマホ（生徒の端末）でカードがはみ出さないように。ローカル版（タブレット）の見た目は変えない */
+@media (max-width: 700px) {
+  .cand-grid, .media-grid, .topic-grid, .emg-grid { grid-template-columns: minmax(0, 1fr); }
+  .cand-name { font-size: 20px; }
+  /* 緊急のときの表：スマホでは1行ずつ縦に並べる */
+  .emg-tab thead { display: none; }
+  .emg-tab, .emg-tab tbody, .emg-tab tr, .emg-tab td { display: block; width: auto !important; }
+  .emg-tab tr { border-bottom: 2px solid var(--line); padding: 8px 0; }
+  .emg-tab td { border: 0; padding: 2px 4px; }
+  .emg-tab td:first-child { font-weight: 800; }
+}
