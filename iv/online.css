@@ -1,7 +1,12 @@
 /* オンライン版だけの見た目（ログイン画面・送信の表示）。本体の見た目は style.css のまま */
 /* hidden を付けた物は必ず消す（display を持つ .btn や form が hidden に勝つため） */
 [hidden] { display: none !important; }
-.login { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; background: var(--bg); }
+/* ★本体は「body の高さを画面に固定し、main だけスクロール」。外側に1枚足した枠にも高さを渡す
+   （渡さないと main の高さが決まらず、スクロールできない＝2026-09-25 実機で発生） */
+#appShell { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.topbar { flex: 0 0 auto; min-height: var(--bar-h); }
+.login { flex: 1; min-height: 0; overflow: auto; }
+.login { display: flex; align-items: center; justify-content: center; padding: 16px; background: var(--bg); }
 .login-card { width: 100%; max-width: 420px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 28px 22px; }
 .login-card h1 { margin: 0 0 6px; color: var(--ai); font-size: 26px; }
 .login-card form { display: flex; flex-direction: column; gap: 14px; margin-top: 18px; }
