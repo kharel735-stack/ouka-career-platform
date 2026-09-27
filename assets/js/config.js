@@ -92,9 +92,9 @@ window.OUKA_CONFIG = {
   content: {
     // 在籍者数の見出し数値。null なら students-data.js の件数を表示。
     // 一覧に載せる人数より多く見せたいとき（実在籍数）だけ数値を入れる。
-    enrollmentTotal: null,
+    enrollmentTotal: 3,  // 2026-09-27 代表指示：スサンタ・モナリサ・ガクルの3名
     // 在籍学生の一覧（プロフィール）を公開するか
-    showStudentRoster: true,
+    showStudentRoster: false,  // 個人の情報は公開しない（取引企業さまへ個別にご案内）
     // Googleフォト/ドライブの共有アルバム埋め込みURL（任意）。
     // 設定すると、写真をコードに足さなくてもアルバムを埋め込めます。
     galleryEmbedUrl: ""

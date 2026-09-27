@@ -462,7 +462,9 @@ window.OUKA_I18N = {
         course: "コース",
         since: "入学",
         consentNote: "掲載は本人の同意に基づきます。氏名は表示名（イニシャル可）です。",
-        empty: "在籍学生の情報は準備中です。"
+        empty: "在籍学生の情報は準備中です。",
+        companyOnly: "学生一人ひとりのプロフィール（日本語レベル・会話面接の結果・経歴・希望職種）は、プライバシー保護のため公開していません。取引企業さまにだけ個別にご案内しています。",
+        companyCta: "企業さまのお問い合わせ"
       },
       reg: {
         title: "学校の登録・認可",
@@ -959,7 +961,9 @@ window.OUKA_I18N = {
         course: "Course",
         since: "Enrolled",
         consentNote: "Shown with each person's consent. Names are display names (initials allowed).",
-        empty: "Student information is being prepared."
+        empty: "Student information is being prepared.",
+        companyOnly: "To protect privacy, individual student profiles (Japanese level, interview results, background and desired job) are not published. We share them only with our partner companies, one by one.",
+        companyCta: "Inquiries from companies"
       },
       reg: {
         title: "School registration",
