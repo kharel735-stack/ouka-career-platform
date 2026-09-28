@@ -38,7 +38,7 @@
   function saveLast(o) { try { localStorage.setItem(LAST_KEY, JSON.stringify(o)); } catch (x) { /* 使えなくても止めない */ } }
 
   var MSG = {
-    E_AUTH: "ログインの有効期限が切れました。もう一度ログインしてください。",
+    E_AUTH: "ログインを確かめられませんでした。もう一度ログインしてください（続く時は代表に連絡）。",
     E_NO_ROLE: "このアカウントには権限が登録されていません。代表に連絡してください。",
     E_NOT_ALLOWED: "このアカウントでは財務アプリを開けません。",
     E_FORBIDDEN: "この操作はこのアカウントではできません。",
@@ -164,15 +164,18 @@
         .then(function (s) { if (!s) throw A.sessionError("no_active_session"); });
     }).then(function () { phase = "authorization"; return start(); }).catch(function (err) {
       secret = null; clearSecret(); setBusy(false); loginStarted = false;
-      if (phase === "authorization" && window.Clerk && window.Clerk.signOut) window.Clerk.signOut();
+      if (phase === "authorization" && window.Clerk && window.Clerk.signOut) window.Clerk.signOut(stayHere());
       var m = phase === "authentication" ? A.mapSignInError(err) : A.mapRequestError(err);
       if (err && err.message) m.message = err.message;
       setErr(A.formatError(m));
     });
   }
+  /* ★ログアウトの後、Clerk はサイトのトップ（ホームページ）へ移動する。/fin/ に留まるように行き先を渡す */
+  function stayHere() { return { redirectUrl: location.origin + location.pathname }; }
+
   function onLogout() {
     var c = window.Clerk;
-    Promise.resolve(c && c.signOut ? c.signOut() : null).then(function () { location.replace(location.pathname); });
+    Promise.resolve(c && c.signOut ? c.signOut(stayHere()) : null).then(function () { location.replace(location.pathname); });
   }
 
   /* ------------------------------------------------------------ 画面の切り替え（携帯が主） */
