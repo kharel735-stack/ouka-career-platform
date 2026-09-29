@@ -143,3 +143,8 @@ body.has-nav .toast { bottom: calc(84px + env(safe-area-inset-bottom)); }
 .voice-out { background: var(--bg); border-radius: 10px; padding: 10px 12px; margin-top: 8px; }
 .voice-out #vText { font-size: 17px; min-height: 1.5em; overflow-wrap: anywhere; }
 .voice-out .acts { display: flex; gap: 8px; margin-top: 8px; }
+.photo-btn { display: flex; align-items: center; justify-content: center; cursor: pointer; margin: 0; color: var(--ink); font-size: 16px; }
+#pImg { max-width: 100%; max-height: 220px; border-radius: 8px; display: block; margin-bottom: 6px; }
+#pImg:not([src]) { display: none; }
+#pText { white-space: pre-wrap; font-size: 12px; max-height: 200px; overflow: auto; margin: 6px 0 0; }
+.btn.proof { margin-top: 6px; }

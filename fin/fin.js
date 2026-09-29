@@ -50,7 +50,7 @@
     E_NO_PERMIT: "かのんの許可がまだありません。", E_STATE: "この支払（入金）は、いまの状態ではその操作ができません。",
     E_REASON: "理由を書いてください。", E_AMOUNT: "金額を正しく入れてください。", E_DATE: "日付を正しく入れてください。",
     E_FUTURE: "まだ来ていない日付では「入った」にできません。", E_PARTY: "相手を入れてください。",
-    E_DUP: "同じ名前の支払先があります。", E_NEED_SETUP: "最初の設定がまだです。", E_DAY: "支払日は1〜31で入れてください。",
+    E_DUP: "同じ名前の支払先があります。", E_NEED_SETUP: "最初の設定がまだです。", E_IMAGE: "写真が大きすぎるか、形が違います。", E_PROOF: "この証憑は開けません。", E_DAY: "支払日は1〜31で入れてください。",
     E_BIZ: "事業を選んでください。", E_KIND: "区分を選んでください。", E_NOT_FOUND: "見つかりません。画面を読み込み直してください。"
   };
   function msgOf(res) {
@@ -257,6 +257,7 @@
       '<div class="m">' + esc(o.date) + (o.dir === "out" && o.due && o.status !== "支払済" ? "（期限）" : "") + "・" + esc(o.biz) + "・" + esc(o.status) +
       (o.memo ? "・" + esc(o.memo) : "") + "</div>" + (o.approver ? '<div class="m">' + esc(o.approver) + "</div>" : "") +
       (o.stop_reason ? '<div class="m" style="color:var(--red)">止めた理由：' + esc(o.stop_reason) + "</div>" : "") +
+      (o.proof && me && me.can.view ? '<button class="btn small proof" data-proof="' + esc(o.proof) + '">📎 証憑を見る</button>' : "") +
       (acts || "") + '</div><div class="amt num" style="color:var(--' + o.dir + ')">' + sign + money(o.cur, o.amount) + "</div></div>";
   }
   function btn(act, id, label, cls) {
@@ -425,7 +426,7 @@
       };
       var h = '<div class="card"><div class="seg"><button type="button" id="dIn" class="in' + (isIn ? " on" : "") + '">入ってくるお金</button>' +
         '<button type="button" id="dOut" class="out' + (!isIn ? " on" : "") + '">出ていくお金</button></div>' +
-        voiceBox(last) +
+        voiceBox(last) + photoBox(last) +
         '<form id="addForm" autocomplete="off">' +
         (!isIn && reg.length ? '<label>登録した支払先から選ぶ<select id="aReg"><option value="">（選ばない）</option>' +
           reg.map(function (p, i) { return '<option value="' + i + '">' + esc(p.name) + (p.amount ? "（" + money(p.cur, p.amount) + "）" : "") + "</option>"; }).join("") +
@@ -454,6 +455,7 @@
       $("dIn").onclick = function () { dir = "in"; draw(); };
       $("dOut").onclick = function () { dir = "out"; draw(); };
       bindVoice();
+      bindPhoto(isIn);
       if ($("aReg")) $("aReg").onchange = function () {
         var p = reg[Number(this.value)];
         if (!p) return;
@@ -467,6 +469,7 @@
           party: $("aParty").value.trim(), date: $("aDate").value, corp: $("aCorp").value, biz: $("aBiz").value,
           memo: $("aMemo").value.trim(), account: $("aAcc").value, method: $("aMethod").value, note: $("aNote").value.trim() };
         if (isIn) ent.received = $("aRecv").checked;
+        if (pendingProof) ent.proof = pendingProof;
         if (!(ent.amount > 0)) { toast(MSG.E_AMOUNT); return; }
         $("aSave").disabled = true;
         api(isIn ? "add_income" : "add_payment", { entry: ent }).then(function (r) {
@@ -477,6 +480,7 @@
           saveLast(l);
           toast((isIn ? "入金を記録しました " : "支払を起案しました ") + r.id);
           $("aAmt").value = ""; $("aParty").value = ""; $("aMemo").value = ""; $("aNote").value = "";
+          pendingProof = ""; if ($("pOut")) $("pOut").hidden = true;
           if ($("aReg")) $("aReg").value = "";
         });
       };
@@ -536,6 +540,65 @@
     };
     $("vParty").onclick = function () { if (heard || $("vText").textContent) $("aParty").value = (heard || $("vText").textContent).slice(0, 80); };
     $("vMemo").onclick = function () { if (heard || $("vText").textContent) $("aMemo").value = (heard || $("vText").textContent).slice(0, 200); };
+  }
+
+  /* ------------------------------------------------------------ 写真で入れる（レシート・請求書・振込明細） */
+  var pendingProof = "";
+  var PHOTO_LANGS = [["ja", "日本語"], ["en", "English"], ["ne", "नेपाली"]];
+  function photoBox(last) {
+    if (!window.FinPhoto) return "";
+    var lang = last.photoLang || "ja";
+    return '<div class="voice"><label class="btn mic photo-btn">📷 写真で入れる<input type="file" id="pFile" accept="image/*" capture="environment" hidden></label>' +
+      '<select id="pLang" aria-label="写真の文字">' + PHOTO_LANGS.map(function (l) {
+        return '<option value="' + l[0] + '"' + (l[0] === lang ? " selected" : "") + ">" + l[1] + "</option>";
+      }).join("") + "</select></div>" +
+      '<div class="voice-out" id="pOut" hidden><img id="pImg" alt="写真"><div class="small" id="pState"></div>' +
+      '<details><summary>読み取った文字</summary><pre id="pText"></pre></details>' +
+      '<p class="note">写真は証憑として非公開のフォルダに保存し、記録に付けます。読み取りは下書きです。金額・相手・日付を必ず確かめてから保存してください。</p></div>';
+  }
+  function bindPhoto(isIn) {
+    var P = window.FinPhoto, f = $("pFile");
+    if (!P || !f) return;
+    $("pLang").onchange = function () { var l = readLast(); l.photoLang = this.value; saveLast(l); };
+    f.onchange = function () {
+      var file = f.files && f.files[0];
+      if (!file) return;
+      var g = gen;
+      $("pOut").hidden = false; $("pState").textContent = "写真を小さくしています…"; $("pText").textContent = "";
+      pendingProof = "";
+      P.shrink(file).then(function (dataUrl) {
+        $("pImg").src = dataUrl;
+        $("pState").textContent = "送って文字を読んでいます…（10〜20秒）";
+        return api("photo", { image: dataUrl, lang: $("pLang").value });
+      }).then(function (r) {
+        if (g !== gen) return;
+        f.value = "";
+        if (!r || !r.ok) { $("pState").textContent = r && r.message || msgOf(r); return; }
+        pendingProof = r.proof;
+        $("pText").textContent = r.text || "（文字を読めませんでした）";
+        var d = P.parse(r.text || ""), got = [];
+        if (d.amount) { $("aAmt").value = d.amount; got.push("金額"); }
+        if (d.cur) $("aCur").value = d.cur;
+        if (d.date && !(isIn && $("aRecv") && $("aRecv").checked && d.date > today())) { $("aDate").value = d.date; got.push("日付"); }
+        if (d.party && !$("aParty").value) { $("aParty").value = d.party; got.push("相手"); }
+        if (!$("aMemo").value && r.text) $("aMemo").value = (r.text.split(/\r?\n/).filter(Boolean).slice(0, 2).join(" ")).slice(0, 200);
+        $("pState").textContent = "📎 証憑を保存しました。" + (got.length ? got.join("・") + "を下書きしました。確かめてください。" : "金額などは読み取れませんでした。手で入れてください。") +
+          (r.ocr !== "OK" ? "（文字の読み取りに失敗）" : "");
+        toast(got.length ? "写真から " + got.join("・") + " を入れました" : "写真を保存しました（文字は読めず）");
+      }, function (err) { f.value = ""; $("pState").textContent = err && err.message || "写真を送れませんでした。"; });
+    };
+  }
+  function openProof(id, b) {
+    var w = window.open("", "_blank");
+    if (w) w.document.write('<p style="font:16px sans-serif;padding:24px">写真を読み込んでいます…</p>');
+    b.disabled = true;
+    api("proof", { id: id }).then(function (r) {
+      b.disabled = false;
+      if (!r.ok) { if (w) w.close(); toast(msgOf(r)); return; }
+      var src = "data:" + r.type + ";base64," + r.data;
+      if (w) w.document.body.innerHTML = '<img src="' + src + '" style="max-width:100%">';
+      else location.href = src;
+    });
   }
 
   /* ------------------------------------------------------------ 支払先 */
@@ -830,6 +893,10 @@
     $("codeCancel").addEventListener("click", function () { if (codeStep) codeStep.cancel(); toLogin(""); });
     $("logoutBtn").addEventListener("click", onLogout);
     window.addEventListener("hashchange", route);
+    $("view").addEventListener("click", function (e) {
+      var b = e.target.closest && e.target.closest("[data-proof]");
+      if (b) openProof(b.getAttribute("data-proof"), b);
+    });
     if (!CFG.finLayerUrl || !/^https:\/\//.test(CFG.finLayerUrl) || !A.clerkHost(CFG.clerkPublishableKey || "")) {
       setErr("設定（config.js）が足りません。代表に連絡してください。"); $("loginBtn").disabled = true; return;
     }
