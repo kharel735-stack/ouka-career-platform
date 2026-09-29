@@ -114,5 +114,15 @@
     });
   }
 
-  return { parse: parse, moneyIn: moneyIn, dateOf: dateOf, shrink: shrink };
+  /* PDF はそのまま送る（中身は変えない） */
+  function readFile(file) {
+    return new Promise(function (resolve, reject) {
+      var r = new FileReader();
+      r.onload = function () { resolve(r.result); };
+      r.onerror = function () { reject(new Error("ファイルを読めませんでした")); };
+      r.readAsDataURL(file);
+    });
+  }
+
+  return { parse: parse, moneyIn: moneyIn, dateOf: dateOf, shrink: shrink, readFile: readFile };
 }));

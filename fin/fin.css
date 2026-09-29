@@ -148,3 +148,6 @@ body.has-nav .toast { bottom: calc(84px + env(safe-area-inset-bottom)); }
 #pImg:not([src]) { display: none; }
 #pText { white-space: pre-wrap; font-size: 12px; max-height: 200px; overflow: auto; margin: 6px 0 0; }
 .btn.proof { margin-top: 6px; }
+.photo-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.photo-row .photo-btn { font-size: 15px; }
+.pdf-tag { font-size: 20px; font-weight: 700; margin-bottom: 4px; }

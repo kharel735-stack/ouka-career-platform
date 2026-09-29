@@ -548,27 +548,32 @@
   function photoBox(last) {
     if (!window.FinPhoto) return "";
     var lang = last.photoLang || "ja";
-    return '<div class="voice"><label class="btn mic photo-btn">📷 写真で入れる<input type="file" id="pFile" accept="image/*" capture="environment" hidden></label>' +
+    /* ★capture を付けたボタンはカメラしか開かない＝「撮る」と「選ぶ（写真・PDF）」を分ける */
+    return '<div class="photo-row"><label class="btn mic photo-btn">📷 撮る<input type="file" id="pFile" accept="image/*" capture="environment" hidden></label>' +
+      '<label class="btn mic photo-btn">📁 写真・PDFを選ぶ<input type="file" id="pPick" accept="image/*,application/pdf" hidden></label></div>' +
+      '<div class="voice"><span class="small muted">読む文字</span>' +
       '<select id="pLang" aria-label="写真の文字">' + PHOTO_LANGS.map(function (l) {
         return '<option value="' + l[0] + '"' + (l[0] === lang ? " selected" : "") + ">" + l[1] + "</option>";
       }).join("") + "</select></div>" +
-      '<div class="voice-out" id="pOut" hidden><img id="pImg" alt="写真"><div class="small" id="pState"></div>' +
+      '<div class="voice-out" id="pOut" hidden><img id="pImg" alt="写真"><div id="pPdf" class="pdf-tag" hidden>📄 PDF</div><div class="small" id="pState"></div>' +
       '<details><summary>読み取った文字</summary><pre id="pText"></pre></details>' +
-      '<p class="note">写真は証憑として非公開のフォルダに保存し、記録に付けます。読み取りは下書きです。金額・相手・日付を必ず確かめてから保存してください。</p></div>';
+      '<p class="note">写真・PDFは証憑として非公開のフォルダに保存し、記録に付けます。読み取りは下書きです。金額・相手・日付を必ず確かめてから保存してください。</p></div>';
   }
   function bindPhoto(isIn) {
-    var P = window.FinPhoto, f = $("pFile");
-    if (!P || !f) return;
+    var P = window.FinPhoto;
+    if (!P || !$("pFile")) return;
     $("pLang").onchange = function () { var l = readLast(); l.photoLang = this.value; saveLast(l); };
-    f.onchange = function () {
-      var file = f.files && f.files[0];
+    var onPick = function () {
+      var f = this, file = f.files && f.files[0];
       if (!file) return;
-      var g = gen;
-      $("pOut").hidden = false; $("pState").textContent = "写真を小さくしています…"; $("pText").textContent = "";
+      var g = gen, isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name || "");
+      $("pOut").hidden = false; $("pText").textContent = ""; $("pPdf").hidden = !isPdf; $("pImg").removeAttribute("src");
+      $("pState").textContent = isPdf ? "PDFを読み込んでいます…" : "写真を小さくしています…";
       pendingProof = "";
-      P.shrink(file).then(function (dataUrl) {
-        $("pImg").src = dataUrl;
-        $("pState").textContent = "送って文字を読んでいます…（10〜20秒）";
+      if (isPdf && file.size > 4 * 1024 * 1024) { f.value = ""; $("pState").textContent = "PDFが大きすぎます（4MBまで）。1ページだけにするか、写真で撮ってください。"; return; }
+      (isPdf ? P.readFile(file) : P.shrink(file)).then(function (dataUrl) {
+        if (!isPdf) $("pImg").src = dataUrl;
+        $("pState").textContent = "送って文字を読んでいます…（10〜30秒）";
         return api("photo", { image: dataUrl, lang: $("pLang").value });
       }).then(function (r) {
         if (g !== gen) return;
@@ -587,6 +592,8 @@
         toast(got.length ? "写真から " + got.join("・") + " を入れました" : "写真を保存しました（文字は読めず）");
       }, function (err) { f.value = ""; $("pState").textContent = err && err.message || "写真を送れませんでした。"; });
     };
+    $("pFile").onchange = onPick;
+    $("pPick").onchange = onPick;
   }
   function openProof(id, b) {
     var w = window.open("", "_blank");
@@ -595,9 +602,12 @@
     api("proof", { id: id }).then(function (r) {
       b.disabled = false;
       if (!r.ok) { if (w) w.close(); toast(msgOf(r)); return; }
-      var src = "data:" + r.type + ";base64," + r.data;
-      if (w) w.document.body.innerHTML = '<img src="' + src + '" style="max-width:100%">';
-      else location.href = src;
+      var bin = atob(r.data), arr = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      var url = URL.createObjectURL(new Blob([arr], { type: r.type }));
+      if (r.type === "application/pdf") { if (w) w.location.href = url; else location.href = url; return; }
+      if (w) w.document.body.innerHTML = '<img src="' + url + '" style="max-width:100%">';
+      else location.href = url;
     });
   }
 

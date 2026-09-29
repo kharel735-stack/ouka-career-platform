@@ -2,5 +2,5 @@
 window.OUKA_FIN_CONFIG = {
   clerkPublishableKey: "pk_live_Y2xlcmsuYWJhcy1nbG9iYWxncm91cC5jb20k",
   finLayerUrl: "https://script.google.com/macros/s/AKfycbzaPVJXOJc5k12o0y2jvlvSLJAcEFZwdDdd_4aEZPicPq-pxW89CbtI2RgwuZhmGeHs/exec",
-  appVersion: "47cb5b29ec"
+  appVersion: "e3b855686e"
 };
