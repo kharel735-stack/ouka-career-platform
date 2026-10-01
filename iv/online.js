@@ -39,6 +39,7 @@
   function toLogin(msg) {
     codeStep = null;
     show($("codeForm"), false);
+    show($("taskBox"), false);
     show($("loginForm"), true);
     show($("loginView"), true);
     show($("appShell"), false);
@@ -86,6 +87,72 @@
     });
   }
 
+
+  /* ------------------------------------------------------------ ログインしたら /iv/ から出さない（2026-10-01）
+   * 事故：パスワードを打つと、ホームページ（abas-globalgroup.com）へ飛ばされた。
+   * 原因：Clerk は「パスワードを新しくする」などの追加の手続き（session task）があると、Clerk 自身のページ
+   *       （accounts.abas-globalgroup.com）へ移り、終わると管理画面の after_sign_in_url＝ホームページへ戻す。
+   *       本番は enforce_hibp_on_sign_in＝漏れたことのあるパスワードは、ログインの時に作り直しを求める。
+   * 対策：Clerk の行き先をすべて /iv/ に固定し、手続きは /iv/ の中に Clerk の部品を出して済ませる。
+   *       管理画面の設定は変えない（/app/ と同じ Clerk なので、/app/ に影響させない）。 */
+  var IV_URL = location.href.split("#")[0].split("?")[0];   /* https://abas-globalgroup.com/iv/ */
+  var TASK_MARK = "#/ouka-clerk-task";
+  var TASK_MOUNT = { "reset-password": "mountTaskResetPassword", "setup-mfa": "mountTaskSetupMFA",
+                     "choose-organization": "mountTaskChooseOrganization" };
+  var TASK_TEXT = {
+    "reset-password": "安全のため、パスワードを新しくする必要があります（15文字以上）。下で新しいパスワードを作ってください。終わると自動でこの画面に戻ります。\nFor security, please set a new password (15+ characters). You will come back here automatically.",
+    "setup-mfa": "安全のため、追加の確認の設定が必要です。下の手順で設定してください。終わると自動でこの画面に戻ります。",
+    "choose-organization": "所属を選んでください。終わると自動でこの画面に戻ります。"
+  };
+  var taskShown = false;
+  function clerkOptions() {
+    var task = IV_URL + TASK_MARK;
+    return {
+      signInForceRedirectUrl: IV_URL, signUpForceRedirectUrl: IV_URL,
+      signInFallbackRedirectUrl: IV_URL, signUpFallbackRedirectUrl: IV_URL,
+      afterSignOutUrl: IV_URL,
+      taskUrls: { "reset-password": task, "setup-mfa": task, "choose-organization": task },
+      routerPush: function (to) { return clerkGo(to, false); },
+      routerReplace: function (to) { return clerkGo(to, true); }
+    };
+  }
+  /* Clerk が同じサイトの中で移ろうとした時はここに来る。/iv/ の外へは行かせない */
+  function clerkGo(to, replace) {
+    var u;
+    try { u = new URL(to, location.href); } catch (x) { return; }
+    if (u.href.indexOf(TASK_MARK) >= 0) { showTask(); return; }
+    if (taskShown || u.origin !== location.origin || u.pathname !== location.pathname) {
+      taskShown = false;
+      location.replace(IV_URL);          /* 手続きが終わった＝読み込み直してログイン済みで始める */
+      return;
+    }
+    if (u.href === location.href) return;
+    if (replace) location.replace(u.href); else location.assign(u.href);
+  }
+  function showTask() {
+    var c = window.Clerk, s = c && c.session, t = s && s.currentTask;
+    var fn = t && TASK_MOUNT[t.key] && c[TASK_MOUNT[t.key]];
+    show($("loginView"), true); show($("appShell"), false);
+    show($("loginForm"), false); show($("codeForm"), false);
+    setBusy(false);
+    if (!fn) {
+      toLogin("ログインの途中で、追加の手続きが必要になりました（" + (t ? t.key : "不明") + "）。代表に連絡してください。");
+      if (c && c.signOut) c.signOut();
+      return;
+    }
+    if (taskShown) return;
+    taskShown = true;
+    $("taskHint").textContent = TASK_TEXT[t.key] || "";
+    show($("taskBox"), true);
+    fn.call(c, $("taskMount"), { redirectUrlComplete: IV_URL });
+  }
+  function cancelTask() {
+    var c = window.Clerk;
+    taskShown = false;
+    show($("taskBox"), false);
+    Promise.resolve(c && c.signOut ? c.signOut() : null).then(function () { toLogin(""); });
+  }
+
   /* ------------------------------------------------------------ Clerk */
   var SESSION_WAIT_MS = 3000, SESSION_STEP_MS = 150;
   function waitForSession(clerk, left) {
@@ -96,7 +163,7 @@
   }
   function loadClerk() {
     if (window.Clerk && window.Clerk.load) {              /* テストでは先に置いてある */
-      return Promise.resolve(window.Clerk.load({})).then(function () { return window.Clerk; });
+      return Promise.resolve(window.Clerk.load(clerkOptions())).then(function () { return window.Clerk; });
     }
     return new Promise(function (resolve, reject) {
       var url = A.scriptUrl(CFG.clerkPublishableKey);
@@ -106,7 +173,7 @@
       el.setAttribute("data-clerk-publishable-key", CFG.clerkPublishableKey);
       el.onload = function () {
         if (!window.Clerk) { reject(new Error("ログイン基盤を読み込めませんでした")); return; }
-        Promise.resolve(window.Clerk.load({})).then(function () { resolve(window.Clerk); }, reject);
+        Promise.resolve(window.Clerk.load(clerkOptions())).then(function () { resolve(window.Clerk); }, reject);
       };
       el.onerror = function () { reject(new Error("ログイン基盤に接続できませんでした。電波を確かめてください。")); };
       document.head.appendChild(el);
@@ -170,8 +237,9 @@
         return clerk.setActive({ session: res.createdSessionId });
       }, function (err) { if (!A.isAlreadySignedIn(err)) throw err; })
         .then(function () { return waitForSession(clerk, SESSION_WAIT_MS); })
-        .then(function (sess) { if (!sess) throw A.sessionError("no_active_session"); });
-    }).then(function () {
+        .then(function (sess) { if (!sess) throw A.sessionError("no_active_session"); return sess; });
+    }).then(function (sess) {
+      if (sess.status === "pending") { loginStarted = false; showTask(); return; }   /* 手続きは /iv/ の中で */
       phase = "authorization";
       return start();
     }).catch(function (err) {
@@ -383,6 +451,7 @@
     $("codeForm").addEventListener("submit", function (e) { e.preventDefault(); if (codeStep) codeStep.submit($("fCode").value); });
     $("codeCancel").addEventListener("click", function () { if (codeStep) codeStep.cancel(); toLogin(""); });
     $("logoutBtn").addEventListener("click", onLogout);
+    $("taskCancel").addEventListener("click", cancelTask);
     if (!CFG.ivLayerUrl || !/^https:\/\//.test(CFG.ivLayerUrl) || !A.clerkHost(CFG.clerkPublishableKey || "")) {
       setErr("設定（config.js）が足りません。代表に連絡してください。");
       $("loginBtn").disabled = true;
@@ -392,6 +461,7 @@
     clerkReady.then(function (clerk) {
       return waitForSession(clerk, SESSION_WAIT_MS).then(function (sess) {
         if (!sess || loginStarted) return;
+        if (sess.status === "pending") { showTask(); return; }   /* 手続きの途中で閉じた人 */
         return start().catch(function (err) {
           setBusy(false);
           setErr(err && err.message ? err.message : "自動ログインに失敗しました。もう一度ログインしてください。");
