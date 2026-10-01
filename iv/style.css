@@ -438,3 +438,127 @@ rt { font-size: .5em; color: var(--muted); font-weight: 600; line-height: 1; }
 .lv { display: inline-block; min-width: 28px; padding: 2px 8px; border-radius: 8px; font-weight: 800; color: #fff; }
 .lv-A { background: #1B7F4B; } .lv-B { background: #12294B; } .lv-C { background: #C8362B; }
 .gr-stuck { background: #FFF6F5; }
+/* ---- スマホで崩れない（2026-09-28）----
+   チェック欄：文字を1つの箱に入れる（ふりがな付きの漢字が1字ずつ別の列になって縦に崩れていた）
+   漢字の表：7列が画面に入らず右にはみ出していた → スマホでは1字＝1枚のカードにする
+   上のボタン：「候補者」「ホーム」が2行に割れていた */
+.ts-chk > .ts-t { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.topbar .btn { white-space: nowrap; }
+@media (max-width: 760px) {
+  .topbar { gap: 8px; padding: 0 10px; }
+  .topbar .btn-sm { padding: 0 9px; font-size: 14px; }
+  .brand { font-size: 13px; }
+  .rtable.kjt thead { display: none; }
+  .rtable.kjt, .rtable.kjt tbody { display: block; }
+  .rtable.kjt tr { display: grid; grid-template-columns: 64px minmax(0, 1fr); column-gap: 10px; padding: 8px 0;
+    border-bottom: 1px solid var(--line); }
+  .rtable.kjt td { display: block; min-width: 0; padding: 2px 0; border: 0; line-height: 1.9; white-space: normal; overflow-wrap: anywhere; }
+  .rtable.kjt td.kj { grid-row: 1 / span 6; font-size: 40px; width: auto; text-align: center; align-self: start; line-height: 1.3; }
+  .rtable.kjt td[data-l]::before { content: attr(data-l) "　"; font-size: 12px; font-weight: 700; color: var(--muted); }
+  .rtable.kjt td.num { text-align: left; }
+}
+/* ---- 書く宿題＝ノートの写真（2026-09-28） ---- */
+.tk { display: inline-block; font-size: 12px; font-weight: 800; border-radius: 999px; padding: 1px 9px; margin-right: 6px;
+  vertical-align: middle; line-height: 1.6; white-space: nowrap; }
+.tk-write { background: #C8362B; color: #fff; }
+.tk-say { background: #E8EEF6; color: var(--ai); }
+.ts-hw-w { padding: 8px 10px; }
+.ts-hw-w > .ts-t { font-size: 17px; line-height: 2.1; }
+.ph-box { margin-top: 8px; }
+.ph-thumbs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.ph-th { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.ph-th img { width: 96px; height: 96px; object-fit: cover; border-radius: 8px; border: 1.5px solid var(--line); cursor: zoom-in; }
+.ph-sent { font-size: 12px; font-weight: 700; color: #1B7F4B; }
+.ph-none { font-size: 14px; color: var(--muted); }
+.ph-btn { width: 100%; min-height: 56px; font-size: 18px; position: relative; overflow: hidden; }
+.ph-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.ph-help { font-size: 13px; color: var(--muted); margin-top: 6px; line-height: 1.6; }
+.ph-ok { border-color: #3F8F5A !important; background: #F3FBF5 !important; }
+.hw-chk { display: block; cursor: pointer; }
+.hw-chk-row { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 700; margin-top: 4px; }
+.hw-chk-row input { width: 26px; height: 26px; flex: none; }
+.hw-auto { font-size: 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.ph-zoom { position: fixed; inset: 0; background: rgba(0,0,0,.88); z-index: 50; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; padding: 12px; }
+.ph-zoom img { max-width: 100%; max-height: calc(100% - 56px); object-fit: contain; background: #fff; }
+.ph-zoom-x { color: #fff; font-size: 18px; font-weight: 700; margin-top: 10px; padding: 8px 20px; border: 1.5px solid #fff; border-radius: 10px; }
+.ph-filter { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0; }
+.ph-filter select { font: inherit; font-size: 16px; min-height: 44px; padding: 0 8px; border: 1.5px solid var(--line); border-radius: 10px; }
+.ph-todo { font-size: 15px; display: flex; align-items: center; gap: 6px; }
+.ph-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.ph-card { background: var(--card); border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+.ph-card.ph-marked { border-color: #3F8F5A; }
+.ph-head { font-size: 16px; }
+.ph-q { font-size: 14px; color: var(--muted); margin: 2px 0 6px; line-height: 1.5; }
+.ph-img img { width: 100%; border-radius: 8px; border: 1px solid var(--line); cursor: zoom-in; background: #fff; }
+.ph-marks { display: flex; gap: 6px; align-items: center; margin: 8px 0 4px; flex-wrap: wrap; }
+.ph-m { min-width: 52px; font-size: 22px; font-weight: 800; }
+.ph-m.on { background: var(--ai); color: #fff; border-color: var(--ai); }
+.ph-note { flex: 1; min-width: 140px; font: inherit; font-size: 15px; min-height: 44px; padding: 0 10px;
+  border: 1.5px solid var(--line); border-radius: 10px; }
+@media (max-width: 760px) { .ph-grid { grid-template-columns: 1fr; } }
+
+/* ---------- 宿題（2026-10-01・スマホで押しやすく。日本語の下にネパール語） ---------- */
+.hw2 { max-width: 640px; margin: 0 auto; }
+.hw2 .ne { font-family: "Noto Sans Devanagari", "Kohinoor Devanagari", "Devanagari Sangam MN", sans-serif; }
+.hw2 .center { text-align: center; }
+.hw-day { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+.hw-day select { font: inherit; font-size: 20px; min-height: 48px; padding: 0 10px; border: 1.5px solid var(--line); border-radius: 10px; background: #fff; }
+.hw-prog { display: flex; align-items: center; gap: 10px; font-size: 16px; margin: 6px 0 10px; }
+.hw-prog .hw-bar { flex: 1; margin: 0; }
+.hw-bar { height: 10px; background: var(--line); border-radius: 9px; overflow: hidden; margin: 6px 0 12px; }
+.hw-bar i { display: block; height: 100%; background: #3F8F5A; }
+.hw-goal { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; display: flex; flex-direction: column; gap: 2px; line-height: 1.6; }
+.hw-goal .ne, .hw-ne { color: #44506A; font-size: 15px; }
+.hw-h { font-size: 18px; color: var(--shu); margin: 22px 0 6px; }
+.hw-h .ne { font-size: 15px; font-weight: 600; }
+.hw-words { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.hw-words span { background: #EEF1F6; border-radius: 8px; padding: 4px 9px; font-size: 17px; }
+.hw-words small { color: var(--muted); }
+.hw-task { display: flex; align-items: center; gap: 12px; background: var(--card); border: 1.5px solid var(--line); border-radius: 14px; padding: 12px 14px; margin-top: 8px; text-decoration: none; color: inherit; min-height: 72px; }
+.hw-task:active { background: #EEF1F6; }
+.hw-task.is-done { border-color: #3F8F5A; background: #F1F8F3; }
+.hw-task.is-off { opacity: .5; }
+.hw-task.hw-practice { border-style: dashed; }
+.hw-ic { font-size: 28px; width: 38px; text-align: center; flex: 0 0 38px; }
+.hw-tx { flex: 1; display: flex; flex-direction: column; gap: 1px; font-size: 17px; line-height: 1.45; }
+.hw-tx .ne { font-size: 14px; color: #44506A; }
+.hw-sub { font-size: 13px; color: var(--muted); }
+.hw-ok { font-size: 14px; font-weight: 700; color: #1B7F4B; }
+.hw-go { color: var(--ai); font-size: 15px; font-weight: 700; white-space: nowrap; }
+.hw-submit { justify-content: center; margin-top: 20px; }
+.hw-submit .btn-xl { width: 100%; }
+.hw-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
+.hw-cnt { font-size: 18px; font-weight: 700; color: var(--ai); }
+.hw-card3, .hw-result { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; }
+.hw-result { text-align: center; }
+.hw-big { font-size: 56px; font-weight: 800; color: var(--ai); }
+.hw-em { font-size: 54px; text-align: center; line-height: 1.2; }
+.hw-kj { font-size: 36px; font-weight: 800; text-align: center; margin-top: 4px; line-height: 1.35; }
+.hw-say-t { font-size: 28px; }
+.hw-yo { font-size: 20px; color: #2E4A7A; text-align: center; }
+.hw-mn { font-size: 20px; margin-top: 10px; }
+.hw-wide { width: 100%; margin-top: 10px; }
+.hw-choice { display: block; width: 100%; min-height: 58px; margin-top: 10px; padding: 10px 14px; font: inherit; font-size: 19px; text-align: left; background: #fff; border: 2px solid var(--line); border-radius: 12px; cursor: pointer; color: inherit; }
+.hw-choice.ok { border-color: #3F8F5A; background: #E6F4EA; }
+.hw-choice.ng { border-color: var(--shu); background: #FBE9E7; }
+.hw-card2 { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; width: 100%; min-height: 320px; background: #fff; border: 1px solid var(--line); border-radius: 18px; font: inherit; color: inherit; cursor: pointer; padding: 20px; }
+.hw-hint { font-size: 14px; color: var(--muted); margin: 10px 0; }
+.hw-nav { display: flex; gap: 10px; margin-top: 10px; }
+.hw-nav .btn { flex: 1; }
+.hw-slot { min-height: 60px; border: 2px dashed var(--line); border-radius: 12px; padding: 8px; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.hw-pool { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.hw-tok { padding: 10px 14px; border-radius: 10px; background: #EEF1F6; border: 1.5px solid var(--line); font: inherit; font-size: 20px; font-weight: 700; cursor: pointer; color: inherit; }
+.hw-ans2 { margin-top: 12px; padding: 10px; border-radius: 10px; font-size: 18px; font-weight: 700; text-align: center; }
+.hw-ans2.ok { background: #E6F4EA; color: #1B7F4B; }
+.hw-ans2.ng { background: #FBE9E7; color: #9A2B20; }
+.hw-recbtn { background: var(--shu); color: #fff; border-color: var(--shu); }
+.hw-recbtn.is-rec { animation: hwpulse 1s infinite; }
+@keyframes hwpulse { 50% { opacity: .6; } }
+.hw-dots { display: flex; gap: 8px; justify-content: center; margin-top: 12px; }
+.hw-dots i { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--shu); }
+.hw-dots i.on { background: var(--shu); }
+.hw-take { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 14px; color: var(--muted); }
+.hw-take audio { flex: 1; height: 36px; }
+.hw-paper { font-size: 17px; line-height: 1.6; }
+.hw2 .field-pick { margin: 4px 0 8px; }

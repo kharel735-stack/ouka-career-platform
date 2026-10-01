@@ -389,16 +389,61 @@
       badge();
     });
   }
+  /* ---- ノートの写真（2026-09-28）。1枚ずつ送る。送れたら端末には小さい控えだけ残す ---- */
+  var photoWait = 0, photoBusy = false;
+  function photoMine(x) {
+    if (x.scope === "hw" || x.scope === "voice") return who.role === "STUDENT" && x.owner === who.name;   /* voice＝宿題の録音（2026-10-01） */
+    if (x.scope === "study") return !!who.can.teacher && x.owner === who.name;
+    return false;
+  }
+  function b64(blob) {
+    return new Promise(function (res, rej) {
+      var r = new FileReader();
+      r.onload = function () { res(String(r.result).split(",")[1] || ""); };
+      r.onerror = function () { rej(new Error("写真を読めません")); };
+      r.readAsDataURL(blob);
+    });
+  }
+  function photosChanged() { setTimeout(flushPhotos, 500); }
+  function flushPhotos() {
+    var A2 = window.OUKA_APP_API;
+    if (photoBusy || !who || !A2 || !A2.photoQueue) return;
+    photoBusy = true;
+    A2.photoQueue().then(function (all) {
+      var q = all.filter(photoMine);
+      photoWait = q.length;
+      badge();
+      var one = function (i) {
+        if (i >= q.length) return null;
+        var x = q[i];
+        return b64(x.blob).then(function (data) {
+          return api("photo", { photo: { id: x.id, type: x.scope, no: x.no, item: x.item, mime: x.mime || "image/jpeg",
+            data: data, text: x.text || "", taken_at: x.created_at } });
+        }).then(function (res) {
+          if (!res || !res.ok) throw new Error((res && res.error) || "NO_RESPONSE");
+          return A2.photoSent(x, res.saved_at);
+        }).then(function () { photoWait--; badge(); return one(i + 1); });
+      };
+      return one(0);
+    }).then(function () {
+      photoBusy = false;
+      badge();
+    }, function (err) {
+      photoBusy = false;
+      lastErr = String((err && err.message) || err);
+      badge();
+    });
+  }
   function badge() {
     var el = $("syncBadge");
     if (!el || !who) return;
-    var n = pending().length;
+    var n = pending().length + photoWait;
     el.hidden = false;
     el.className = "sync-badge" + (n ? " sync-wait" : "");
     el.textContent = n ? "未送信 " + n + " 件" + (lastErr ? "（圏外？）" : "") : "送信ずみ";
   }
-  window.addEventListener("online", function () { flush(); });
-  setInterval(function () { if (who && navigator.onLine !== false) flush(); }, 60000);
+  window.addEventListener("online", function () { flush(); flushPhotos(); });
+  setInterval(function () { if (who && navigator.onLine !== false) { flush(); flushPhotos(); } }, 60000);
 
   /* ------------------------------------------------------------ 起動 */
   function start() {
@@ -423,7 +468,7 @@
       setNames();
       window.OUKA_ONLINE = {
         role: who.role, name: who.name, can: who.can, students: who.students,
-        allow: allow, home: home, changed: changed, afterRender: afterRender, api: api
+        allow: allow, home: home, changed: changed, afterRender: afterRender, api: api, photosChanged: photosChanged
       };
       $("who").textContent = who.name + "（" + ({ STUDENT: "生徒", TEACHER: "先生", CEO: "代表",
         SCHOOL_ADMIN: "校長", SUPER_ADMIN: "管理者" }[who.role] || who.role) + "）";
@@ -440,7 +485,7 @@
         appLoaded = true;
         var el = document.createElement("script");
         el.src = "app.js" + (CFG.appVersion ? "?v=" + CFG.appVersion : "");   /* 古い app.js を使わせない */
-        el.onload = function () { flush(); };
+        el.onload = function () { flush(); flushPhotos(); };
         document.body.appendChild(el);
       }
     });

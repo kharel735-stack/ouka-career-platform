@@ -475,6 +475,9 @@
   var IMPORT_KEY = "ouka_interview_imported_v1";
   var SETTINGS_KEY = "ouka_interview_settings_v1";
   var HW_KEY = "ouka_homework_v1";
+  /* 日の見出し：1001〜1010 は オリエンテーション O1〜O10（2026-10-01）。それ以外は Day */
+  function dayLabel(n) { n = Number(n); return n > 1000 ? "O" + (n - 1000) : "Day " + n; }
+  function dayLabels(a) { return a.map(dayLabel).join(", "); }
   var TS_KEY = "ouka_teacher_study_v1";   /* 先生の勉強の記録 */
   var DR_KEY = "ouka_drill_v1";          /* 問題（546問）の答えと正誤 */
   var GR_KEY = "ouka_grade_v1";          /* 週次ふるい（金曜）の採点 */
@@ -552,6 +555,176 @@
   }
   function mediaSize(list) { return list.reduce(function (n, x) { return n + (x.size || 0); }, 0); }
   function mb(n) { return (n / 1048576).toFixed(1) + " MB"; }
+
+  /* ---------- 書く宿題＝ノートに書いて写真で出す（2026-09-28 代表指示） ----------
+   * 「キーボードで打てると変換で書けてしまう＝本人の成長が分からない」。
+   * だから「書く」宿題には入力欄を置かない。問題は画面に出し、答えはノートに手で書き、写真を撮って出す。
+   * 話す・聞く・ACTION はチェック（先生が次の授業で確かめる）、アプリの問題は解いた数が自動で入る。
+   * 写真は端末で縮小（長辺1600px・JPEG）して、録音と同じ端末の保存箱に入れる。
+   * オンライン版は online.js が自動で受け口へ送る（圏外なら「未送信」に貯まる）。 */
+  function plainText(t) { return String(t || "").replace(/<rt>[\s\S]*?<\/rt>/g, "").replace(/<[^>]+>/g, ""); }
+  function taskKind(t) {
+    t = plainText(t);
+    if (/問題バンク/.test(t)) return "drill";
+    if (/ACTION/.test(t)) return "action";
+    if (/書|作文|練習\s*[A-ZＡ-Ｚ]/.test(t)) return "write";
+    return "say";
+  }
+  var TASK_LABEL = { write: "ノートに書く→写真", say: "声に出す・聞く", drill: "アプリの問題", action: "ACTION" };
+  var PHOTO_MAX = 3;                       /* 1つの宿題に3枚まで（ノートが2ページ以上になる時） */
+  var PH_COUNT = {};                       /* 画面を描く時に使う枚数の控え（保存箱は非同期のため） */
+  function photoDay(scope, no) { return "photo-" + scope + "-" + no; }
+  function photoOwner(scope) { return scope === "study" ? teacherName() : studentName(); }
+  function photoAllMine(scope, no) {
+    var owner = photoOwner(scope);
+    return mediaAll().then(function (all) {
+      return all.filter(function (x) { return x.kind === "photo" && x.day === photoDay(scope, no) && x.owner === owner; })
+        .sort(function (a, b) { return String(a.created_at).localeCompare(String(b.created_at)); });
+    });
+  }
+  function photoCount(scope, no, item) { return PH_COUNT[scope + "|" + no + "|" + item] || 0; }
+  function shrinkImage(file) {
+    return new Promise(function (res, rej) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () {
+        var M = 1600, w = img.naturalWidth, h = img.naturalHeight, k = Math.min(1, M / Math.max(w, h));
+        var c = document.createElement("canvas");
+        c.width = Math.max(1, Math.round(w * k)); c.height = Math.max(1, Math.round(h * k));
+        var g = c.getContext("2d");
+        g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height);
+        g.drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        c.toBlob(function (b) { if (b) res(b); else rej(new Error("写真を読めません")); }, "image/jpeg", 0.72);
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); rej(new Error("写真を読めません（画像ではない？）")); };
+      img.src = url;
+    });
+  }
+  function photoAdd(scope, no, item, text, file) {
+    var owner = photoOwner(scope);
+    if (!owner) { toast("先に名前を入れてください"); return Promise.resolve(); }
+    if (photoCount(scope, no, item) >= PHOTO_MAX) { toast("1つの宿題に " + PHOTO_MAX + " 枚までです"); return Promise.resolve(); }
+    toast("写真を入れています…");
+    return shrinkImage(file).then(function (blob) {
+      return mediaPut({
+        id: "ph_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+        kind: "photo", scope: scope, owner: owner, day: photoDay(scope, no), no: no, item: item,
+        text: plainText(text).slice(0, 200), blob: blob, mime: "image/jpeg", size: blob.size,
+        created_at: new Date().toISOString(), sent_at: ""
+      });
+    }).then(function () {
+      toast("写真を入れました");
+      if (ONLINE && ONLINE.photosChanged) ONLINE.photosChanged();
+      return photoFill(scope, no);
+    }).catch(function (e) { toast(e.message || "写真を入れられませんでした"); });
+  }
+  /* 宿題の画面の写真欄を埋める。★送った写真は消せない（先生の手元にもう届いているため） */
+  function photoFill(scope, no) {
+    var locked = !!document.querySelector('.ph-box[data-locked="1"]');
+    return photoAllMine(scope, no).then(function (list) {
+      Object.keys(PH_COUNT).forEach(function (k) { if (k.indexOf(scope + "|" + no + "|") === 0) delete PH_COUNT[k]; });
+      list.forEach(function (x) { var k = scope + "|" + no + "|" + x.item; PH_COUNT[k] = (PH_COUNT[k] || 0) + 1; });
+      Array.prototype.forEach.call(document.querySelectorAll('.ph-box[data-scope="' + scope + '"][data-no="' + no + '"]'), function (box) {
+        var item = parseInt(box.getAttribute("data-item"), 10);
+        var mine = list.filter(function (x) { return x.item === item; });
+        var th = box.querySelector(".ph-thumbs");
+        th.innerHTML = mine.length ? mine.map(function (x) {
+          var url = URL.createObjectURL(x.thumb || x.blob);
+          return '<div class="ph-th"><img src="' + url + '" alt="ノートの写真" data-act="ph-zoom" data-src="' + url + '">' +
+            (x.sent_at ? '<span class="ph-sent">送信ずみ</span>'
+              : locked ? "" : '<button class="btn btn-sm" data-act="ph-del" data-id="' + esc(x.id) + '" data-scope="' + scope + '" data-no="' + no + '">消す</button>') +
+            "</div>";
+        }).join("") : '<span class="ph-none">まだ写真がありません</span>';
+        var btn = box.querySelector(".ph-btn");
+        if (btn) btn.style.display = locked || mine.length >= PHOTO_MAX ? "none" : "";
+        var st = box.closest(".hw-item, .ts-hw");
+        if (st) st.classList.toggle("ph-ok", mine.length > 0);
+      });
+      return list;
+    });
+  }
+  /* 写真欄のHTML（中身は photoFill が後から入れる） */
+  function photoBox(scope, no, item, text, locked) {
+    return '<div class="ph-box" data-scope="' + scope + '" data-no="' + no + '" data-item="' + item + '"' +
+      (locked ? ' data-locked="1"' : "") + ">" +
+      '<div class="ph-thumbs"><span class="ph-none">まだ写真がありません</span></div>' +
+      (locked ? "" : '<label class="btn btn-primary ph-btn">ノートを撮る（写真）' +
+        '<input type="file" accept="image/*" capture="environment" class="ph-in" data-scope="' + scope + '" data-no="' + no +
+        '" data-item="' + item + '" data-text="' + esc(plainText(text)) + '"></label>') +
+      '<div class="ph-help">答えは<b>ノートに手で書く</b>。書いたページを撮って出します（キーボードでは出せません）。</div></div>';
+  }
+  document.addEventListener("change", function (e) {
+    var el = e.target;
+    if (el.classList && el.classList.contains("ph-note")) {          /* ひとことを書いたら、いまの印のまま保存 */
+      var card = el.closest(".ph-card"), on = card && card.querySelector(".ph-m.on");
+      (PH_VIEW.src || photoSource()).mark(el.getAttribute("data-id"), on ? on.getAttribute("data-m") : "", el.value)
+        .then(function () { toast("ひとことを保存しました"); }, function (er) { toast("保存できませんでした（" + er.message + "）"); });
+      return;
+    }
+    if (!el.classList || !el.classList.contains("ph-in") || !el.files || !el.files.length) return;
+    var f = el.files[0];
+    photoAdd(el.getAttribute("data-scope"), parseInt(el.getAttribute("data-no"), 10),
+      parseInt(el.getAttribute("data-item"), 10), el.getAttribute("data-text"), f).then(function () {
+      el.value = "";
+      var scope = el.getAttribute("data-scope"), no = parseInt(el.getAttribute("data-no"), 10);
+      if (scope === "hw") hwSave(no, false); else tsSave(no, false);
+    });
+  });
+  function photoZoom(src) {
+    var z = document.createElement("div");
+    z.className = "ph-zoom";
+    z.innerHTML = '<img src="' + src + '" alt="ノートの写真"><div class="ph-zoom-x">とじる</div>';
+    z.addEventListener("click", function () { z.remove(); });
+    document.body.appendChild(z);
+  }
+
+  /* 見る側（先生・代表）。オンライン＝受け口から、ローカル＝この端末の保存箱から。形はそろえる。 */
+  function photoSource() {
+    if (ONLINE) {
+      return {
+        list: function (kind) {
+          return ONLINE.api("photo_list", kind ? { kind: kind } : {}).then(function (r) {
+            if (!r || !r.ok) throw new Error((r && r.error) || "応答なし");
+            return r.photos;
+          });
+        },
+        img: function (id) {
+          return ONLINE.api("photo_get", { id: id }).then(function (r) {
+            if (!r || !r.ok) throw new Error((r && r.error) || "応答なし");
+            var bin = atob(r.data), buf = new Uint8Array(bin.length);
+            for (var i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+            return URL.createObjectURL(new Blob([buf], { type: r.type || "image/jpeg" }));
+          });
+        },
+        mark: function (id, mark, note) {
+          return ONLINE.api("photo_mark", { mark: { id: id, mark: mark, note: note } }).then(function (r) {
+            if (!r || !r.ok) throw new Error((r && r.error) || "応答なし");
+          });
+        }
+      };
+    }
+    var cache = {};
+    return {
+      list: function () {
+        return mediaAll().then(function (all) {
+          return all.filter(function (x) { return x.kind === "photo"; }).map(function (x) {
+            cache[x.id] = x;
+            return { id: x.id, type: x.scope, who: x.owner, no: x.no, item: x.item + 1, text: x.text,
+              taken_at: x.created_at, kb: Math.round((x.size || 0) / 1024), mark: x.mark || "", note: x.note || "",
+              marked_by: x.marked_by || "", marked_at: x.marked_at || "" };
+          });
+        });
+      },
+      img: function (id) { return Promise.resolve(cache[id] ? URL.createObjectURL(cache[id].blob) : ""); },
+      mark: function (id, mark, note) {
+        var x = cache[id];
+        if (!x) return Promise.reject(new Error("見つかりません"));
+        x.mark = mark; x.note = note; x.marked_by = teacherName() || "先生"; x.marked_at = new Date().toISOString();
+        return mediaPut(x);
+      }
+    };
+  }
 
   /* ---------- 宿題の提出（この端末に保存する。先生は「提出物確認」で見る） ---------- */
   function hwAll() { return readJSON(HW_KEY, {}); }
@@ -808,9 +981,9 @@
     student: {
       title: "生徒・学習", icon: "▶",
       items: [
+        { key: "homework", label: "宿題 ／ गृहकार्य", note: "今日の しゅくだい（たんご・じゅぎょうの ふくしゅう・ノートの しゃしん）。ここから 出す" },
         { key: "today", label: "今日の教材", note: "その日に使う教材（プリント・スライド）がここに並ぶ" },
         { key: "drill", label: "問題", note: "ドリル・小テスト。問題バンクから出す" },
-        { key: "homework", label: "宿題", note: "出されている宿題と締切" },
         { key: "media", label: "動画・音声", note: "動画学習シートとシャドーイング用の音声" },
         { key: "emergency", label: "緊急のとき", note: "119・110・#9910などの番号と、電話で言うこと" },
         { key: "speak", label: "声・動画で出す", note: "発音を録音する／はっぴょうの動画を出す" },
@@ -828,6 +1001,8 @@
         { key: "guide", label: "Teacher Guide", note: "教え方・板書・つまずきへの対応（SOP/教師授業マニュアル を入れる予定）" },
         { key: "assign", label: "宿題を出す", note: "クラス・生徒を選んで宿題を割り当てる" },
         { key: "inbox", label: "提出物確認", note: "誰が出した・出していないかの一覧" },
+        { key: "photos", label: "ノートの写真", note: "書く宿題の写真を見て ○△× を付ける" },
+        { key: "voices", label: "生徒の声", note: "宿題で録音した声を聞いて ○△× を付ける（オンライン版）" },
         { key: "grade", label: "採点", note: "小テスト・作文の採点入力" },
         { key: "progress", label: "生徒進捗", note: "クラス全体と生徒ごとの到達状況" }
       ]
@@ -962,7 +1137,7 @@
   }
   var LIVE = { "teacher/today": 1, "teacher/materials": 1, "student/today": 1, "student/drill": 1, "student/homework": 1,
     "student/media": 1, "student/emergency": 1, "student/submit": 1, "student/speak": 1, "teacher/inbox": 1,
-    "teacher/study": 1, "student/history": 1, "teacher/grade": 1 };
+    "teacher/study": 1, "student/history": 1, "teacher/grade": 1, "teacher/photos": 1, "teacher/voices": 1 };
   var MAT_BASE = "materials/";
 
   function dayCount() { return LESSONS ? LESSONS.days.length : 0; }
@@ -1170,7 +1345,7 @@
       var srows = rows.length ? rows.map(function (x) {
         return "<tr><td><b>" + esc(x.name) + "</b></td><td class='num'>" + x.hw + "</td>" +
           "<td class='num'>" + (x.q ? x.ok + " / " + x.q : "—") + "</td>" +
-          "<td>" + (x.days.length ? "Day " + esc(x.days.sort(function (a, b) { return a - b; }).slice(-8).join(", ")) : '<span class="muted">まだ0</span>') + "</td>" +
+          "<td>" + (x.days.length ? esc(dayLabels(x.days.sort(function (a, b) { return a - b; }).slice(-8))) : '<span class="muted">まだ0</span>') + "</td>" +
           "<td>" + (x.lv ? esc(x.week) + "　<b>" + esc(x.lv) + "</b>" : "—") + "</td>" +
           "<td>" + (x.last ? esc(jdate(x.last)) : '<span class="chip st-未実施">記録なし</span>') + "</td></tr>";
       }).join("") : '<tr><td colspan="6" class="muted">まだ記録がありません。</td></tr>';
@@ -1193,7 +1368,9 @@
         '<div class="tools"><a class="btn" href="#/">ホーム</a></div></div>' +
         '<div class="box"><b>スプレッドシート「OUKA_会話面接結果」に届いている記録です。</b>' +
         "生徒が問題を解く・宿題を出すと、その場で自動で届きます（送るボタンは要りません）。" +
-        "宿題に書いた文と録音は、生徒のスマホの中だけにあります（サーバーには送っていません）。</div>" +
+        "書く宿題は<b>ノートの写真</b>で届きます（録音はスマホの中だけ）。</div>" +
+        '<div class="pf-top"><a class="btn btn-primary" href="#/teacher/photos">ノートの写真を見る（○△×を付ける）</a>' +
+        ' <a class="btn btn-primary" href="#/teacher/voices">🎙️ 生徒の声を聞く</a></div>' +
         '<h2 class="sec-h">生徒</h2>' +
         '<table class="rtable"><thead><tr><th>生徒</th><th>宿題提出</th><th>問題 正解/解いた</th><th>やったDay</th><th>週次ふるい（最新）</th><th>最後</th></tr></thead><tbody>' +
         srows + "</tbody></table>" +
@@ -1237,7 +1414,7 @@
     var srows = S.length ? S.map(function (r) {
       return "<tr><td><b>" + esc(r.name) + "</b></td><td class='num'>" + r.submitted + "</td>" +
         "<td class='num'>" + (r.q ? r.ok + " / " + r.q : "—") + "</td>" +
-        "<td>" + (r.days.length ? "Day " + esc(r.days.slice(-8).join(", ")) : '<span class="muted">まだ0</span>') + "</td>" +
+        "<td>" + (r.days.length ? esc(dayLabels(r.days.slice(-8))) : '<span class="muted">まだ0</span>') + "</td>" +
         "<td>" + (r.last ? esc(jdate(r.last)) : '<span class="chip st-未実施">記録なし</span>') + "</td></tr>";
     }).join("") : '<tr><td colspan="5" class="muted">まだ提出がありません。</td></tr>';
     var zeroT = T.filter(function (r) { return !r.submitted; }).map(function (r) { return r.name; });
@@ -1433,23 +1610,29 @@
     var bun = u.bunpou.map(function (b) { return "<li><b>" + esc(b.pattern) + '</b>　<span class="muted">' + esc(b.example) + "</span></li>"; }).join("");
     var kj = u.kanji.map(function (k) {
       return '<tr><td class="kj">' + esc(k.c) + (k.write ? '<span class="wbadge">書く</span>' : "") +
-        '</td><td class="en3">' + esc(k.en || "") + "</td><td><b>" + esc(k.kun) + "</b></td>" +
-        '<td class="on">' + esc(k.on) + "</td><td class='num'>" + esc(k.strokes || "") + "</td><td>" +
-        (k.origin_r || k.origin) + "</td><td>" + esc(k.words) + "</td></tr>";
+        '</td><td class="en3" data-l="意味">' + esc(k.en || "") + '</td><td data-l="くん"><b>' + esc(k.kun) + "</b></td>" +
+        '<td class="on" data-l="おん">' + esc(k.on) + '</td><td class="num" data-l="画">' + esc(k.strokes || "") + '</td><td data-l="成り立ち">' +
+        (k.origin_r || k.origin) + '</td><td data-l="語例">' + esc(k.words) + "</td></tr>";
     }).join("");
     var osh = (u.oshie_r || u.oshie).map(function (t) { return "<li>" + t + "</li>"; }).join("");
     var chkTexts = u.check_r || u.check;
     var chk = u.check.map(function (t, i) {
       var on = rec && rec.check && rec.check[i];
       return '<label class="ts-chk"><input type="checkbox" class="ts-c" data-i="' + i + '"' +
-        (on ? " checked" : "") + (done ? " disabled" : "") + "> " + chkTexts[i] + "</label>";
+        (on ? " checked" : "") + (done ? " disabled" : "") + '> <span class="ts-t">' + chkTexts[i] + "</span></label>";
     }).join("");
     var hwItems = u.shukudai || [];
     var hwTexts = u.shukudai_r || hwItems;
+    /* 書く宿題＝写真（チェックでは「できた」にしない）／言う・聞く宿題＝チェック */
     var hwBox = hwItems.map(function (t, i) {
       var on = rec && rec.hw && rec.hw[i];
+      var kind = taskKind(t);
+      if (kind === "write") {
+        return '<div class="ts-hw ts-hw-w"><div class="ts-t"><span class="tk tk-write">' + TASK_LABEL.write + "</span>" + hwTexts[i] + "</div>" +
+          photoBox("study", n, i, t, !!done) + "</div>";
+      }
       return '<label class="ts-chk ts-hw"><input type="checkbox" class="ts-h" data-i="' + i + '"' +
-        (on ? " checked" : "") + (done ? " disabled" : "") + "> " + hwTexts[i] + "</label>";
+        (on ? " checked" : "") + (done ? " disabled" : "") + '> <span class="ts-t"><span class="tk tk-say">' + TASK_LABEL[kind] + "</span>" + hwTexts[i] + "</span></label>";
     }).join("");
     view.innerHTML = '<section class="lesson">' + nav +
       '<div class="lesson-head"><h1>UNIT ' + u.no + "　" + (u.title_r || esc(u.title)) + "</h1>" +
@@ -1466,7 +1649,7 @@
       '<p class="kj-rule">おぼえるのは <b>「くん」と「意味」</b>だけ。<b>「おん」は あとで</b>。' +
       '<b class="wtext">書く</b> の 字は 書けるように、ほかは <b>読めれば いい</b>。' +
       '<a href="#/teacher/study">漢字の はじめかた →</a></p>' +
-      '<table class="rtable"><thead><tr><th>字</th><th>意味</th><th>くん</th><th>おん</th><th>画</th><th>成り立ち</th><th>語例</th></tr></thead><tbody>' +
+      '<table class="rtable kjt"><thead><tr><th>字</th><th>意味</th><th>くん</th><th>おん</th><th>画</th><th>成り立ち</th><th>語例</th></tr></thead><tbody>' +
       kj + "</tbody></table></div>" +
       '<div class="sec-box"><h2 class="sec-h">④ 教え方メモ（生徒に教えるとき）</h2><ul class="small">' + osh + "</ul></div>" +
       '<h2 class="sec-h">やったことを書く（これが提出になります）</h2>' +
@@ -1476,7 +1659,7 @@
       (hwBox ? '<div class="ts-lab">宿題　つぎの じゅぎょうまでに やる</div><div class="ts-chks">' + hwBox + "</div>" : "") +
       '<label class="ts-row">自分のテストの点（100点満点）<input id="tsScore" type="number" min="0" max="100" value="' +
       esc(rec && rec.score != null ? rec.score : "") + '"' + (done ? " readonly" : "") + "></label>" +
-      '<label class="ts-row ts-note">書いた文・わからなかった所<textarea id="tsNote" rows="4" placeholder="例：「は」と「が」がまだ分かりません。作った文を3つ書く。"' +
+      '<label class="ts-row ts-note">わからなかった所・代表に聞きたいこと（宿題の答えはノートに書いて写真で出す）<textarea id="tsNote" rows="4" placeholder="例：「は」と「が」のちがいがまだ分かりません。"' +
       (done ? " readonly" : "") + ">" + esc(rec && rec.note ? rec.note : "") + "</textarea></label></div>" +
       '<div class="start-btns">' +
       (done ? '<button class="btn btn-xl" data-act="ts-edit">直す</button>'
@@ -1487,6 +1670,7 @@
       '<p class="muted small">保存されるのは<b>この端末の中だけ</b>です。代表に見せるときは「代表の確認」でCSVに書き出します。</p>' +
       "</section>";
     bindTeacherName();
+    if (name) photoFill("study", n);
   }
 
   function tsCollect(n) {
@@ -1498,6 +1682,10 @@
     var hw = [];
     Array.prototype.forEach.call(document.querySelectorAll(".ts-h"), function (el) {
       hw[parseInt(el.getAttribute("data-i"), 10)] = el.checked;
+    });
+    /* 書く宿題は「写真が1枚以上ある」＝できた（本人のチェックでは数えない） */
+    (u.shukudai || []).forEach(function (t, i) {
+      if (taskKind(t) === "write") hw[i] = photoCount("study", n, i) > 0;
     });
     var sc = document.getElementById("tsScore");
     var nt = document.getElementById("tsNote");
@@ -1600,64 +1788,142 @@
   }
 
   /* 生徒：宿題（書いて出す。紙で出したい人はPDFを印刷する） */
-  function renderStudentHomework(n) {
-    if (!LESSONS) return noLessons();
-    n = n || currentDay();
-    var d = dayData(n);
-    var name = studentName();
-    var items = splitHomework(d.homework);
-    var rec = name ? hwGet(name, n) : null;
-    var done = rec && rec.submitted_at;
-    headName.textContent = "生徒／宿題 Day " + n;
-    view.innerHTML = '<section class="lesson">' + dayNav("student", "homework", n) +
-      '<div class="lesson-head"><h1>Day ' + d.day + " の宿題</h1>" +
-      (done ? '<span class="chip st-完了">提出しました</span>' : (rec ? '<span class="chip st-面接中">書きかけ</span>' : "")) + "</div>" +
-      '<div class="hw-name"><label>名前（なまえ）<input id="hwName" value="' + esc(name) + '" placeholder="例：SITA RAI" autocomplete="off"></label>' +
-      '<span class="muted small">名前を入れると、書いたものが保存されます。</span></div>' +
-      (name ? "" : '<div class="warn">名前を入れてから書いてください。</div>') +
-      '<div class="hw-list">' + items.map(function (it, i) {
-        var val = rec && rec.answers ? (rec.answers[i] || "") : "";
-        return '<div class="hw-item"><div class="hw-q"><span class="hw-no">' + esc(it.no) + "</span>" + esc(it.text) + "</div>" +
-          '<textarea class="hw-a" data-i="' + i + '" rows="3" placeholder="ここに書く"' + (done ? " readonly" : "") + ">" + esc(val) + "</textarea></div>";
-      }).join("") + "</div>" +
-      '<div class="box"><b>ACTION（明日の朝礼で確認）</b>　' + d.action + "</div>" +
-      '<div class="start-btns">' +
-      (done ? '<button class="btn btn-xl" id="hwEdit" data-act="hw-edit">直す</button>'
-            : '<button class="btn btn-primary btn-xl" id="hwSubmit" data-act="hw-submit">提出する</button>') +
-      '<button class="btn btn-xl" id="hwSave" data-act="hw-save">とちゅうで保存</button>' +
-      '<a class="btn btn-xl" href="#/student/submit">自分の提出を見る</a></div>' +
-      (done ? '<p class="muted small">提出 ' + esc(String(rec.submitted_at).slice(0, 16).replace("T", " ")) + "</p>" : "") +
-      '<h2 class="sec-h">紙で出す人</h2><div class="mat-row">' + matLink("24_なぞり書き_ひらがなカタカナ.pdf") + matLink("27_動画学習シート.pdf") + "</div>" +
-      '<p class="muted small">提出はこの端末に保存されます。先生は「先生 → 提出物確認」で見られます。' +
-      "ほかの端末やスプレッドシートへ送る仕組みは、まだ入れていません。</p>" +
-      "</section>";
-    bindDaySel();
-    var nm = document.getElementById("hwName");
-    nm.addEventListener("change", function () { setStudentName(nm.value); render(); });
-    Array.prototype.forEach.call(document.querySelectorAll(".hw-a"), function (ta) {
-      ta.addEventListener("input", function () { hwSave(n, false); });
-    });
+  /* ---------- 宿題（2026-10-01 代表「今の感じでいい。ちゃんと提出できるように、簡単に。使いやすく」） ----------
+   * 1日の宿題＝ ①分野の単語（テスト・録音） ②授業の復習（ことば・ならべかえ・録音） ③ノートの写真 の6つ。
+   * ★1つ終わるごとに自動で保存する（保存ボタンを置かない）。生徒が押すのは最後の「提出する」1回だけ。
+   * ★数えるのは機械で確かめられる物だけ＝テストの点・録音した回数・写真の枚数。カードの「言った」は練習なので数えない。
+   * ★録音は端末の中だけ（声は送らない・残さない）。送るのは「やったかどうかと数」。
+   * 中身＝data/homework.js（正本＝配布用PDF/V_わかりやすい授業_試作/_tools/。ここで書き足さない）。 */
+  var HWD = window.OUKA_HOMEWORK || (LESSONS && LESSONS.homework) || null;
+  var HW_TASKS = [
+    { key: "wtest", part: 1, icon: "🎧", ja: "たんご テスト", ne: "शब्द परीक्षा" },
+    { key: "wrec", part: 1, icon: "🎙️", ja: "たんごを いって ろくおん", ne: "शब्द भनेर रेकर्ड गर्ने" },
+    { key: "ltest", part: 2, icon: "📘", ja: "じゅぎょうの ことば", ne: "कक्षाका शब्द" },
+    { key: "order", part: 2, icon: "🧩", ja: "れいぶんを ならべる", ne: "वाक्य मिलाउने" },
+    { key: "erec", part: 2, icon: "🎙️", ja: "れいぶんを いって ろくおん", ne: "वाक्य भनेर रेकर्ड गर्ने" },
+    { key: "photo", part: 3, icon: "📷", ja: "ノートの しゃしん", ne: "कापीको फोटो" }
+  ];
+  /* オリエンテーション O1〜O10（2026-10-01 代表決定）＝ひらがなの2週間。単語は ひらがなだけ（漢字・カタカナなし）。
+   * 分野の単語（漢字入り）と 例文の ならべかえは 出さない＝その日の単語だけを 意味・聞く・言う・書く で 回す。
+   * day は 1001〜1010（Day1〜128 と ぶつからない数）。画面では「O1」と出す。 */
+  var HW_TASKS_ORI = [
+    { key: "otest", part: 1, icon: "📘", ja: "いみ テスト", ne: "अर्थ परीक्षा" },
+    { key: "olisten", part: 1, icon: "🎧", ja: "きいて えらぶ", ne: "सुनेर छान्ने" },
+    { key: "orec", part: 1, icon: "🎙️", ja: "いって ろくおん", ne: "भनेर रेकर्ड गर्ने" },
+    { key: "photo", part: 3, icon: "📷", ja: "ノートの しゃしん", ne: "कापीको फोटो" }
+  ];
+  var HW_NO = ["①", "②", "③", "④", "⑤", "⑥"];
+  var HW_REC_TIMES = { wrec: 3, erec: 2, orec: 1 };
+  function hwIsOri(n) { return n > 1000; }
+  function hwTasks(n) { return hwIsOri(n) ? HW_TASKS_ORI : HW_TASKS; }
+  function hwTaskIndex(key, n) { var L = hwTasks(n); for (var i = 0; i < L.length; i++) if (L[i].key === key) return i; return -1; }
+  /* 日の並び（O1〜O10 → Day1〜128）と 見出し */
+  function hwOrder() { return (HWD.ori || []).map(function (x) { return x.day; }).concat(HWD.days.map(function (x) { return x.day; })); }
+  function hwLabel(n) { var d = hwDayData(n); return hwIsOri(n) ? (d ? d.label : "O" + (n - 1000)) : "Day " + n; }
+  function hwStep(n, k) { var L = hwOrder(), i = L.indexOf(n); return L[Math.max(0, Math.min(L.length - 1, i + k))]; }
+  /* オリエンテーションの 単語（O10 のように 新しい単語が無い日は、それまでの 全部） */
+  function hwOriWords(n) {
+    var d = hwDayData(n);
+    if (d.words.length) return d.words.map(function (w) { return { ja: w.ja, yomi: w.ja, ne: w.ne, icon: "🔤" }; });
+    var all = [];
+    (HWD.ori || []).forEach(function (x) { if (x.day < n) x.words.forEach(function (w) { all.push({ ja: w.ja, yomi: w.ja, ne: w.ne, icon: "🔤" }); }); });
+    return all;
+  }
+  function canRecord() { return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder && window.isSecureContext !== false); }
+  function hwDayData(n) { return HWD && (n > 1000 ? (HWD.ori || [])[n - 1001] : HWD.days[n - 1]); }
+  function hwFieldData() { var c = currentField().code; return HWD && c ? HWD.fields[c] || null : null; }
+  function hwDayNo() {
+    var n = parseInt(settings().hw_day, 10);
+    return (n >= 1 && n <= 128) || (n > 1000 && hwDayData(n)) ? n : currentDay();
+  }
+  function ja2(ja, ne) { return esc(ja) + ' <span class="ne">' + esc(ne) + "</span>"; }
+  function shuffle(a) {
+    a = a.slice();
+    for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; }
+    return a;
+  }
+  /* 先生用の書き込み（（先生）や〇〇）を外す＝読み上げ・ならべかえ用 */
+  function hwClean(s) { return String(s).replace(/（[^）]*）/g, "").replace(/…/g, "、").trim(); }
+  function hwSpeak(text) {
+    try {
+      if (!window.speechSynthesis) return;
+      speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(hwClean(text).replace(/〇〇|△△/g, "なになに"));
+      u.lang = "ja-JP"; u.rate = 0.85;
+      var v = speechSynthesis.getVoices().filter(function (x) { return /^ja/i.test(x.lang); })[0];
+      if (v) u.voice = v;
+      speechSynthesis.speak(u);
+    } catch (e) { /* 声が無い端末では鳴らない */ }
   }
 
-  function hwCollect(day) {
-    var name = studentName();
-    var d = dayData(day);
-    var answers = {};
-    Array.prototype.forEach.call(document.querySelectorAll(".hw-a"), function (ta) {
-      answers[ta.getAttribute("data-i")] = ta.value;
-    });
-    var old = hwGet(name, day) || {};
-    return {
-      student: name, day: day, field: currentField().code || "", answers: answers,
-      questions: splitHomework(d.homework).map(function (x) { return x.no + " " + x.text; }),
-      submitted_at: old.submitted_at || ""
-    };
+  /* 今日の新しい単語＝1日6語（①試験→②仕事→③生活の順）。1周した後は もう1周（総復習） */
+  function hwNewWords(f, day) {
+    var per = HWD.per_day, len = f.words.length, out = [];
+    var s = ((day - 1) * per) % len;
+    for (var k = 0; k < per; k++) out.push(f.words[(s + k) % len]);
+    return out;
+  }
+  function hwLap(f, day) { return Math.floor(((day - 1) * HWD.per_day) / f.words.length) + 1; }
+  /* 復習＝きのう・3日前・7日前の語＋きのう まちがえた語 */
+  function hwReviewWords(f, day) {
+    var seen = {}, out = [];
+    hwNewWords(f, day).forEach(function (w) { seen[w.ja] = 1; });
+    var add = function (w) { if (w && !seen[w.ja]) { seen[w.ja] = 1; out.push(w); } };
+    var prev = studentName() ? hwGet(studentName(), day - 1) : null;
+    var wrong = prev && prev.res && prev.res.wtest ? prev.res.wtest.wrong || [] : [];
+    f.words.forEach(function (w) { if (wrong.indexOf(w.ja) >= 0) add(w); });
+    [1, 3, 7].forEach(function (b) { if (day - b >= 1) hwNewWords(f, day - b).forEach(add); });
+    return out;
   }
 
+  /* 記録：answers は今までと同じ形（先生の提出物確認・スプレッドシート送信がそのまま読める） */
+  function hwRec(day) {
+    var name = studentName();
+    var r = (name && hwGet(name, day)) || { student: name, day: day, answers: {}, res: {}, submitted_at: "" };
+    r.res = r.res || {};
+    return r;
+  }
+  function hwAnswers(r, day) {
+    var a = {};
+    hwTasks(day).forEach(function (t, i) {
+      var x = r.res[t.key];
+      if (t.key === "photo") {
+        if (!HW_PH[day]) { a[i] = (r.answers || {})[i] || ""; return; }   /* 写真の数をまだ読んでいない＝前の答えを残す */
+        var c = photoCount("hw", day, i); a[i] = c ? "写真 " + c + " 枚" : "";
+      }
+      else if (!x || !x.done) a[i] = "";
+      else if (x.score != null) a[i] = x.score + " / " + x.total;
+      else a[i] = "ろくおん " + x.count + " 回";
+    });
+    return a;
+  }
+  function hwStore(day, key, result) {
+    var name = studentName();
+    if (!name) { toast("先に 名前を 入れてください"); return false; }
+    var r = hwRec(day);
+    if (key) r.res[key] = result;
+    r.student = name; r.day = day; r.field = currentField().code || r.field || "";
+    r.answers = hwAnswers(r, day);
+    r.questions = hwTasks(day).map(function (t, i) { return HW_NO[i] + " " + t.ja; });
+    hwPut(r);
+    return true;
+  }
+  function hwDone(r, key) {
+    if (key === "photo") return photoCount("hw", r.day, hwTaskIndex("photo", r.day)) > 0;
+    return !!(r.res[key] && r.res[key].done);
+  }
+  /* やらなくていい物：録音できない端末の録音・分野未選択の単語 */
+  function hwNeeded(key) {
+    if ((key === "wrec" || key === "erec" || key === "orec") && !canRecord()) return false;
+    return true;
+  }
+
+  /* 写真の欄から呼ばれる（写真を足した・消した時） */
+  function hwOnList(n) { var r = route(); return r.item === "homework" && !r.sub && (r.day || hwDayNo()) === n; }
   function hwSave(day, tell) {
-    var name = studentName();
-    if (!name) { if (tell) toast("先に名前を入れてください"); return false; }
-    hwPut(hwCollect(day));
+    if (!studentName()) { if (tell) toast("先に名前を入れてください"); return false; }
+    hwStore(day, null);
+    if (hwOnList(day)) renderHwList(day);   /* 写真を足した・消した＝「できた数」をすぐ変える */
     if (tell) toast("保存しました");
     return true;
   }
@@ -1665,14 +1931,346 @@
   function hwSubmit(day) {
     var name = studentName();
     if (!name) { toast("先に名前を入れてください"); return; }
-    var rec = hwCollect(day);
-    var written = Object.keys(rec.answers).filter(function (k) { return String(rec.answers[k]).trim(); }).length;
-    if (!written) { toast("まだ何も書いていません"); return; }
-    if (written < rec.questions.length && !confirm("書いていない欄があります。このまま提出しますか？")) return;
-    rec.submitted_at = new Date().toISOString();
-    hwPut(rec);
-    toast("提出しました");
+    hwStore(day, null);
+    var r = hwRec(day);
+    var left = hwTasks(day).filter(function (t) { return hwNeeded(t.key) && !hwDone(r, t.key); }).length;
+    var did = hwTasks(day).filter(function (t) { return hwDone(r, t.key); }).length;
+    if (!did) { toast("まだ 何も やっていません"); return; }
+    if (left && !confirm("まだ " + left + " こ あります。このまま 出しますか？\nअझै " + left + " वटा बाँकी छ। यसै पेश गर्ने？")) return;
+    r.submitted_at = new Date().toISOString();
+    hwPut(r);
+    toast("ていしゅつ しました ／ पेश भयो");
     render();
+  }
+
+  var HW_PH = {};   /* 写真の数を読み終えた Day */
+  var HWS = null;   /* いまやっている宿題（画面の中だけ。録音もここだけ） */
+
+  function renderStudentHomework(n) {
+    if (!HWD) {
+      view.innerHTML = '<section class="start"><div class="soon"><p><b>宿題のデータが入っていません。</b></p>' +
+        "<p class='muted'>パソコンで <code>python3 配布用PDF/V_わかりやすい授業_試作/_tools/アプリ宿題データ.py</code> を実行すると入ります。</p></div></section>";
+      return;
+    }
+    n = n || hwDayNo();
+    if (!hwDayData(n)) n = 1;
+    var s2 = settings(); if (s2.hw_day !== n) { s2.hw_day = n; writeJSON(SETTINGS_KEY, s2); }
+    var sub = route().sub || "";
+    if (sub && HWS && (HWS.key !== sub || HWS.day !== n)) hwStop();
+    if (sub && hwTaskIndex(sub, n) >= 0 && sub !== "photo") return renderHwTask(n, sub);
+    if (sub === "card") return renderHwCard(n);
+    hwStop();
+    renderHwList(n);
+  }
+
+  function renderHwList(n) {
+    var d = hwDayData(n), f = hwFieldData(), name = studentName();
+    var r = hwRec(n), done = !!r.submitted_at;
+    var ori = hwIsOri(n);
+    var need = hwTasks(n).filter(function (t) { return hwNeeded(t.key); });
+    var did = need.filter(function (t) { return hwDone(r, t.key); }).length;
+    headName.textContent = "しゅくだい " + hwLabel(n);
+    /* オンライン版ではアカウントの名前が入り、打ち変えられない（online.js が読むだけにする） */
+    var nameBox =
+      '<div class="hw-name"><label>なまえ ／ <span class="ne">नाम</span><input id="hwName" value="' + esc(name) + '" placeholder="例：SITA RAI" autocomplete="off"></label></div>';
+    var row = function (t) {
+      var i = hwTaskIndex(t.key, n), x = r.res[t.key], ok = hwDone(r, t.key);
+      var off = !name || (t.part === 1 && !f && !ori);
+      var cant = !hwNeeded(t.key);
+      var sub = cant ? "この たんまつでは ろくおん できません（先生の 前で いう）"
+        : t.key === "wtest" ? "10もん・じどうで まる"
+        : t.key === "wrec" ? "1語 " + HW_REC_TIMES.wrec + "かい ＝ " + HWD.per_day * HW_REC_TIMES.wrec + "かい"
+        : t.key === "ltest" ? "いみを えらぶ " + Math.min(10, d.words.length) + "もん"
+        : t.key === "order" ? hwOrderItems(d).length + "もん"
+        : t.key === "erec" ? "1文 " + HW_REC_TIMES.erec + "かい ＝ " + d.ex.length * HW_REC_TIMES.erec + "かい"
+        : t.key === "otest" ? "いみを えらぶ " + Math.min(10, hwOriWords(n).length) + "もん・じどうで まる"
+        : t.key === "olisten" ? "きいて ことばを えらぶ " + Math.min(10, hwOriWords(n).length) + "もん"
+        : t.key === "orec" ? "1語 1かい ＝ " + Math.min(hwOriWords(n).length, 30) + "かい" : "";
+      var res = ok ? '<span class="hw-ok">✓ ' + esc(hwAnswers(r, n)[i]) + "</span>" : "";
+      return '<a class="hw-task' + (ok ? " is-done" : "") + (off || cant ? " is-off" : "") + '" href="' +
+        (off || cant ? "javascript:void(0)" : "#/student/homework/" + n + "/" + t.key) + '"' + (off ? ' data-act="hw-need"' : "") + ">" +
+        '<span class="hw-ic">' + (ok ? "✅" : t.icon) + "</span>" +
+        '<span class="hw-tx"><b>' + HW_NO[i] + " " + esc(t.ja) + '</b><span class="ne">' + esc(t.ne) + "</span>" +
+        '<span class="hw-sub">' + esc(sub) + "</span>" + res + "</span>" +
+        '<span class="hw-go">' + (ok ? "もう一度" : "›") + "</span></a>";
+    };
+    var part = function (p) { return hwTasks(n).filter(function (t) { return t.part === p; }).map(row).join(""); };
+    var nw = f && !ori ? hwNewWords(f, n) : [];
+    var ow = ori ? hwOriWords(n) : [];
+    var daySel = '<div class="hw-day"><a class="btn" href="#/student/homework/' + hwStep(n, -1) + '">‹</a>' +
+        '<select id="hwDaySel">' + hwOrder().map(function (x) {
+          return '<option value="' + x + '"' + (x === n ? " selected" : "") + ">" + (x > 1000 ? hwLabel(x) + " オリエンテーション" : "Day " + x) + "</option>"; }).join("") + "</select>" +
+        '<a class="btn" href="#/student/homework/' + hwStep(n, 1) + '">›</a>';
+    /* オリエンテーション＝今日の字と 今日の単語だけ（分野の単語・例文は 出さない） */
+    var oriMid = !ori ? "" :
+      '<h2 class="hw-h">🔤 きょうの じ ／ <span class="ne">आजका अक्षर</span></h2>' +
+      '<div class="hw-goal"><b style="font-size:1.6em;letter-spacing:.2em">' + esc(d.letters || "ぜんぶの ふくしゅう") + '</b>' +
+        '<span class="ne">' + esc(d.title.ne) + "</span></div>" +
+      '<h2 class="hw-h">📝 きょうの たんご ' + (d.words.length ? d.words.length + "ご" : "（これまでの ぜんぶ " + ow.length + "ご）") +
+        " ／ <span class='ne'>आजका शब्द</span></h2>" +
+      (d.words.length ? '<div class="hw-words">' + d.words.map(function (w) { return "<span>" + esc(w.ja) + " <small>" + esc(w.ne) + "</small></span>"; }).join("") + "</div>" : "") +
+      '<a class="hw-task hw-practice" href="#/student/homework/' + n + '/card"><span class="hw-ic">🃏</span><span class="hw-tx"><b>カードで おぼえる（れんしゅう）</b>' +
+        '<span class="ne">कार्डले याद गर्ने（अभ्यास）</span><span class="hw-sub">きく → いみ → いう</span></span><span class="hw-go">›</span></a>' +
+      part(1);
+    view.innerHTML = '<section class="lesson hw2">' + daySel +
+        (done ? '<span class="chip st-完了">ていしゅつ ずみ ／ पेश भयो</span>' : "") + "</div>" +
+      nameBox + (name ? "" : '<div class="warn">さいしょに なまえを 入れてください ／ <span class="ne">पहिले आफ्नो नाम लेख्नुहोस्</span></div>') +
+      '<div class="hw-prog"><div class="hw-bar"><i style="width:' + Math.round(did / Math.max(1, need.length) * 100) + '%"></i></div>' +
+        "<b>" + did + " / " + need.length + "</b> できた ／ <span class='ne'>सकियो</span></div>" +
+      '<div class="hw-goal"><span class="muted">今日の ゴール ／ <span class="ne">आजको लक्ष्य</span></span><b>' + esc(d.goal.ja) + '</b><span class="ne">' + esc(d.goal.ne) + "</span></div>" +
+
+      oriMid + (ori ? "" :
+      '<h2 class="hw-h">' + (f ? f.icon + " " + esc(f.ja) : "") + "の たんご ／ <span class='ne'>" + (f ? esc(f.ne) + "का " : "") + "शब्द</span></h2>" +
+      fieldPicker() +
+      (f ? '<div class="hw-words">' + nw.map(function (w) { return "<span>" + esc(w.icon || f.icon) + " " + esc(w.ja) + " <small>" + esc(w.yomi) + "</small></span>"; }).join("") + "</div>" +
+           (hwLap(f, n) > 1 ? '<p class="muted small">2しゅうめ（ふくしゅう）／ <span class="ne">दोस्रो फेरा（दोहोर्याइ）</span></p>' : "") +
+           '<a class="hw-task hw-practice" href="#/student/homework/' + n + '/card"><span class="hw-ic">🃏</span><span class="hw-tx"><b>カードで おぼえる（れんしゅう）</b>' +
+           '<span class="ne">कार्डले याद गर्ने（अभ्यास）</span><span class="hw-sub">きく → いみ → いう</span></span><span class="hw-go">›</span></a>'
+         : '<div class="warn">コースを えらぶと たんごが 出ます ／ <span class="ne">कोर्स छान्नुहोस्</span></div>') +
+      part(1) +
+      '<h2 class="hw-h">📘 じゅぎょうの ふくしゅう ／ <span class="ne">कक्षाको दोहोर्याइ</span></h2>' + part(2)) +
+      '<h2 class="hw-h">✍️ かみの しゅくだい ／ <span class="ne">कागजको गृहकार्य</span></h2>' +
+      '<div class="hw-item' + (hwDone(r, "photo") ? " ph-ok" : "") + '"><div class="hw-q">' + HW_NO[hwTaskIndex("photo", n)] + " ノートの しゃしん ／ <span class='ne'>कापीको फोटो</span></div>" +
+        '<div class="hw-paper">' + esc(d.hw.ja) + '</div><div class="ne hw-ne">' + esc(d.hw.ne) + "</div>" +
+        (name ? photoBox("hw", n, hwTaskIndex("photo", n), HW_NO[hwTaskIndex("photo", n)] + " " + d.hw.ja, false) : "") + "</div>" +
+      '<div class="start-btns hw-submit">' +
+        (done ? '<p class="muted small">ていしゅつ ' + esc(jdate(r.submitted_at)) + "（あとから やった 分も 自動で 先生に とどきます）</p>"
+              : '<button class="btn btn-primary btn-xl" data-act="hw-submit"' + (name ? "" : " disabled") + ">ていしゅつ する ／ <span class='ne'>पेश गर्ने</span></button>") +
+      "</div>" +
+      '<p class="muted small">やった 分は じどうで ほぞん されます ／ <span class="ne">गरेको काम आफैं सेभ हुन्छ</span>。' +
+        "ろくおんは この たんまつの 中だけ（おくりません）。</p>" +
+      "</section>";
+    var sel = document.getElementById("hwDaySel");
+    sel.addEventListener("change", function () { go("#/student/homework/" + sel.value); });
+    var nm = document.getElementById("hwName");
+    if (nm) nm.addEventListener("change", function () { setStudentName(nm.value); render(); });
+    if (ONLINE && ONLINE.afterRender) ONLINE.afterRender(view);   /* 描き直した時も、名前は読むだけのまま */
+    var shown = hwDone(r, "photo");
+    if (name) photoFill("hw", n).then(function () {
+      HW_PH[n] = true;
+      var rr = hwRec(n), a = hwAnswers(rr, n), k = hwTaskIndex("photo", n);
+      if (rr.answers && rr.answers[k] !== a[k] && hwGet(name, n)) hwStore(n, null);
+      if (hwDone(hwRec(n), "photo") !== shown && hwOnList(n)) renderHwList(n);   /* 写真の有無が変わった時だけ「できた数」を出し直す */
+    });
+  }
+
+  function hwHead(n, title, sub) {
+    headName.textContent = title;
+    return '<div class="hw-top"><a class="btn" href="#/student/homework/' + n + '">‹ もどる ／ <span class="ne">फर्कने</span></a>' +
+      '<span class="hw-cnt">' + sub + "</span></div>";
+  }
+
+  /* カード（れんしゅう＝数えない） */
+  function renderHwCard(n) {
+    var f = hwFieldData();
+    if (!f && !hwIsOri(n)) { go("#/student/homework/" + n); return; }
+    var list = hwIsOri(n) ? hwOriWords(n) : hwNewWords(f, n).concat(hwReviewWords(f, n));
+    if (!f) f = { icon: "🔤" };
+    if (!HWS || HWS.key !== "card" || HWS.day !== n) HWS = { key: "card", day: n, i: 0, open: false };
+    var w = list[HWS.i], isNew = hwIsOri(n) || HWS.i < HWD.per_day;
+    view.innerHTML = '<section class="lesson hw2">' + hwHead(n, "たんご カード", (HWS.i + 1) + " / " + list.length) +
+      '<button class="hw-card2" data-act="hw-flip"><span class="hw-em">' + esc(w.icon || f.icon) + "</span>" +
+        '<span class="hw-kj">' + esc(w.ja) + '</span><span class="hw-yo">' + esc(w.yomi) + "</span>" +
+        (HWS.open ? '<span class="hw-mn ne">' + esc(w.ne) + "</span>" : '<span class="hw-hint">タップ ＝ いみ ／ <span class="ne">थिच्नुहोस् ＝ अर्थ</span></span>') +
+        '<span class="chip ' + (isNew ? "st-完了" : "st-面接中") + '">' + (isNew ? "あたらしい ／ नयाँ" : "ふくしゅう ／ दोहोर्याइ") + "</span></button>" +
+      '<button class="btn btn-xl hw-wide" data-act="hw-say" data-say="' + esc(w.yomi) + '">🔊 きく ／ <span class="ne">सुन्ने</span></button>' +
+      '<div class="hw-nav"><button class="btn btn-xl" data-act="hw-card-prev"' + (HWS.i ? "" : " disabled") + ">‹ まえ</button>" +
+        '<button class="btn btn-primary btn-xl" data-act="hw-card-next">' + (HWS.i < list.length - 1 ? "つぎ ›" : "おわり ✓") + "</button></div>" +
+      "</section>";
+  }
+
+  /* 数える宿題（テスト・ならべかえ・録音）を1つの形で回す */
+  function hwOrderItems(d) {
+    return d.ex.map(function (x) { return { ja: hwClean(x.ja), ne: x.ne }; })
+      .filter(function (x) { return x.ja.split(/\s+/).length >= 2; });
+  }
+  function hwBuild(n, key) {
+    var d = hwDayData(n), f = hwFieldData(), s = { key: key, day: n, i: 0, score: 0, picked: null, wrong: [], items: [] };
+    if (key === "wtest") {
+      var pool = hwNewWords(f, n).concat(hwReviewWords(f, n)), kinds = ["A", "B", "C"];
+      for (var k = 0; k < 10; k++) {
+        var w = pool[k % pool.length];
+        var others = shuffle(f.words.filter(function (x) { return x.ja !== w.ja; })).slice(0, 3);
+        s.items.push({ w: w, kind: kinds[k % 3], ch: shuffle([w].concat(others)) });
+      }
+    } else if (key === "ltest") {
+      var all = [];
+      HWD.days.forEach(function (x) { x.words.forEach(function (y) { all.push(y); }); });
+      shuffle(d.words).slice(0, 10).forEach(function (w) {
+        var near = d.words.filter(function (x) { return x.ja !== w.ja; });
+        var others = shuffle(near).slice(0, 3);
+        if (others.length < 3) others = others.concat(shuffle(all.filter(function (x) { return x.ja !== w.ja && x.ne !== w.ne; })).slice(0, 3 - others.length));
+        s.items.push({ w: w, ch: shuffle([w].concat(others)) });
+      });
+    } else if (key === "order") {
+      s.items = hwOrderItems(d).map(function (x) {
+        var toks = x.ja.split(/\s+/);
+        return { x: x, toks: toks, pool: shuffle(toks.map(function (t, i) { return { t: t, i: i }; })), got: [], checked: null };
+      });
+    } else if (key === "otest" || key === "olisten") {
+      /* その日の単語から 10問。選ぶ肢も その日（足りなければ 前の日まで）の単語から＝まだ習っていない字は 出ない */
+      var ow = hwOriWords(n), back = [];
+      (HWD.ori || []).forEach(function (x) { if (x.day <= n) x.words.forEach(function (y) { back.push({ ja: y.ja, yomi: y.ja, ne: y.ne, icon: "🔤" }); }); });
+      shuffle(ow).slice(0, 10).forEach(function (w) {
+        var others = shuffle(ow.filter(function (x) { return x.ja !== w.ja && x.ne !== w.ne; })).slice(0, 3);
+        if (others.length < 3) others = others.concat(shuffle(back.filter(function (x) { return x.ja !== w.ja && x.ne !== w.ne && others.indexOf(x) < 0; })).slice(0, 3 - others.length));
+        s.items.push({ w: w, kind: key === "otest" ? "L" : "B", ch: shuffle([w].concat(others)) });
+      });
+    } else if (key === "orec") {
+      s.items = hwOriWords(n).slice(0, 30).map(function (w) { return { ja: w.ja, sub: "", say: w.ja, ne: w.ne, icon: "🔤", takes: [] }; });
+    } else if (key === "wrec") {
+      s.items = hwNewWords(f, n).map(function (w) { return { ja: w.ja, sub: w.yomi, say: w.yomi, ne: w.ne, icon: w.icon || f.icon, takes: [] }; });
+    } else if (key === "erec") {
+      s.items = d.ex.map(function (x) { return { ja: hwClean(x.ja), sub: "", say: x.ja, ne: x.ne, icon: "💬", takes: [] }; });
+    }
+    s.total = s.items.length;
+    return s;
+  }
+  function hwFinish(s) {
+    var res;
+    if (s.key === "wrec" || s.key === "erec" || s.key === "orec") res = { done: true, count: s.items.reduce(function (t, x) { return t + x.takes.length; }, 0) };
+    else res = { done: true, score: s.score, total: s.total, wrong: s.wrong, at: new Date().toISOString() };
+    var old = hwRec(s.day).res[s.key];
+    if (old && old.done && old.score != null && res.score < old.score) res = old;   /* 何回やってもいい。いちばん良い点を残す */
+    hwStore(s.day, s.key, res);
+    s.finished = true;
+  }
+  function hwStop() {
+    if (HWS && HWS.mr && HWS.mr.state === "recording") { try { HWS.mr.stop(); } catch (e) { /* もう止まっている */ } }
+    if (HWS && HWS.stream) HWS.stream.getTracks().forEach(function (t) { t.stop(); });
+    if (HWS && HWS.key !== "card") HWS = null;
+  }
+
+  function renderHwTask(n, key) {
+    var f = hwFieldData(), t = hwTasks(n)[hwTaskIndex(key, n)];
+    if (!t || !studentName() || (t.part === 1 && !f && !hwIsOri(n)) || !hwNeeded(key)) { go("#/student/homework/" + n); return; }
+    if (!HWS || HWS.key !== key || HWS.day !== n) HWS = hwBuild(n, key);
+    var s = HWS;
+    if (s.finished) {
+      var isRec = key === "wrec" || key === "erec" || key === "orec";
+      view.innerHTML = '<section class="lesson hw2">' + hwHead(n, t.ja, "おわり") +
+        '<div class="hw-result"><div class="hw-big">' + (isRec ? "✅" : s.score + " / " + s.total) + "</div>" +
+        "<p>" + (isRec ? "できました！ ／ <span class='ne'>सकियो！</span>" : s.score >= s.total * 0.8 ? "よく できました ／ <span class='ne'>धेरै राम्रो！</span>" : "もう一度 やると 点が 上がります ／ <span class='ne'>फेरि गर्दा अंक बढ्छ</span>") + "</p>" +
+        (s.wrong.length ? '<p class="muted">まちがえた ことば（あした また 出ます）</p><p>' + s.wrong.map(esc).join("・") + "</p>" : "") +
+        '<a class="btn btn-primary btn-xl hw-wide" href="#/student/homework/' + n + '">しゅくだいに もどる ／ <span class="ne">गृहकार्यमा फर्कने</span></a>' +
+        (isRec ? "" : '<button class="btn btn-xl hw-wide" data-act="hw-again">もう一度 ／ <span class="ne">फेरि</span></button>') +
+        "</div></section>";
+      return;
+    }
+    var head = hwHead(n, t.ja, (s.i + 1) + " / " + s.total) + '<div class="hw-bar"><i style="width:' + Math.round(s.i / s.total * 100) + '%"></i></div>';
+    var body = "";
+    if (key === "wtest" || key === "ltest" || key === "otest" || key === "olisten") {
+      var q = s.items[s.i], w = q.w, kind = q.kind || "L";
+      if (kind === "A" || kind === "L") body = '<div class="hw-em">' + esc(w.icon || (f ? f.icon : "📘")) + '</div><div class="hw-kj">' + esc(w.ja) + "</div>" +
+        (w.yomi ? '<div class="hw-yo">' + esc(w.yomi) + "</div>" : "") + '<p class="muted center">いみは？ ／ <span class="ne">अर्थ के हो？</span></p>';
+      else if (kind === "B") body = '<div class="hw-em">🎧</div><button class="btn btn-xl hw-wide" data-act="hw-say" data-say="' + esc(w.yomi) + '">🔊 きく ／ <span class="ne">सुन्ने</span></button>' +
+        '<p class="muted center">きいた ことばは？ ／ <span class="ne">सुनेको शब्द कुन？</span></p>';
+      else body = '<div class="hw-kj ne">' + esc(w.ne) + '</div><p class="muted center">日本語で？ ／ <span class="ne">जापानीमा？</span></p>';
+      body += q.ch.map(function (c, k) {
+        var cls = "";
+        if (s.picked !== null) { if (c.ja === w.ja) cls = " ok"; else if (k === s.picked) cls = " ng"; }
+        var label = (kind === "A" || kind === "L") ? '<span class="ne">' + esc(c.ne) + "</span>" : esc(c.ja) + (c.yomi ? ' <small class="muted">' + esc(c.yomi) + "</small>" : "");
+        return '<button class="hw-choice' + cls + '" data-act="hw-pick" data-k="' + k + '">' + label + "</button>";
+      }).join("");
+      if (s.picked !== null) body += '<button class="btn btn-primary btn-xl hw-wide" data-act="hw-next">つぎ ／ <span class="ne">अर्को</span> ›</button>';
+    } else if (key === "order") {
+      var o = s.items[s.i], rest = o.pool.filter(function (p) { return o.got.indexOf(p) < 0; });
+      body = '<div class="hw-mn ne center">' + esc(o.x.ne) + "</div>" +
+        '<button class="btn hw-wide" data-act="hw-say" data-say="' + esc(o.x.ja) + '">🔊 きく ／ <span class="ne">सुन्ने</span></button>' +
+        '<div class="hw-slot">' + o.got.map(function (p, k) { return '<button class="hw-tok" data-act="hw-back" data-k="' + k + '">' + esc(p.t) + "</button>"; }).join("") + "</div>" +
+        '<div class="hw-pool">' + rest.map(function (p) { return '<button class="hw-tok" data-act="hw-tok" data-k="' + o.pool.indexOf(p) + '">' + esc(p.t) + "</button>"; }).join("") + "</div>" +
+        (o.checked === null
+          ? '<button class="btn btn-primary btn-xl hw-wide" data-act="hw-check"' + (rest.length ? " disabled" : "") + ">こたえを みる ／ <span class='ne'>उत्तर हेर्ने</span></button>"
+          : '<div class="hw-ans2 ' + (o.checked ? "ok" : "ng") + '">' + (o.checked ? "◎ せいかい" : "× こたえ：" + esc(o.x.ja)) + "</div>" +
+            '<button class="btn btn-primary btn-xl hw-wide" data-act="hw-next">つぎ ›</button>');
+    } else {
+      var it = s.items[s.i], need = HW_REC_TIMES[key];
+      body = '<div class="hw-em">' + esc(it.icon) + '</div><div class="hw-kj hw-say-t">' + esc(it.ja) + "</div>" +
+        (it.sub ? '<div class="hw-yo">' + esc(it.sub) + "</div>" : "") + '<div class="hw-mn ne center">' + esc(it.ne) + "</div>" +
+        '<button class="btn btn-xl hw-wide" data-act="hw-say" data-say="' + esc(it.say) + '">🔊 ① きく ／ <span class="ne">सुन्ने</span></button>' +
+        '<button class="btn btn-xl hw-wide hw-recbtn' + (s.recording ? " is-rec" : "") + '" data-act="hw-rec">' +
+          (s.recording ? "■ ③ とめる ／ <span class='ne'>रोक्ने</span>" : "🎙️ ② いって ろくおん ／ <span class='ne'>भनेर रेकर्ड</span>") + "</button>" +
+        '<div class="hw-dots">' + Array.apply(null, Array(need)).map(function (_, k) { return '<i class="' + (k < it.takes.length ? "on" : "") + '"></i>'; }).join("") + "</div>" +
+        it.takes.map(function (u, k) { return '<div class="hw-take"><span>' + (k + 1) + 'かいめ</span><audio controls src="' + u + '"></audio></div>'; }).join("") +
+        '<button class="btn btn-primary btn-xl hw-wide" data-act="hw-next"' + (it.takes.length >= need ? "" : " disabled") + ">" +
+          (s.i < s.total - 1 ? "つぎ ›" : "おわり ✓") + "</button>" +
+        '<p class="muted small center">' + need + "かい ろくおん すると「つぎ」が おせます ／ <span class='ne'>" + need + " पटक रेकर्ड गरेपछि अर्को</span></p>";
+    }
+    view.innerHTML = '<section class="lesson hw2">' + head + '<div class="hw-card3">' + body + "</div></section>";
+    if ((key === "wtest" || key === "olisten") && s.items[s.i].kind === "B" && s.picked === null && !s.spoke) { s.spoke = true; setTimeout(function () { hwSpeak(s.items[s.i].w.yomi); }, 300); }
+  }
+
+  function hwAct(act, el) {
+    var s = HWS, n = route().day || hwDayNo();
+    if (act === "hw-need") { toast(studentName() ? "さきに コースを えらんでください" : "さきに なまえを 入れてください"); return true; }
+    if (act === "hw-say") { hwSpeak(el.getAttribute("data-say")); return true; }
+    if (!s) return false;
+    if (act === "hw-flip") { s.open = !s.open; render(); return true; }
+    if (act === "hw-card-prev") { s.i = Math.max(0, s.i - 1); s.open = false; render(); return true; }
+    if (act === "hw-card-next") {
+      var f = hwFieldData(), len = hwIsOri(n) ? hwOriWords(n).length : f ? hwNewWords(f, n).length + hwReviewWords(f, n).length : 0;
+      if (s.i < len - 1) { s.i++; s.open = false; render(); } else { HWS = null; go("#/student/homework/" + n); }
+      return true;
+    }
+    if (act === "hw-pick" && s.picked === null) {
+      var q = s.items[s.i];
+      s.picked = parseInt(el.getAttribute("data-k"), 10);
+      if (q.ch[s.picked].ja === q.w.ja) s.score++; else s.wrong.push(q.w.ja);
+      hwSpeak(q.w.yomi || q.w.ja);
+      render(); return true;
+    }
+    if (act === "hw-tok") { var o = s.items[s.i]; if (o.checked === null) o.got.push(o.pool[parseInt(el.getAttribute("data-k"), 10)]); render(); return true; }
+    if (act === "hw-back") { var o2 = s.items[s.i]; if (o2.checked === null) o2.got.splice(parseInt(el.getAttribute("data-k"), 10), 1); render(); return true; }
+    if (act === "hw-check") {
+      var o3 = s.items[s.i];
+      o3.checked = o3.got.map(function (p) { return p.t; }).join(" ") === o3.toks.join(" ");
+      if (o3.checked) s.score++; else s.wrong.push(o3.x.ja);
+      hwSpeak(o3.x.ja); render(); return true;
+    }
+    if (act === "hw-next") {
+      if (s.recording) return true;
+      s.picked = null; s.spoke = false;
+      if (s.i < s.total - 1) s.i++; else hwFinish(s);
+      render(); return true;
+    }
+    if (act === "hw-again") { HWS = hwBuild(s.day, s.key); render(); return true; }
+    if (act === "hw-rec") { hwRecToggle(s); return true; }
+    return false;
+  }
+
+  function hwRecToggle(s) {
+    if (s.recording) { if (s.mr && s.mr.state === "recording") s.mr.stop(); return; }
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+      var chunks = [], mr = new MediaRecorder(stream), item = s.items[s.i];
+      s.stream = stream; s.mr = mr;
+      mr.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
+      mr.onstop = function () {
+        stream.getTracks().forEach(function (t) { t.stop(); });
+        s.recording = false;
+        if (chunks.length) {
+          var blob = new Blob(chunks, { type: mr.mimeType || "audio/webm" });
+          item.takes.push(URL.createObjectURL(blob));
+          voiceAdd(s, item, blob, item.takes.length);
+        }
+        if (HWS === s) render();
+      };
+      mr.start(); s.recording = true; render();
+    }).catch(function () { toast("マイクが つかえません（ゆるして ください）／ माइक अनुमति दिनुहोस्"); });
+  }
+
+  /* 宿題の録音を 先生・代表に届ける（2026-10-01 代表「録音を俺に来るようにして」）。
+   * ★オンライン版だけ＝ログインした生徒の声を、写真と同じ非公開フォルダへ送る。送れたら端末からは消す（容量をふさがない）。
+   * ★学校のMac版（ローカル）は今までどおり その場で聞くだけ（送り先が無いので 保存箱に ためない）。 */
+  function voiceAdd(s, item, blob, take) {
+    if (!ONLINE || !studentName() || blob.size > 2 * 1024 * 1024) return;
+    var t = hwTasks(s.day)[hwTaskIndex(s.key, s.day)];
+    mediaPut({
+      id: "vo_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+      kind: "voice", scope: "voice", owner: studentName(), day: "voice-" + s.day, no: s.day, item: s.i,
+      text: (hwLabel(s.day) + " " + (t ? t.ja : "") + "：" + hwClean(item.ja) + "（" + take + "かいめ）").slice(0, 200),
+      blob: blob, mime: String(blob.type || "audio/webm").split(";")[0], size: blob.size,
+      created_at: new Date().toISOString(), sent_at: ""
+    }).then(function () { if (ONLINE.photosChanged) ONLINE.photosChanged(); }, function () { /* 保存できない端末＝その場で聞くだけ */ });
   }
 
   /* 生徒：声・動画で提出（発音練習と60秒発表） */
@@ -1793,7 +2391,7 @@
       (mine.length ? '<table class="rtable"><thead><tr><th>Day</th><th>状態</th><th>書いた数</th><th>日時</th><th></th></tr></thead><tbody>' +
         mine.map(function (r) {
           var w = Object.keys(r.answers || {}).filter(function (k) { return String(r.answers[k]).trim(); }).length;
-          return "<tr><td>Day " + esc(r.day) + "</td><td>" + (r.submitted_at ? '<span class="chip st-完了">提出</span>' : '<span class="chip st-面接中">書きかけ</span>') +
+          return "<tr><td>" + esc(dayLabel(r.day)) + "</td><td>" + (r.submitted_at ? '<span class="chip st-完了">提出</span>' : '<span class="chip st-面接中">書きかけ</span>') +
             "</td><td class='num'>" + w + " / " + (r.questions || []).length + "</td><td>" +
             esc(String(r.submitted_at || r.saved_at || "").slice(0, 16).replace("T", " ")) +
             '</td><td><a class="btn btn-sm" href="#/student/homework/' + esc(r.day) + '">開く</a></td></tr>';
@@ -1916,7 +2514,7 @@
           '<table class="rtable"><thead><tr><th>Day</th><th>問題</th><th>正解</th><th>宿題</th><th>いつ</th></tr></thead><tbody>' +
           rows.map(function (r) {
             var d = r.drill;
-            return "<tr><td>Day " + esc(r.day) + "</td>" +
+            return "<tr><td>" + esc(dayLabel(r.day)) + "</td>" +
               "<td class='num'>" + (d ? d.answered + " / " + d.total : "—") + "</td>" +
               "<td class='num'>" + (d ? d.correct + (d.answered ? "（" + Math.round(d.correct / d.answered * 100) + "%）" : "") : "—") + "</td>" +
               "<td>" + (r.hw ? (r.hw.submitted_at ? '<span class="chip st-完了">提出</span>' : '<span class="chip st-面接中">書きかけ</span>') : '<span class="muted">—</span>') + "</td>" +
@@ -1943,7 +2541,8 @@
       '<div class="lesson-head"><h1>Day ' + n + " の提出</h1>" +
       '<span class="chip ' + (list.length ? "st-完了" : "st-未実施") + '">' + list.length + " 人</span>" +
       '<div class="tools"><button class="btn" data-act="hw-export">提出をCSVで保存</button></div></div>' +
-      '<div class="box small"><b>この日の宿題</b>　' + d.homework + "</div>" +
+      '<div class="box small"><b>この日の宿題</b>　' + (HWD ? HW_TASKS.map(function (t, i) { return HW_NO[i] + " " + esc(t.ja); }).join("　") +
+        "<br><span class='muted'>テストは点、録音は回数、ノートは写真の枚数が入ります（録音の声そのものは届きません）。</span>" : d.homework) + "</div>" +
       (list.length ? list.map(function (r) {
         var qs = r.questions || [];
         return '<div class="hw-card"><div class="hw-head"><b>' + esc(r.student) + "</b>" +
@@ -2162,6 +2761,149 @@
     if (k === "teacher/grade") return renderTeacherGrade();
     if (k === "student/speak") return renderStudentSpeak(n);
     if (k === "teacher/inbox") return renderTeacherInbox(n);
+    if (k === "teacher/photos") return renderTeacherPhotos();
+    if (k === "teacher/voices") return renderTeacherVoices();
+  }
+
+  /* 先生・代表：ノートの写真を見て ○△× とひとこと。
+     ★生徒の写真＝先生が見る／先生の勉強の写真＝代表・校長が見る（受け口が分けて返す）。
+     ★○△× は「本人に言う結果」ではなく先生の確認の印。 */
+  var PH_VIEW = { who: "", type: "", todo: false };
+  function renderTeacherPhotos() {
+    headName.textContent = "先生／ノートの写真";
+    view.innerHTML = '<section class="lesson"><div class="home-head"><h1>ノートの写真</h1>' +
+      '<div class="tools"><a class="btn" href="#/teacher">先生トップ</a></div></div><p class="muted">読み込み中…</p></section>';
+    var src = photoSource();
+    src.list().then(function (list) {
+      if (route().item !== "photos") return;
+      var names = {};
+      list.forEach(function (x) { names[x.who] = 1; });
+      var shown = list.filter(function (x) {
+        return (!PH_VIEW.who || x.who === PH_VIEW.who) && (!PH_VIEW.type || x.type === PH_VIEW.type) && (!PH_VIEW.todo || !x.mark);
+      });
+      var todo = list.filter(function (x) { return !x.mark; }).length;
+      var opt = function (v, label, cur) { return '<option value="' + esc(v) + '"' + (v === cur ? " selected" : "") + ">" + esc(label) + "</option>"; };
+      view.innerHTML = '<section class="lesson"><div class="home-head"><h1>ノートの写真</h1>' +
+        '<div class="tools"><a class="btn" href="#/teacher">先生トップ</a></div></div>' +
+        '<div class="box small">書く宿題は<b>ノートに手で書いて写真で出します</b>（キーボードでは出せません）。' +
+        "字の形・書き順・前の週より良くなったかを見て、<b>○（できた）△（もう少し）×（やり直し）</b>を付けてください。" +
+        "印は先生の確認用です。結果の言い方は今までどおり（本人を責めない）。</div>" +
+        '<div class="ph-filter"><select id="phWho">' + opt("", "全員", PH_VIEW.who) +
+        Object.keys(names).sort().map(function (n2) { return opt(n2, n2, PH_VIEW.who); }).join("") + "</select>" +
+        '<select id="phType">' + opt("", "生徒と先生", PH_VIEW.type) + opt("hw", "生徒の宿題", PH_VIEW.type) + opt("study", "先生の勉強", PH_VIEW.type) + "</select>" +
+        '<label class="ph-todo"><input type="checkbox" id="phTodo"' + (PH_VIEW.todo ? " checked" : "") + "> まだ見ていない物だけ（" + todo + "）</label></div>" +
+        (shown.length ? '<div class="ph-grid">' + shown.map(function (x) {
+          return '<div class="ph-card' + (x.mark ? " ph-marked" : "") + '" data-id="' + esc(x.id) + '">' +
+            '<div class="ph-head"><b>' + esc(x.who) + "</b>　" + (x.type === "study" ? "先生の勉強 UNIT " : "Day ") + esc(x.no) +
+            "　の " + esc(x.item) + " 番目</div>" +
+            '<div class="ph-q">' + esc(x.text || "") + "</div>" +
+            '<div class="ph-img" data-id="' + esc(x.id) + '"><span class="muted small">写真を読み込み中…</span></div>' +
+            '<div class="ph-marks">' + ["○", "△", "×"].map(function (m) {
+              return '<button class="btn ph-m' + (x.mark === m ? " on" : "") + '" data-act="ph-mark" data-id="' + esc(x.id) + '" data-m="' + m + '">' + m + "</button>";
+            }).join("") +
+            '<input class="ph-note" data-id="' + esc(x.id) + '" value="' + esc(x.note || "") + '" placeholder="ひとこと（例：「ぬ」の形）" maxlength="200"></div>' +
+            '<div class="muted small">' + esc(jdate(x.taken_at)) + (x.marked_by ? "　／　確認：" + esc(x.marked_by) : "") + "</div></div>";
+        }).join("") + "</div>"
+          : '<div class="soon"><p>' + (list.length ? "この条件の写真はありません。" : "まだ写真がありません。") + "</p>" +
+            '<p class="muted small">生徒が「宿題」で、先生が「先生の勉強」で、ノートを撮って出すとここに出ます。</p></div>') +
+        "</section>";
+      document.getElementById("phWho").addEventListener("change", function (e) { PH_VIEW.who = e.target.value; render(); });
+      document.getElementById("phType").addEventListener("change", function (e) { PH_VIEW.type = e.target.value; render(); });
+      document.getElementById("phTodo").addEventListener("change", function (e) { PH_VIEW.todo = e.target.checked; render(); });
+      /* 写真は1枚ずつ順に読む（20人分を一度に頼むと回線が細い日に止まる） */
+      var boxes = Array.prototype.slice.call(document.querySelectorAll(".ph-img"));
+      (function next(i) {
+        if (i >= boxes.length || route().item !== "photos") return;
+        var b = boxes[i];
+        src.img(b.getAttribute("data-id")).then(function (url) {
+          b.innerHTML = url ? '<img src="' + url + '" alt="ノートの写真" data-act="ph-zoom" data-src="' + url + '">' : '<span class="muted small">写真がありません</span>';
+        }, function (e) { b.innerHTML = '<span class="muted small">読めませんでした（' + esc(e.message) + "）</span>"; })
+          .then(function () { next(i + 1); });
+      })(0);
+      PH_VIEW.src = src;
+    }).catch(function (e) {
+      view.innerHTML = '<section class="lesson"><h1>ノートの写真</h1><div class="warn">読めませんでした（' + esc(e.message) +
+        "）。" + (/NOT_CONFIGURED/.test(e.message) ? "写真の置き場がまだ作られていません（代表の設定待ち）。" : "電波を確かめて、もう一度開いてください。") +
+        '</div><a class="btn" href="#/teacher">先生トップ</a></section>';
+    });
+  }
+  /* 生徒の声（2026-10-01）。生徒ごと・日ごとにまとめて ▶ で聞く。○△× は写真と同じ表に入る。 */
+  var VO_VIEW = { who: "", todo: false };
+  function renderTeacherVoices() {
+    headName.textContent = "先生／生徒の声";
+    var top = '<div class="home-head"><h1>🎙️ 生徒の声</h1><div class="tools"><a class="btn" href="#/teacher">先生トップ</a></div></div>';
+    if (!ONLINE) {
+      view.innerHTML = '<section class="lesson">' + top + '<div class="soon"><p><b>声が届くのはオンライン版だけです。</b></p>' +
+        '<p class="muted">学校のMac版では、録音はその端末の中で聞くだけです（送り先がありません）。' +
+        "生徒がオンライン版（ログインして使う画面）で宿題を録音すると、ここ（オンライン版の先生・代表の画面）に届きます。</p></div></section>";
+      return;
+    }
+    view.innerHTML = '<section class="lesson">' + top + '<p class="muted">読み込み中…</p></section>';
+    var src = photoSource();
+    src.list("voice").then(function (list) {
+      if (route().item !== "voices") return;
+      var names = {};
+      list.forEach(function (x) { names[x.who] = 1; });
+      var shown = list.filter(function (x) { return (!VO_VIEW.who || x.who === VO_VIEW.who) && (!VO_VIEW.todo || !x.mark); });
+      var todo = list.filter(function (x) { return !x.mark; }).length;
+      /* 生徒＋日 で まとめる */
+      var groups = [], gi = {};
+      shown.forEach(function (x) {
+        var k = x.who + "|" + x.no;
+        if (!(k in gi)) { gi[k] = groups.length; groups.push({ who: x.who, no: x.no, items: [] }); }
+        groups[gi[k]].items.push(x);
+      });
+      var opt = function (v, label, cur) { return '<option value="' + esc(v) + '"' + (v === cur ? " selected" : "") + ">" + esc(label) + "</option>"; };
+      view.innerHTML = '<section class="lesson">' + top +
+        '<div class="box small">生徒が宿題で<b>言って録音した声</b>です。見本と同じに聞こえるかを聞いて、' +
+        "<b>○（言えた）△（もう少し）×（ちがう）</b>を付けてください。聞けるのは<b>先生・代表と本人だけ</b>（ほかの生徒には聞こえません）。</div>" +
+        '<div class="ph-filter"><select id="voWho">' + opt("", "全員", VO_VIEW.who) +
+        Object.keys(names).sort().map(function (n2) { return opt(n2, n2, VO_VIEW.who); }).join("") + "</select>" +
+        '<label class="ph-todo"><input type="checkbox" id="voTodo"' + (VO_VIEW.todo ? " checked" : "") + "> まだ聞いていない物だけ（" + todo + "）</label></div>" +
+        (groups.length ? groups.map(function (g) {
+          return '<div class="box"><b>' + esc(g.who) + "</b>　" + esc(dayLabel(g.no)) + "　（" + g.items.length + " こ）" +
+            g.items.map(function (x) {
+              return '<div class="ph-card' + (x.mark ? " ph-marked" : "") + '" data-id="' + esc(x.id) + '" style="margin-top:6px">' +
+                '<div class="ph-q">' + esc(x.text || "") + "</div>" +
+                '<div class="vo-play" data-id="' + esc(x.id) + '"><button class="btn" data-act="vo-load" data-id="' + esc(x.id) + '">▶ きく</button></div>' +
+                '<div class="ph-marks">' + ["○", "△", "×"].map(function (m) {
+                  return '<button class="btn ph-m' + (x.mark === m ? " on" : "") + '" data-act="ph-mark" data-id="' + esc(x.id) + '" data-m="' + m + '">' + m + "</button>";
+                }).join("") +
+                '<input class="ph-note" data-id="' + esc(x.id) + '" value="' + esc(x.note || "") + '" placeholder="ひとこと（例：「つ」が「ちゅ」）" maxlength="200"></div>' +
+                '<div class="muted small">' + esc(jdate(x.taken_at)) + (x.marked_by ? "　／　確認：" + esc(x.marked_by) : "") + "</div></div>";
+            }).join("") + "</div>";
+        }).join("")
+          : '<div class="soon"><p>' + (list.length ? "この条件の声はありません。" : "まだ声が届いていません。") + "</p>" +
+            '<p class="muted small">生徒がオンライン版の「宿題」で「いって ろくおん」をすると、ここに届きます。</p></div>') +
+        "</section>";
+      document.getElementById("voWho").addEventListener("change", function (e) { VO_VIEW.who = e.target.value; render(); });
+      document.getElementById("voTodo").addEventListener("change", function (e) { VO_VIEW.todo = e.target.checked; render(); });
+      PH_VIEW.src = src;
+    }).catch(function (e) {
+      view.innerHTML = '<section class="lesson">' + top + '<div class="warn">読めませんでした（' + esc(e.message) + "）。" +
+        (/NOT_CONFIGURED/.test(e.message) ? "置き場がまだ作られていません（代表の設定待ち）。" : "電波を確かめて、もう一度開いてください。") + "</div></section>";
+    });
+  }
+  /* ▶ を押した時だけ その1つを取りに行く（20人分を一度に取ると回線が細い日に止まる） */
+  function voiceLoad(el) {
+    var id = el.getAttribute("data-id"), box = el.parentNode;
+    box.innerHTML = '<span class="muted small">読み込み中…</span>';
+    (PH_VIEW.src || photoSource()).img(id).then(function (url) {
+      box.innerHTML = '<audio controls autoplay src="' + url + '"></audio>';
+    }, function (e) { box.innerHTML = '<span class="muted small">聞けませんでした（' + esc(e.message) + "）</span>"; });
+  }
+
+  function photoMark(el) {
+    var id = el.getAttribute("data-id"), m = el.getAttribute("data-m");
+    var card = el.closest(".ph-card");
+    var note = card ? card.querySelector(".ph-note").value : "";
+    var cur = card && card.querySelector(".ph-m.on");
+    if (cur && cur.getAttribute("data-m") === m) m = "";          /* もう一度押したら消す */
+    (PH_VIEW.src || photoSource()).mark(id, m, note).then(function () {
+      Array.prototype.forEach.call(card.querySelectorAll(".ph-m"), function (b) { b.classList.toggle("on", b.getAttribute("data-m") === m); });
+      card.classList.toggle("ph-marked", !!m);
+      toast(m ? m + " を付けました" : "印を消しました");
+    }, function (e) { toast("付けられませんでした（" + e.message + "）"); });
   }
 
   /* ---------- 画面：履歴書アップロード ---------- */
@@ -2720,8 +3462,8 @@
     if (h === "/upload") return { name: "upload" };
     if (h === "/student") return { name: "hub", hub: "student" };
     if (h === "/teacher") return { name: "hub", hub: "teacher" };
-    var mm = h.match(/^\/(student|teacher)\/([a-z_]+)(?:\/(\d+))?$/);
-    if (mm) return { name: "soon", hub: mm[1], item: mm[2], day: mm[3] ? parseInt(mm[3], 10) : 0 };
+    var mm = h.match(/^\/(student|teacher)\/([a-z_]+)(?:\/(\d+))?(?:\/([a-z]+))?$/);
+    if (mm) return { name: "soon", hub: mm[1], item: mm[2], day: mm[3] ? parseInt(mm[3], 10) : 0, sub: mm[4] || "" };
     if ((m = h.match(/^\/c\/([^/]+)\/q\/(\d+)$/))) return { name: "q", cid: decodeURIComponent(m[1]), n: parseInt(m[2], 10) };
     if ((m = h.match(/^\/c\/([^/]+)\/result$/))) return { name: "result", cid: decodeURIComponent(m[1]) };
     if ((m = h.match(/^\/c\/([^/]+)$/))) return { name: "start", cid: decodeURIComponent(m[1]) };
@@ -2762,6 +3504,7 @@
     else if (r.name === "soon") {
       var kk = r.hub + "/" + r.item;
       if (kk === "teacher/study") renderLive(r.hub, r.item, r.day || 0);
+      else if (kk === "student/homework" && LESSONS && r.day > 1000) renderLive(r.hub, r.item, r.day);   /* オリエンテーション O1〜O10＝1001〜1010 */
       else if (LIVE[kk] && LESSONS) renderLive(r.hub, r.item, r.day && r.day <= dayCount() ? r.day : 0);
       else renderSoon(r.hub, r.item);
     }
@@ -2813,6 +3556,7 @@
     else if (act === "drill-next" && quiz) { quiz.idx++; render(); }
     else if (act === "drill-prev" && quiz) { quiz.idx = Math.max(0, quiz.idx - 1); render(); }
     else if (act === "drill-again" && quiz) { quiz = null; render(); }
+    else if (/^hw-/.test(act) && hwAct(act, el)) { /* 宿題の中の操作 */ }
     else if (act === "hw-save") hwSave(route().day || currentDay(), true);
     else if (act === "hw-submit") hwSubmit(route().day || currentDay());
     else if (act === "hw-edit") {
@@ -2820,6 +3564,17 @@
       if (rr) { rr.submitted_at = ""; hwPut(rr); render(); }
     }
     else if (act === "hw-export") hwExport(route().day || currentDay());
+    else if (act === "ph-zoom") photoZoom(el.getAttribute("data-src"));
+    else if (act === "ph-mark") photoMark(el);
+    else if (act === "vo-load") voiceLoad(el);
+    else if (act === "ph-del") {
+      if (confirm("この写真を消しますか？")) {
+        mediaDel(el.getAttribute("data-id")).then(function () {
+          var sc = el.getAttribute("data-scope"), no = parseInt(el.getAttribute("data-no"), 10);
+          return photoFill(sc, no).then(function () { if (sc === "hw") hwSave(no, false); else tsSave(no, false); });
+        }).then(function () { if (ONLINE && ONLINE.photosChanged) ONLINE.photosChanged(); toast("消しました"); });
+      }
+    }
     else if (act === "ts-save") tsSave(route().day || 1, true);
     else if (act === "ts-submit") tsSubmit(route().day || 1);
     else if (act === "ts-edit") {
@@ -2882,7 +3637,36 @@
   });
 
   /* オンライン版の自動送信が、この画面の記録を読むための口（ローカル版では使わない） */
-  window.OUKA_APP_API = { studyRecords: studyRecords, render: function () { render(); } };
+  window.OUKA_APP_API = {
+    studyRecords: studyRecords, render: function () { render(); },
+    /* まだ送っていない写真（オンライン版が送る） */
+    photoQueue: function () {
+      return mediaAll().then(function (all) { return all.filter(function (x) { return (x.kind === "photo" || x.kind === "voice") && !x.sent_at; }); });
+    },
+    /* 送れた写真は、端末には小さい控えだけ残す（端末の容量をふさがない） */
+    photoSent: function (x, at) {
+      if (x.kind === "voice") return mediaDel(x.id);   /* 声は先生・代表に届いた＝端末には残さない */
+      return makeThumb(x.blob).then(function (th) {
+        x.thumb = th; x.blob = th; x.sent_at = at || new Date().toISOString();
+        return mediaPut(x);
+      });
+    }
+  };
+  function makeThumb(blob) {
+    return new Promise(function (res) {
+      var url = URL.createObjectURL(blob), img = new Image();
+      img.onload = function () {
+        var k = Math.min(1, 480 / Math.max(img.naturalWidth, img.naturalHeight));
+        var c = document.createElement("canvas");
+        c.width = Math.max(1, Math.round(img.naturalWidth * k)); c.height = Math.max(1, Math.round(img.naturalHeight * k));
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        c.toBlob(function (b) { res(b || blob); }, "image/jpeg", 0.7);
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); res(blob); };
+      img.src = url;
+    });
+  }
 
   window.addEventListener("hashchange", render);
   render();
