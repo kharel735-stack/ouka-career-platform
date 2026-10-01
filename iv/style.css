@@ -554,6 +554,11 @@ rt { font-size: .5em; color: var(--muted); font-weight: 600; line-height: 1; }
 .hw-ans2.ng { background: #FBE9E7; color: #9A2B20; }
 .hw-recbtn { background: var(--shu); color: #fff; border-color: var(--shu); }
 .hw-recbtn.is-rec { animation: hwpulse 1s infinite; }
+/* 録音の頭切れ対策（2026-10-01）：準備中は灰色、始まったら赤い「いま はなして！」 */
+.hw-recbtn.is-wait { opacity: .7; }
+.hw-live { margin: 8px 0 4px; padding: 10px; border-radius: 10px; background: #C8362B; color: #fff;
+  font-weight: 800; font-size: 1.25em; text-align: center; animation: hwpulse 1s infinite; }
+.hw-live .ne { color: #fff; }
 @keyframes hwpulse { 50% { opacity: .6; } }
 .hw-dots { display: flex; gap: 8px; justify-content: center; margin-top: 12px; }
 .hw-dots i { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--shu); }

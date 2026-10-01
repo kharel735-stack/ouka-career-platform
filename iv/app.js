@@ -1368,7 +1368,7 @@
         '<div class="tools"><a class="btn" href="#/">ホーム</a></div></div>' +
         '<div class="box"><b>スプレッドシート「OUKA_会話面接結果」に届いている記録です。</b>' +
         "生徒が問題を解く・宿題を出すと、その場で自動で届きます（送るボタンは要りません）。" +
-        "書く宿題は<b>ノートの写真</b>で届きます（録音はスマホの中だけ）。</div>" +
+        "書く宿題は<b>ノートの写真</b>、言う宿題は<b>録音</b>で届きます（1つ録音するたびに すぐ届く）。</div>" +
         '<div class="pf-top"><a class="btn btn-primary" href="#/teacher/photos">ノートの写真を見る（○△×を付ける）</a>' +
         ' <a class="btn btn-primary" href="#/teacher/voices">🎙️ 生徒の声を聞く</a></div>' +
         '<h2 class="sec-h">生徒</h2>' +
@@ -1424,6 +1424,9 @@
       (SYNC_ON ? '<button class="btn btn-primary" data-act="study-send">スプレッドシートへ送る</button>' : "") +
       '<button class="btn" data-act="check-export">CSVで書き出す</button>' +
       '<a class="btn" href="#/">ホーム</a></div></div>' +
+      '<div class="pf-top"><a class="btn btn-primary" href="https://abas-globalgroup.com/iv/#/teacher/voices" target="_blank" rel="noopener">' +
+        '🎙️ 生徒の声を聞く（オンライン版で開く）</a></div>' +
+      '<p class="muted small">生徒がオンライン版の宿題で録音した声は、オンライン版に届きます（このMacの中には来ません）。代表のアカウントでログインして聞いてください。</p>' +
       (SYNC_ON
         ? '<div class="box"><b>この画面に出るのは、この端末の中にある記録です。</b>' +
           '<b>「スプレッドシートへ送る」</b>を押すと、スプレッドシート「OUKA_会話面接結果」の' +
@@ -2188,8 +2191,13 @@
       body = '<div class="hw-em">' + esc(it.icon) + '</div><div class="hw-kj hw-say-t">' + esc(it.ja) + "</div>" +
         (it.sub ? '<div class="hw-yo">' + esc(it.sub) + "</div>" : "") + '<div class="hw-mn ne center">' + esc(it.ne) + "</div>" +
         '<button class="btn btn-xl hw-wide" data-act="hw-say" data-say="' + esc(it.say) + '">🔊 ① きく ／ <span class="ne">सुन्ने</span></button>' +
-        '<button class="btn btn-xl hw-wide hw-recbtn' + (s.recording ? " is-rec" : "") + '" data-act="hw-rec">' +
-          (s.recording ? "■ ③ とめる ／ <span class='ne'>रोक्ने</span>" : "🎙️ ② いって ろくおん ／ <span class='ne'>भनेर रेकर्ड</span>") + "</button>" +
+        (s.recording && s.live && !s.stopping ? '<div class="hw-live">🔴 いま はなして！ ／ <span class="ne">अहिले बोल्नुहोस्！</span></div>' : "") +
+        '<button class="btn btn-xl hw-wide hw-recbtn' + (s.recording && s.live ? " is-rec" : s.recording ? " is-wait" : "") + '" data-act="hw-rec"' +
+          (s.recording && (!s.live || s.stopping) ? " disabled" : "") + ">" +
+          (!s.recording ? "🎙️ ② いって ろくおん ／ <span class='ne'>भनेर रेकर्ड</span>"
+            : !s.live ? "⏳ じゅんび… まって ／ <span class='ne'>पर्खनुहोस्…</span>"
+            : s.stopping ? "… とめています ／ <span class='ne'>रोकिँदैछ</span>"
+            : "■ ③ とめる ／ <span class='ne'>रोक्ने</span>") + "</button>" +
         '<div class="hw-dots">' + Array.apply(null, Array(need)).map(function (_, k) { return '<i class="' + (k < it.takes.length ? "on" : "") + '"></i>'; }).join("") + "</div>" +
         it.takes.map(function (u, k) { return '<div class="hw-take"><span>' + (k + 1) + 'かいめ</span><audio controls src="' + u + '"></audio></div>'; }).join("") +
         '<button class="btn btn-primary btn-xl hw-wide" data-act="hw-next"' + (it.takes.length >= need ? "" : " disabled") + ">" +
@@ -2197,6 +2205,7 @@
         '<p class="muted small center">' + need + "かい ろくおん すると「つぎ」が おせます ／ <span class='ne'>" + need + " पटक रेकर्ड गरेपछि अर्को</span></p>";
     }
     view.innerHTML = '<section class="lesson hw2">' + head + '<div class="hw-card3">' + body + "</div></section>";
+    if ((key === "wrec" || key === "erec" || key === "orec") && canRecord() && !s.stream && !s.micP) hwMic(s).catch(function () { /* 押した時に もう一度 たずねる */ });
     if ((key === "wtest" || key === "olisten") && s.items[s.i].kind === "B" && s.picked === null && !s.spoke) { s.spoke = true; setTimeout(function () { hwSpeak(s.items[s.i].w.yomi); }, 300); }
   }
 
@@ -2238,15 +2247,38 @@
     return false;
   }
 
+  /* 録音の「頭が切れる」対策（2026-10-01 代表「タイムラグがあるから、せっかちな人のは録音できない」）
+   * ① マイクは 録音の画面を開いた時に つないでおき、1語ごとに つなぎ直さない（押した瞬間に録れる）
+   * ② 録音が本当に始まるまでは「じゅんび…」、始まったら「🔴 いま はなして！」と出す（それまで話させない）
+   * ③ 「とめる」を押しても 0.4秒だけ録り続ける（言い終わりも切らない）
+   * マイクを切るのは 録音の画面を出た時（hwStop）だけ。 */
+  var HW_TAIL_MS = 400;
+  function hwMic(s) {
+    if (s.stream && s.stream.getTracks().some(function (x) { return x.readyState === "live"; })) return Promise.resolve(s.stream);
+    if (s.micP) return s.micP;
+    s.micP = navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+      s.stream = stream; s.micP = null;
+      if (HWS !== s) stream.getTracks().forEach(function (x) { x.stop(); });   /* 待つ間に画面を出た */
+      return stream;
+    }, function (e) { s.micP = null; throw e; });
+    return s.micP;
+  }
   function hwRecToggle(s) {
-    if (s.recording) { if (s.mr && s.mr.state === "recording") s.mr.stop(); return; }
-    navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+    if (s.recording) {
+      if (!s.live || s.stopping) return;                    /* 始まる前・止めている途中は 何もしない */
+      s.stopping = true; render();
+      setTimeout(function () { if (s.mr && s.mr.state === "recording") s.mr.stop(); }, HW_TAIL_MS);
+      return;
+    }
+    s.recording = true; s.live = false; s.stopping = false; render();
+    hwMic(s).then(function (stream) {
+      if (HWS !== s) return;
       var chunks = [], mr = new MediaRecorder(stream), item = s.items[s.i];
-      s.stream = stream; s.mr = mr;
+      s.mr = mr;
       mr.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
+      mr.onstart = function () { s.live = true; if (HWS === s) render(); };
       mr.onstop = function () {
-        stream.getTracks().forEach(function (t) { t.stop(); });
-        s.recording = false;
+        s.recording = false; s.live = false; s.stopping = false;
         if (chunks.length) {
           var blob = new Blob(chunks, { type: mr.mimeType || "audio/webm" });
           item.takes.push(URL.createObjectURL(blob));
@@ -2254,8 +2286,11 @@
         }
         if (HWS === s) render();
       };
-      mr.start(); s.recording = true; render();
-    }).catch(function () { toast("マイクが つかえません（ゆるして ください）／ माइक अनुमति दिनुहोस्"); });
+      mr.start(100);
+    }).catch(function () {
+      s.recording = false; s.live = false; if (HWS === s) render();
+      toast("マイクが つかえません（ゆるして ください）／ माइक अनुमति दिनुहोस्");
+    });
   }
 
   /* 宿題の録音を 先生・代表に届ける（2026-10-01 代表「録音を俺に来るようにして」）。
