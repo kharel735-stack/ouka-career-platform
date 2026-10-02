@@ -23,7 +23,7 @@
   var SETTINGS_KEY = "ouka_interview_settings_v1";   /* app.js と同じ */
   var CONTENT_KEY = "ouka_iv_content_v1";            /* 教材の控え（細い回線のため） */
   var SENT_KEY = "ouka_iv_sent_v1";                  /* 送った記録の指紋 */
-  var WATCH = { ouka_drill_v1: 1, ouka_homework_v1: 1, ouka_teacher_study_v1: 1, ouka_grade_v1: 1 };
+  var WATCH = { ouka_drill_v1: 1, ouka_homework_v1: 1, ouka_teacher_study_v1: 1, ouka_grade_v1: 1, ouka_report_v1: 1 };
   var INTERVIEW_ROUTES = { candidates: 1, upload: 1, "new": 1, start: 1, q: 1, result: 1, results: 1 };
 
   var clerkReady = null, loginStarted = false, codeStep = null, who = null, appLoaded = false;
@@ -290,7 +290,7 @@
     if (!who.can.teacher) {
       Array.prototype.forEach.call(view.querySelectorAll('a[href="#/"]'), function (a) { a.style.display = "none"; });
     }
-    ["hwName", "tsName"].forEach(function (id) {
+    ["hwName", "tsName", "rpName"].forEach(function (id) {
       var el = view.querySelector("#" + id);
       if (!el) return;
       el.readOnly = true;
@@ -310,7 +310,7 @@
     return api("content", { have: have }).then(function (res) {
       if (res && res.ok && res.same && cached) return cached;
       if (res && res.ok && res.lessons) {
-        var c = { content_ver: res.content_ver, lessons: res.lessons, study: res.study || null };
+        var c = { content_ver: res.content_ver, lessons: res.lessons, study: res.study || null, ne: res.ne || null };
         try { localStorage.setItem(CONTENT_KEY, JSON.stringify(c)); } catch (x) { /* 入らなくても今は使える */ }
         return c;
       }
@@ -359,6 +359,7 @@
       if (r.type === "hw" || r.type === "drill") { if (!(who.role === "STUDENT" && r.who === who.name)) return false; }
       else if (r.type === "study") { if (!(who.can.teacher && r.who === who.name)) return false; }
       else if (r.type === "grade") { if (!who.can.teacher) return false; }
+      else if (r.type === "report") { if (!(who.can.teacher && r.who === who.name)) return false; }
       else return false;
       return sent[keyOf(r)] !== sigOf(r);
     });
@@ -465,6 +466,7 @@
     }).then(function (c) {
       window.OUKA_LESSONS = c.lessons;
       window.OUKA_TEACHER_STUDY = who.can.teacher ? c.study : null;
+      window.OUKA_LESSONS_NE = who.can.teacher ? c.ne || null : null;
       setNames();
       window.OUKA_ONLINE = {
         role: who.role, name: who.name, can: who.can, students: who.students,

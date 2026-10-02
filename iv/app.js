@@ -997,6 +997,7 @@
       items: [
         { key: "today", label: "今日の授業", note: "日次授業指示書（9ステップ）を1日1枚で表示" },
         { key: "materials", label: "教材", note: "その授業で配る教材の一覧" },
+        { key: "report", label: "報告を送る", note: "生徒のこと・授業のこと・直してほしい所を書いて送る（Claudeが読んで、直すか代表に聞くか決める）" },
         { key: "study", label: "先生の勉強", note: "先生が自分で日本語を勉強する本（N5→N1・雑学・漢字・教え方メモ）" },
         { key: "guide", label: "Teacher Guide", note: "教え方・板書・つまずきへの対応（SOP/教師授業マニュアル を入れる予定）" },
         { key: "assign", label: "宿題を出す", note: "クラス・生徒を選んで宿題を割り当てる" },
@@ -1135,7 +1136,7 @@
       '<span class="media-title">' + esc(m.title) + "</span>" +
       '<span class="media-meta">' + esc(m.org) + "　／　" + esc(m.lang) + "</span></a>";
   }
-  var LIVE = { "teacher/today": 1, "teacher/materials": 1, "student/today": 1, "student/drill": 1, "student/homework": 1,
+  var LIVE = { "teacher/report": 1, "teacher/today": 1, "teacher/materials": 1, "student/today": 1, "student/drill": 1, "student/homework": 1,
     "student/media": 1, "student/emergency": 1, "student/submit": 1, "student/speak": 1, "teacher/inbox": 1,
     "teacher/study": 1, "student/history": 1, "teacher/grade": 1, "teacher/photos": 1, "teacher/voices": 1 };
   var MAT_BASE = "materials/";
@@ -1183,16 +1184,38 @@
   function kv(k, v) { return "<tr><th>" + k + "</th><td>" + v + "</td></tr>"; }
 
   /* 先生：今日の授業（日次授業指示書 1日分） */
+  /* ネパール語版（2026-10-02）＝ネパール語版PDFと同じ正本から作った data/lessons_ne.js。草案＝マドゥ先生の確認前 */
+  var LNE = window.OUKA_LESSONS_NE || (LESSONS && LESSONS.ne) || null;
+  var UPD = window.OUKA_APP_UPDATE || (LESSONS && LESSONS.update) || null;
+  function langSwitch(cur) {
+    if (!LNE) return "";
+    return '<div class="lang-sw"><button class="btn' + (cur === "ja" ? " btn-primary" : "") + '" data-act="set-lang" data-lang="ja">日本語</button>' +
+      '<button class="btn' + (cur === "ne" ? " btn-primary" : "") + '" data-act="set-lang" data-lang="ne">नेपाली</button></div>';
+  }
+  /* 「いつ・何が」変わったか（アプリに反映したツールが書く data/update.js）。授業中には入れ替えない */
+  function updateNote() {
+    if (!UPD || !UPD.applied_at) return "";
+    return '<div class="upd-note">教材の更新 ' + esc(String(UPD.applied_at).slice(5, 16).replace("T", " ")) +
+      (UPD.changed && UPD.changed.length ? "　変わった所：" + esc(UPD.changed.join("・")) : "") + "</div>";
+  }
+  function teacherLang() { return LNE && settings().teacher_lang === "ne" ? "ne" : "ja"; }
+
   function renderTeacherDay(n) {
     if (!LESSONS) return noLessons();
     n = n || currentDay();
     var d = dayData(n);
     headName.textContent = "先生／今日の授業 Day " + n;
+    if (teacherLang() === "ne" && LNE.days[n - 1]) {
+      view.innerHTML = '<style>' + LNE.css + "</style>" + '<section class="lesson">' + dayNav("teacher", "today", n) + langSwitch("ne") + updateNote() +
+        '<div class="nep">' + LNE.days[n - 1] + "</div></section>";
+      bindDaySel();
+      return;
+    }
     var steps = d.steps.map(function (s, i) {
       return '<div class="step"><span class="step-no">' + (i + 1) + "</span><b>" + esc(s.name) + "</b><div>" + s.text + "</div></div>";
     }).join("");
     var tests = d.tests.map(function (t) { return "<tr><td>" + t.item + "</td><td class='num'>" + esc(t.count) + "</td><td class='num'>" + esc(t.points) + "</td></tr>"; }).join("");
-    view.innerHTML = '<section class="lesson">' + dayNav("teacher", "today", n) + fieldPicker() +
+    view.innerHTML = '<section class="lesson">' + dayNav("teacher", "today", n) + langSwitch("ja") + updateNote() + fieldPicker() +
       '<div class="lesson-head"><h1>Day ' + d.day + ' <small>Week ' + d.week + (d.is_test ? "　／　週次ふるい（テスト日）" : "") + "</small></h1>" +
       '<span class="chip lv">' + esc(d.level) + "</span></div>" +
       (d.note ? '<div class="warn"><b>' + d.note.title + "</b>　" + d.note.text + "</div>" : "") +
@@ -1480,6 +1503,8 @@
       out.push({ type: "drill", who: r.student, no: r.day, field: r.field || "",
         answered: r.answered, correct: r.correct, total: r.total, saved_at: r.saved_at || "" });
     });
+    /* 先生の報告（2026-10-02）＝読むために送る文なので、本文も送る */
+    rpAll().forEach(function (r) { if (String(r.who || "").trim()) out.push(rpRecord(r)); });
     var gall = grAll();
     Object.keys(gall).forEach(function (k) {
       var r = gall[k];
@@ -2781,6 +2806,139 @@
     });
   }
 
+  /* ---------- 先生の報告（2026-10-02 代表「先生が生徒・カリキュラム・直す所を報告できるように。Claudeが見て直すか、代表に聞くか決める」） ----------
+   * 先生は 種類を選んで・書いて・「送る」を押すだけ。日本語・नेपाली・English どれで書いてもいい。
+   * 届く先＝「OUKA_会話面接結果」の「先生の報告」タブ。Claude が読んで「報告の仕分け」タブに 判断と返事を書く。
+   * ★この画面で先生が見られるのは自分の報告と、それへの返事だけ。 */
+  var RP_KEY = "ouka_report_v1";
+  var RP_KINDS = [
+    { k: "student", ja: "生徒について", ne: "विद्यार्थीबारे", ex: "例：SITA さんは 録音が できない（スマホが こわれている）" },
+    { k: "curriculum", ja: "授業・カリキュラム", ne: "कक्षा・पाठ्यक्रम", ex: "例：Day 12 は 時間が たりない。ゲームが むずかしい" },
+    { k: "fix", ja: "直してほしい所", ne: "सच्याउनुपर्ने", ex: "例：Day 8 の ネパール語の 意味が ちがう／アプリの ボタンが 動かない" },
+    { k: "other", ja: "その他", ne: "अन्य", ex: "" }
+  ];
+  var RP_STATE = { "受け取った": "うけとりました", "直した": "なおしました", "代表の返事待ち": "代表に きいています", "終わり": "おわり" };
+  var RP_FORM = { kind: "", day: "", student: "", where: "", text: "", urgent: false };
+  var RP_REMOTE = null;   /* 受け口から読んだ 仕分け（返事） */
+  function rpAll() { return readJSON(RP_KEY, []); }
+  function rpPut(list) { return writeJSON(RP_KEY, list); }
+  function rpKindLabel(k) { var x = RP_KINDS.filter(function (y) { return y.k === k; })[0]; return x ? x.ja : k; }
+
+  function renderTeacherReport() {
+    var name = teacherName();
+    headName.textContent = "先生／報告を送る";
+    var mine = rpAll().filter(function (r) { return r.who === name; }).sort(function (a, b) { return b.no - a.no; });
+    var tri = {};
+    (RP_REMOTE || []).forEach(function (t) { tri[t["報告ID"]] = t; });
+    var kind = RP_KINDS.filter(function (x) { return x.k === RP_FORM.kind; })[0];
+    view.innerHTML = '<section class="lesson hw2 rp">' +
+      '<div class="lesson-head"><h1>報告を送る <small>／ <span class="ne">रिपोर्ट पठाउने</span></small></h1></div>' +
+      '<p class="muted">生徒のこと・授業のこと・直してほしい所を 書いて 送ってください。日本語・नेपाली・English どれでも いいです。' +
+        "<br>送った報告は Claude が読んで、<b>直す／代表に きく／ようすを見る</b> を決めます。返事は この下に 出ます。</p>" +
+      '<div class="hw-name"><label>先生の なまえ<input id="rpName" value="' + esc(name) + '" placeholder="例：MADHU" autocomplete="off"></label></div>' +
+      (name ? "" : '<div class="warn">さいしょに 先生の なまえを 入れてください</div>') +
+      '<h2 class="hw-h">① なにについて？ ／ <span class="ne">केबारे？</span></h2><div class="rp-kinds">' +
+        RP_KINDS.map(function (x) {
+          return '<button class="btn btn-xl' + (x.k === RP_FORM.kind ? " btn-primary" : "") + '" data-act="rp-kind" data-k="' + x.k + '">' +
+            esc(x.ja) + '<span class="ne">' + esc(x.ne) + "</span></button>";
+        }).join("") + "</div>" +
+      (kind ? '<h2 class="hw-h">② くわしく ／ <span class="ne">विवरण</span></h2>' +
+        '<div class="rp-row"><label>Day（わかれば）<input id="rpDay" inputmode="numeric" value="' + esc(RP_FORM.day) + '" placeholder="12"></label>' +
+          (kind.k === "student" ? '<label>生徒の なまえ<input id="rpStudent" value="' + esc(RP_FORM.student) + '" placeholder="SITA RAI"></label>' : "") +
+          '<label>どこ（画面・教材・ページ）<input id="rpWhere" value="' + esc(RP_FORM.where) + '" placeholder="宿題 ③ ／ 教材 24 ／ 先生の勉強 UNIT 3"></label></div>' +
+        '<textarea id="rpText" rows="6" placeholder="' + esc(kind.ex || "書いてください") + '">' + esc(RP_FORM.text) + "</textarea>" +
+        '<label class="rp-urgent"><input type="checkbox" id="rpUrgent"' + (RP_FORM.urgent ? " checked" : "") + "> いそぎ（今日・明日の 授業に かかわる）</label>" +
+        '<button class="btn btn-primary btn-xl hw-wide" data-act="rp-send"' + (name ? "" : " disabled") + ">送る ／ <span class='ne'>पठाउने</span></button>"
+        : "") +
+      '<h2 class="hw-h">送った 報告 ／ <span class="ne">पठाएका रिपोर्ट</span></h2>' +
+      (mine.length ? mine.map(function (r) {
+        var t = tri[r.id];
+        var st = t ? (RP_STATE[t["状態"]] || t["状態"]) : (r.sent_at ? "とどきました（まだ 読んでいません）" : (ONLINE || SYNC_ON ? "まだ 送れていません（つながったら 送ります）" : "この たんまつに あります"));
+        return '<div class="rp-item' + (r.urgent ? " is-urgent" : "") + '"><div class="rp-head"><b>' + esc(rpKindLabel(r.kind)) + "</b>" +
+          (r.day ? "　Day " + esc(r.day) : "") + (r.student ? "　" + esc(r.student) : "") +
+          '<span class="muted small">' + esc(jdate(r.saved_at)) + "</span></div>" +
+          '<div class="rp-text">' + esc(r.text) + "</div>" +
+          '<div class="rp-st">' + esc(st) + "</div>" +
+          (t && t["先生への返事"] ? '<div class="rp-reply"><b>返事</b>　' + esc(t["先生への返事"]) + "</div>" : "") + "</div>";
+      }).join("") : '<div class="soon"><p>まだ ありません。</p></div>') +
+      (SYNC_ON && !ONLINE && mine.some(function (r) { return !r.sent_at; }) ? '<button class="btn hw-wide" data-act="rp-resend">まだの 報告を もう一度 送る</button>' : "") +
+      "</section>";
+    var nm = document.getElementById("rpName");
+    if (nm) nm.addEventListener("change", function () { setTeacherName(nm.value); render(); });
+    ["rpDay", "rpStudent", "rpWhere", "rpText"].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener("input", function () { RP_FORM[{ rpDay: "day", rpStudent: "student", rpWhere: "where", rpText: "text" }[id]] = el.value; });
+    });
+    var ug = document.getElementById("rpUrgent");
+    if (ug) ug.addEventListener("change", function () { RP_FORM.urgent = ug.checked; });
+    if (ONLINE && ONLINE.afterRender) ONLINE.afterRender(view);
+    rpLoadReplies();
+  }
+
+  function rpSend() {
+    var name = teacherName();
+    if (!name) { toast("先に 先生の なまえを 入れてください"); return; }
+    var text = String(RP_FORM.text || "").trim();
+    if (!RP_FORM.kind) { toast("なにについてか えらんでください"); return; }
+    if (!text) { toast("内容を 書いてください"); return; }
+    var now = Date.now();
+    var day = parseInt(String(RP_FORM.day).replace(/[^\d]/g, ""), 10);
+    var rec = { id: "R-" + now + "-" + Math.random().toString(36).slice(2, 6), no: now, who: name, kind: RP_FORM.kind,
+      day: day >= 1 && day <= 1010 ? day : "", student: RP_FORM.kind === "student" ? String(RP_FORM.student || "").trim().slice(0, 80) : "",
+      where: String(RP_FORM.where || "").trim().slice(0, 200), text: text.slice(0, 4000), urgent: !!RP_FORM.urgent,
+      saved_at: new Date(now).toISOString(), sent_at: "" };
+    var list = rpAll(); list.push(rec);
+    if (!rpPut(list)) return;
+    RP_FORM = { kind: "", day: "", student: "", where: "", text: "", urgent: false };
+    toast("送りました ／ पठाइयो");
+    if (SYNC_ON && !ONLINE) rpSendLocal(); else render();
+  }
+
+  /* ローカル版（学校のMac）＝その場で スプレッドシートへ送る。オンライン版は自動送信（online.js）が送る */
+  function rpSendLocal() {
+    var todo = rpAll().filter(function (r) { return !r.sent_at; });
+    if (!todo.length) { render(); return; }
+    fetch(CONFIG.sync_url, {
+      method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ token: CONFIG.sync_token, kind: "study", records: todo.map(rpRecord) })
+    }).then(function (res) { return res.json(); }).then(function (out) {
+      if (!out || !out.ok) throw new Error((out && out.error) || "応答なし");
+      var ids = {}; todo.forEach(function (r) { ids[r.id] = 1; });
+      var stamp = new Date().toISOString();
+      rpPut(rpAll().map(function (r) { if (ids[r.id]) r.sent_at = stamp; return r; }));
+      render();
+    }).catch(function (err) {
+      toast("まだ 送れていません（" + err.message + "）。この たんまつに 残っています");
+      render();
+    });
+  }
+  function rpRecord(r) {
+    return { type: "report", who: r.who, no: r.no, id: r.id, kind: r.kind, day: r.day, student: r.student,
+      where: r.where, text: r.text, urgent: !!r.urgent, saved_at: r.saved_at };
+  }
+  /* 返事を読む（オンライン＝自分の分だけ届く／ローカル＝合言葉で読み、自分の分だけ出す） */
+  var RP_LOADING = false;
+  function rpLoadReplies() {
+    if (RP_LOADING || RP_REMOTE) return;
+    var p = null;
+    if (ONLINE && ONLINE.api) p = ONLINE.api("report_list", {});
+    else if (SYNC_ON) p = fetch(CONFIG.sync_url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ token: CONFIG.sync_token, kind: "report_list" }) }).then(function (r) { return r.json(); });
+    if (!p) return;
+    RP_LOADING = true;
+    p.then(function (res) {
+      RP_LOADING = false;
+      if (!res || !res.ok) return;
+      RP_REMOTE = res.triage || [];
+      /* 受け口に届いている報告は「とどいた」にする（オンライン版の自動送信の分） */
+      var got = {}; (res.reports || []).forEach(function (r) { got[r["報告ID"]] = 1; });
+      var changedAny = false;
+      var list = rpAll().map(function (r) { if (got[r.id] && !r.sent_at) { r.sent_at = new Date().toISOString(); changedAny = true; } return r; });
+      if (changedAny) rpPut(list);
+      if (route().item === "report") render();
+    }, function () { RP_LOADING = false; });
+  }
+
   function renderLive(hub, item, n) {
     var k = hub + "/" + item;
     if (k === "teacher/today") return renderTeacherDay(n);
@@ -2797,6 +2955,7 @@
     if (k === "student/speak") return renderStudentSpeak(n);
     if (k === "teacher/inbox") return renderTeacherInbox(n);
     if (k === "teacher/photos") return renderTeacherPhotos();
+    if (k === "teacher/report") return renderTeacherReport();
     if (k === "teacher/voices") return renderTeacherVoices();
   }
 
@@ -3527,6 +3686,7 @@
     var c = r.cid ? findCand(r.cid) : null;
     if (r.cid && !c) { toast("候補者が見つかりません"); r = { name: "home" }; }
     document.body.setAttribute("data-screen", r.name);
+    if (!(r.name === "soon" && r.item === "report")) RP_REMOTE = null;   /* 報告の画面に入るたびに返事を読み直す */
     if (r.name === "setfield") {
       if (fieldList().some(function (f) { return f.code === r.code; })) { setField(r.code); toast(currentField().label + "コースにしました"); }
       go("#/student/media");
@@ -3592,6 +3752,10 @@
     else if (act === "drill-prev" && quiz) { quiz.idx = Math.max(0, quiz.idx - 1); render(); }
     else if (act === "drill-again" && quiz) { quiz = null; render(); }
     else if (/^hw-/.test(act) && hwAct(act, el)) { /* 宿題の中の操作 */ }
+    else if (act === "set-lang") { var sl = settings(); sl.teacher_lang = el.getAttribute("data-lang"); writeJSON(SETTINGS_KEY, sl); render(); }
+    else if (act === "rp-kind") { RP_FORM.kind = el.getAttribute("data-k"); render(); }
+    else if (act === "rp-send") rpSend();
+    else if (act === "rp-resend") rpSendLocal();
     else if (act === "hw-save") hwSave(route().day || currentDay(), true);
     else if (act === "hw-submit") hwSubmit(route().day || currentDay());
     else if (act === "hw-edit") {
