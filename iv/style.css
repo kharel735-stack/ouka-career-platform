@@ -590,3 +590,69 @@ rt { font-size: .5em; color: var(--muted); font-weight: 600; line-height: 1; }
 .upd-note { font-size: 13px; color: #2E4A7A; background: #EEF3FA; border-radius: 8px; padding: 4px 10px; margin: 4px 0 8px; display: inline-block; }
 .nep { overflow-x: auto; background: #fff; border: 1px solid var(--line); border-radius: 12px; }
 .nep .page { max-width: 1000px; }
+
+/* ---------- AIの授業（試作・2026-10-02） ---------- */
+.ai-start { text-align: center; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px 16px; }
+.ai-em { font-size: 72px; line-height: 1.1; }
+.ai-start h1 { margin: 6px 0 0; font-size: 30px; }
+.ai-day { font-size: 22px; font-weight: 800; color: var(--shu); margin: 2px 0 10px; }
+.ai-goal { background: #F1F8F3; border-radius: 12px; padding: 10px; line-height: 1.6; }
+.ai-top { display: flex; justify-content: space-between; align-items: center; }
+.ai-step { font-size: 18px; font-weight: 800; color: var(--ai); }
+.ai-teacher { display: flex; gap: 10px; align-items: flex-start; }
+.ai-face { font-size: 54px; line-height: 1; }
+.ai-face.is-talk { animation: hwpulse .8s infinite; }
+.ai-bubble { flex: 1; background: #EEF3FA; border-radius: 4px 16px 16px 16px; padding: 12px 14px; font-size: 22px; font-weight: 700; line-height: 1.55; }
+.ai-ne { margin-top: 8px; font-size: 16px; font-weight: 600; color: #44506A; font-family: "Noto Sans Devanagari", "Kohinoor Devanagari", sans-serif; }
+.ai-ctl { display: flex; gap: 8px; margin-top: 14px; }
+.ai-ctl .btn { flex: 1; }
+.ai-bows { display: flex; justify-content: center; gap: 18px; font-size: 48px; margin-top: 10px; }
+.ai-bows span { display: flex; flex-direction: column; align-items: center; }
+.ai-bows b { font-size: 16px; color: var(--shu); }
+.ai-you { margin-top: 12px; background: #FFF6E5; border-radius: 12px; padding: 10px 12px; font-size: 20px; line-height: 1.5; }
+.ai-trace-wrap { position: relative; width: min(300px, 80vw); aspect-ratio: 1; margin: 0 auto; border: 2px dashed var(--line); border-radius: 16px; background: #fff; }
+.ai-trace-wrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; z-index: 2; }
+.ai-ghost { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: min(220px, 58vw); color: #D9DDE4; z-index: 1; font-family: "Hiragino Kaku Gothic ProN", "Klee One", serif; }
+.ai-choices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; }
+.ai-choice { min-height: 96px; font: inherit; font-size: 46px; background: #fff; border: 2px solid var(--line); border-radius: 14px; cursor: pointer; color: inherit; }
+.ai-choice.ok { border-color: #3F8F5A; background: #E6F4EA; }
+.ai-choice.ng { border-color: var(--shu); background: #FBE9E7; }
+.ai-timer { font-size: 22px; font-weight: 800; color: var(--shu); }
+.ai-help, .ai-quit { width: 100%; margin-top: 10px; }
+.ai-quit { background: transparent; border: none; color: var(--muted); }
+.ai-sum { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0; }
+.ai-sum div { background: #EEF3FA; border-radius: 12px; padding: 10px 4px; display: flex; flex-direction: column; }
+.ai-sum b { font-size: 26px; color: var(--ai); }
+.ai-sum span { font-size: 13px; color: var(--muted); }
+/* AIの授業 v2（3つの言葉・書き順） */
+.ai-langs { display: flex; justify-content: center; gap: 6px; margin: 4px 0 10px; }
+.ai-langs span { background: #EEF3FA; border-radius: 999px; padding: 3px 10px; font-size: 14px; font-weight: 700; }
+.ai-segs { flex: 1; display: grid; gap: 6px; }
+.ai-seg { background: #EEF3FA; border-radius: 4px 14px 14px 14px; padding: 8px 12px; font-size: 19px; line-height: 1.5; opacity: .55; transition: opacity .2s; }
+.ai-seg.is-now { opacity: 1; box-shadow: 0 0 0 2px var(--ai) inset; }
+.ai-seg.ai-ne { font-family: "Noto Sans Devanagari", "Kohinoor Devanagari", sans-serif; }
+.ai-seg.ai-ja { background: #FFF1E8; font-size: 24px; font-weight: 800; }
+.ai-seg.ai-en { background: #F2F2F2; font-size: 16px; }
+.ai-lang { display: block; font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: .04em; }
+.ai-big { text-align: center; font-size: 64px; font-weight: 800; line-height: 1.25; margin: 14px 0 4px; color: var(--ai); white-space: pre-line; }
+.ai-kana { display: block; width: min(300px, 80vw); margin: 10px auto 0; background: #fff; border: 2px dashed var(--line); border-radius: 16px; }
+.ai-kana path { fill: none; stroke-width: 4.5; stroke-linecap: round; stroke-linejoin: round; }
+.ai-kana path.off { stroke: #E3E6EC; }
+.ai-kana path.on { stroke: #12294B; }
+.ai-kana path.now { stroke: var(--shu); }
+.ai-kana text { font-size: 9px; fill: #B0B6C2; font-weight: 700; }
+.ai-kana text.on { fill: var(--shu); }
+.ai-trace-wrap .ai-kana { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; border: none; z-index: 1; }
+.ai-trace-wrap .ai-kana text { fill: var(--shu); font-size: 10px; }
+.ai-meter { height: 12px; background: var(--line); border-radius: 9px; overflow: hidden; margin-top: 8px; }
+.ai-meter i { display: block; height: 100%; width: 0; background: #3F8F5A; transition: width .08s; }
+.ai-novoice { margin-top: 8px; background: #FBE9E7; color: #9A2B20; border-radius: 10px; padding: 8px 10px; font-weight: 700; }
+.ai-choices.is-ne .ai-choice { font-size: 22px; font-family: "Noto Sans Devanagari", "Kohinoor Devanagari", sans-serif; }
+.ai-en { font-size: 13px; color: var(--muted); padding-left: 4px; }
+.ai-pause { width: 100%; margin-top: 10px; }
+.ai-les-list { display: grid; gap: 8px; margin: 14px 0; text-align: left; }
+.ai-les { display: flex; align-items: center; gap: 8px; background: #fff; border: 1.5px solid var(--line); border-radius: 12px; padding: 8px 10px; }
+.ai-les.is-done { border-color: #3F8F5A; background: #F1F8F3; }
+.ai-les.is-mid { border-color: var(--ai); }
+.ai-les-t { flex: 1; display: flex; flex-direction: column; font-size: 16px; }
+.ai-les-t .ne { font-size: 13px; color: #44506A; }

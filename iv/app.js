@@ -981,6 +981,7 @@
     student: {
       title: "生徒・学習", icon: "▶",
       items: [
+        { key: "ai", label: "AIの授業（試作）／ AI शिक्षक", note: "AIの せんせいが ネパール語・English・日本語で、さいしょ（O1 あ行・か行）から 教える。書き順・なぞる・言う" },
         { key: "homework", label: "宿題 ／ गृहकार्य", note: "今日の しゅくだい（たんご・じゅぎょうの ふくしゅう・ノートの しゃしん）。ここから 出す" },
         { key: "today", label: "今日の教材", note: "その日に使う教材（プリント・スライド）がここに並ぶ" },
         { key: "drill", label: "問題", note: "ドリル・小テスト。問題バンクから出す" },
@@ -1008,7 +1009,11 @@
         { key: "progress", label: "生徒進捗", note: "クラス全体と生徒ごとの到達状況" }
       ]
     }
-  };
+  };  /* AIの授業（試作）は データ（声つき）がある時だけ入口を出す＝いまは学校のMac版だけ */
+  HUBS.student.items = HUBS.student.items.filter(function (it) {
+    return it.key !== "ai" || window.OUKA_AI_LESSON || (window.OUKA_LESSONS && window.OUKA_LESSONS.ai_lesson);
+  });
+
 
   function renderPlatform() {
     headName.textContent = "";
@@ -1136,7 +1141,7 @@
       '<span class="media-title">' + esc(m.title) + "</span>" +
       '<span class="media-meta">' + esc(m.org) + "　／　" + esc(m.lang) + "</span></a>";
   }
-  var LIVE = { "teacher/report": 1, "teacher/today": 1, "teacher/materials": 1, "student/today": 1, "student/drill": 1, "student/homework": 1,
+  var LIVE = { "student/ai": 1, "teacher/report": 1, "teacher/today": 1, "teacher/materials": 1, "student/today": 1, "student/drill": 1, "student/homework": 1,
     "student/media": 1, "student/emergency": 1, "student/submit": 1, "student/speak": 1, "teacher/inbox": 1,
     "teacher/study": 1, "student/history": 1, "teacher/grade": 1, "teacher/photos": 1, "teacher/voices": 1 };
   var MAT_BASE = "materials/";
@@ -1148,14 +1153,17 @@
   }
   function setCurrentDay(n) { var s = settings(); s.current_day = n; writeJSON(SETTINGS_KEY, s); }
   function dayData(n) { return LESSONS && LESSONS.days[n - 1]; }
+  /* あとから作った教材（書き順・オリエンテーション・先生の勉強 ほか）＝data/materials_extra.js（正本＝_tools/教材一覧.py） */
+  var MEX = window.OUKA_MATERIALS_EXTRA || (LESSONS && LESSONS.materials_extra) || { groups: [] };
+  function matExtraItems() { var o = []; MEX.groups.forEach(function (g) { g.items.forEach(function (m) { o.push(m); }); }); return o; }
   function matInfo(file) {
-    var list = (LESSONS && LESSONS.materials) || [];
+    var list = ((LESSONS && LESSONS.materials) || []).concat(matExtraItems().map(function (m) { return { file: m.file, no: "", title: m.title, for: m.for }; }));
     for (var i = 0; i < list.length; i++) if (list[i].file === file) return list[i];
     return null;
   }
   function matLink(file, cls) {
     var m = matInfo(file);
-    var title = m ? m.no + " " + m.title : file;
+    var title = m ? (m.no ? m.no + " " : "") + m.title : file;
     if (!m) return '<span class="muted">' + esc(title) + "（ファイルなし）</span>";
     return '<a class="btn ' + (cls || "") + '" target="_blank" rel="noopener" href="' + MAT_BASE + encodeURIComponent(m.file) + '">' + esc(title) + "</a>";
   }
@@ -1253,7 +1261,11 @@
     };
     view.innerHTML = '<section class="lesson"><div class="home-head"><h1>教材</h1>' +
       '<div class="tools"><a class="btn btn-primary" href="#/teacher/today">今日の授業</a></div></div>' +
-      group("student", "生徒にも見せる教材") + group("teacher", "先生用（テスト・記録用紙・先生向け説明）") +
+      MEX.groups.map(function (g) {
+        return '<h2 class="sec-h">' + esc(g.title) + (g.for === "student" ? "（生徒にも見せる）" : "") + '</h2><div class="mat-grid">' +
+          g.items.map(function (m) { return matLink(m.file, "mat-btn"); }).join("") + "</div>";
+      }).join("") +
+      group("student", "教材 01〜33：生徒にも見せる") + group("teacher", "教材 01〜33：先生用（テスト・記録用紙・先生向け説明）") +
       '<p class="muted small">押すとPDFが別のタブで開きます。中身は配布用PDF／教材_第1期 と同じもの（' + esc(LESSONS.source.imported_at) + " 取り込み）。</p></section>";
   }
 
@@ -1809,6 +1821,9 @@
       '<table class="profile lesson-tab">' + kv("教科書", esc(d.lesson) + "　練習A・B") + kv("ことば", esc(d.vocab)) + kv("漢字", esc(d.kanji)) +
       kv("仕事", esc(d.work)) + kv("安全", esc(d.safety)) + "</table>" +
       '<h2 class="sec-h">今日使うプリント</h2><div class="mat-row">' + (mats.length ? mats.map(function (f) { return matLink(f); }).join("") : '<span class="muted">この日に配るプリントはありません（先生の指示を聞く）</span>') + "</div>" +
+      MEX.groups.filter(function (g) { return g.for === "student"; }).map(function (g) {
+        return '<h2 class="sec-h">' + esc(g.title) + '</h2><div class="mat-row">' + g.items.map(function (m) { return matLink(m.file); }).join("") + "</div>";
+      }).join("") +
       '<div class="start-btns"><a class="btn btn-primary btn-xl" href="#/student/drill/' + n + '">問題をやる</a>' +
       '<a class="btn btn-xl" href="#/student/media/' + n + '">動画</a><a class="btn btn-xl" href="#/student/homework/' + n + '">宿題</a></div>' +
       "</section>";
@@ -2939,6 +2954,316 @@
     }, function () { RP_LOADING = false; });
   }
 
+  /* ---------- AIの授業（試作・2026-10-02） ----------
+   * 代表：「AI先生は ネパール語・英語・日本語を話す フランクな人に。最初から（あ の書き順・バランス）。教えた順に日本語を増やす」
+   * 中身＝data/ai_lesson.js（正本＝_tools/AI授業.py）。授業＝場面（scenes）×段取り（beats）。この画面は上から順に進めるだけ。
+   *   say＝AIが話す／stroke＝書き順を1本ずつ見せる／trace＝指でなぞる／record＝言って録音／word＝ことば／pick＝聞いて選ぶ
+   * ★「言った」かどうか＝録音中の声の大きさを この端末で測る（声が聞こえないと進めない）。何と言ったか・正しいかは 先生が録音を聞く。
+   * ★録音は この端末の中だけ（送らない）。声は 日本語 Kyoko／英語 Rishi／ネパール語 Lekha（ヒンディー語の声・仮）。 */
+  var AIL = window.OUKA_AI_LESSON || (LESSONS && LESSONS.ai_lesson) || null;
+  var AIC = null;   /* いま やっている 回（O1〜O10）。AIL.lessons の 1つ */
+  function aiLessonById(id) { var l = (AIL && AIL.lessons) || []; for (var i = 0; i < l.length; i++) if (l[i].id === id) return l[i]; return l[0] || null; }
+  var AI_KEY = "ouka_ai_lesson_v1";
+  var AIS = null, AI_AUDIO = null;
+  var AI_LANG_MARK = { ne: "नेपाली", en: "English", ja: "日本語" };
+  function aiAudioEl() { if (!AI_AUDIO) { AI_AUDIO = new Audio(); AI_AUDIO.preload = "auto"; } return AI_AUDIO; }
+  /* 声の並び（[[lang,text],…]）を 順に話す。話している所は 画面で 光る */
+  function aiPlay(seg, then) {
+    seg = seg || [];
+    var my = (AIS.playId = (AIS.playId || 0) + 1), i = 0;
+    AIS.speaking = true; AIS.segAt = 0;
+    var step = function () {
+      if (!AIS || AIS.playId !== my) return;
+      if (i >= seg.length) { AIS.speaking = false; AIS.segAt = -1; aiRefresh(); if (then) then(); return; }
+      AIS.segAt = i; aiMark();
+      var s = seg[i++], f = AIL.audio[s[0] + "|" + s[1]], a = aiAudioEl();
+      if (readJSON("ouka_ai_fast", false)) { setTimeout(step, 20); return; }   /* 自動テストの時だけ 声を飛ばす（声のファイルは テストが別に確かめる） */
+      if (!f) { if (s[0] === "ja") hwSpeak(s[1]); setTimeout(step, 900); return; }
+      a.onended = step; a.onerror = function () { setTimeout(step, 300); };
+      a.src = AIL.audio_base + f;
+      var p = a.play(); if (p && p.catch) p.catch(function () { setTimeout(step, 300); });
+    };
+    step();
+  }
+  function aiMark() {
+    Array.prototype.forEach.call(document.querySelectorAll(".ai-seg"), function (el, k) { el.classList.toggle("is-now", k === AIS.segAt); });
+  }
+  function aiRefresh() {
+    if (!AIS || AIS.speaking) return;
+    Array.prototype.forEach.call(document.querySelectorAll("[data-wait]"), function (b) { b.disabled = false; b.removeAttribute("data-wait"); });
+    var f = document.querySelector(".ai-face.is-talk"); if (f) f.classList.remove("is-talk");
+    aiMark();
+  }
+  function aiStop() {
+    if (AIS) AIS.playId = (AIS.playId || 0) + 1;
+    if (AI_AUDIO) { try { AI_AUDIO.pause(); } catch (e) { /* もう止まっている */ } }
+    if (AIS && AIS.mr && AIS.mr.state === "recording") { try { AIS.mr.stop(); } catch (e) { /* もう止まっている */ } }
+  }
+  function aiKey(id) { return (studentName() || "（なまえなし）") + "|" + (id || (AIC ? AIC.id : "")); }
+  function aiSaved(id) { return readJSON(AI_KEY, {})[aiKey(id)] || null; }
+  function aiSave() {
+    var all = readJSON(AI_KEY, {});
+    all[aiKey()] = { student: studentName() || "", lesson: AIC.id, scene: AIS.si, done: !!AIS.finished, recs: AIS.recs,
+      traced: AIS.traced, test: AIS.test, total: AIS.testTotal, saved_at: new Date().toISOString() };
+    writeJSON(AI_KEY, all);
+  }
+  function aiBeat() { var sc = AIC.scenes[AIS.si]; return sc && sc.beats[AIS.bi]; }
+  function aiSegHtml(seg, en) {
+    return '<div class="ai-segs">' + (seg || []).map(function (s, k) {
+      return '<div class="ai-seg ai-' + s[0] + (k === AIS.segAt ? " is-now" : "") + '"><span class="ai-lang">' + AI_LANG_MARK[s[0]] + "</span>" + esc(s[1]) + "</div>";
+    }).join("") + (en ? '<div class="ai-en">' + esc(en) + "</div>" : "") + "</div>";   /* 英語＝画面に小さく（声にしない） */
+  }
+  /* 書き順の図（KanjiVG の 109×109）。upto＝何本目まで濃く出すか、num＝番号を出すか */
+  function aiKanaSvg(b, upto, cls) {
+    return '<svg class="ai-kana ' + (cls || "") + '" viewBox="0 0 109 109">' +
+      b.paths.map(function (d, k) {
+        return '<path d="' + d + '" class="' + (k < upto ? "on" : "off") + (k === upto - 1 ? " now" : "") + '" data-k="' + k + '"/>';
+      }).join("") +
+      b.nums.map(function (n) { return '<text x="' + n[0] + '" y="' + n[1] + '" class="' + (n[2] <= upto ? "on" : "") + '">' + n[2] + "</text>"; }).join("") + "</svg>";
+  }
+
+  function renderAiLesson() {
+    headName.textContent = "AIの じゅぎょう（しさく）";
+    if (!AIL) {
+      view.innerHTML = '<section class="start"><div class="soon"><p><b>AIの授業のデータが入っていません。</b></p>' +
+        "<p class='muted'>パソコンで <code>python3 OUKA_INTERVIEW_APP/_tools/AI授業.py</code> を実行すると入ります。</p></div></section>";
+      return;
+    }
+    if (!AIS) {
+      /* 回をえらぶ（O1〜O10）。おわった回は ✓、とちゅうの回は「つづき」 */
+      var next = null;
+      var rows = AIL.lessons.map(function (l) {
+        var sv = aiSaved(l.id), st = sv && sv.done ? "done" : sv && sv.scene > 0 ? "mid" : "";
+        if (!next && st !== "done") next = l;
+        return '<div class="ai-les' + (st ? " is-" + st : "") + '"><div class="ai-les-t"><b>' + esc(l.id) + "</b> " + esc(l.title.replace(l.id + " ", "")) +
+          '<span class="ne">' + esc(l.title_ne || "") + "</span></div>" +
+          (st === "mid" ? '<button class="btn btn-primary" data-act="ai-resume" data-l="' + esc(l.id) + '">जारी ▶</button>' : "") +
+          '<button class="btn' + (st ? "" : " btn-primary") + '" data-act="ai-start" data-l="' + esc(l.id) + '">' + (st === "done" ? "✓ फेरि" : "सुरु ▶") + "</button></div>";
+      }).join("");
+      view.innerHTML = '<section class="lesson hw2 ai"><div class="ai-start"><div class="ai-em">🧑‍🏫</div>' +
+        "<h1>" + esc(AIL.teacher.name) + "</h1>" +
+        '<p class="ai-goal">म नेपाली र जापानीमा, एकदम सुरुबाट सिकाउँछु।<br><small>Hiragana from zero — O1 to O10.</small></p>' +
+        '<p class="muted small">🔊 आवाज खोल ／ Turn on the sound</p>' +
+        (next ? '<button class="btn btn-primary btn-xl hw-wide" data-act="ai-start" data-l="' + esc(next.id) + '">' + esc(next.id) + " सुरु गरौं ▶</button>" : "") +
+        '<div class="ai-les-list">' + rows + "</div>" +
+        '<p class="muted small">しさく：ネパール語の 声は ヒンディー語の 声で 読んでいる 仮の声です（Mac に ネパール語の 声が ない）。' +
+        "ろくおんは この たんまつの 中だけ。" + esc(AIL.credit) + "</p></div></section>";
+      return;
+    }
+    if (AIS.finished) return aiFinish();
+    var sc = AIC.scenes[AIS.si], b = aiBeat(), tot = AIC.scenes.length;
+    var head = '<div class="ai-top"><span class="ai-step">' + esc(sc.icon) + " " + esc(sc.step) + '</span><span class="hw-cnt">' + (AIS.si + 1) + " / " + tot + "</span></div>" +
+      '<div class="hw-bar"><i style="width:' + Math.round(AIS.si / tot * 100) + '%"></i></div>';
+    var wait = AIS.speaking ? ' disabled data-wait="1"' : "";
+    var next = function (ok, label) {
+      return '<button class="btn btn-primary btn-xl hw-wide" data-act="ai-next"' + (ok ? wait : " disabled") + ">" + (label || "अर्को ▶ Next") + "</button>";
+    };
+    var again = '<button class="btn hw-wide" data-act="ai-replay">🔊 फेरि सुन ／ Again</button>';
+    var body = '<div class="ai-teacher"><span class="ai-face' + (AIS.speaking ? " is-talk" : "") + '">🧑‍🏫</span>';
+    if (b.t === "say") {
+      body += aiSegHtml(b.seg, b.en) + "</div>" + (b.big ? '<div class="ai-big">' + esc(b.big).replace(/\n/g, "<br>") + "</div>" : "") + again + next(true);
+    } else if (b.t === "stroke") {
+      body += aiSegHtml(b.intro.concat(AIS.strokeAt > 0 ? b.count[AIS.strokeAt - 1] : []), b.en) + "</div>" +
+        aiKanaSvg(b, AIS.strokeAt, "ai-anim") +
+        '<button class="btn hw-wide" data-act="ai-replay">🔁 फेरि हेर ／ Watch again</button>' + next(AIS.strokeAt >= b.paths.length);
+    } else if (b.t === "trace") {
+      body += aiSegHtml(b.seg, b.en) + "</div>" +
+        '<div class="ai-trace-wrap">' + aiKanaSvg(b, 0, "ai-ghost2") + '<canvas id="aiCv" width="300" height="300"></canvas></div>' +
+        '<div class="ai-ctl"><button class="btn" data-act="ai-clear">मेटाऊ ／ Clear</button><button class="btn" data-act="ai-showorder">लेख्ने क्रम ／ Order</button></div>' +
+        next(AIS.ink > 40, "लेखें ▶ Done");
+    } else if (b.t === "record") {
+      var t = AIS.takes[AIS.si + "|" + AIS.bi] || [];
+      body += aiSegHtml(b.seg, b.en) + "</div>" + '<div class="ai-big">' + esc(b.ja) + "</div>" + again +
+        '<button class="btn btn-xl hw-wide hw-recbtn' + (AIS.recording ? " is-rec" : "") + '" data-act="ai-rec"' + (AIS.speaking && !AIS.recording ? " disabled data-wait=\"1\"" : "") + ">" +
+          (AIS.recording ? "■ रोक ／ Stop" : "🎙️ भन र रेकर्ड ／ Say it") + "</button>" +
+        (AIS.recording ? '<div class="ai-meter"><i id="aiMeter"></i></div>' : "") +
+        (AIS.noVoice ? '<div class="ai-novoice">आवाज सुनिएन। ठूलो स्वरमा फेरि भन। ／ I couldn\'t hear you. Say it louder.</div>' : "") +
+        t.map(function (u, k) { return '<div class="hw-take"><span>' + (k + 1) + "</span><audio controls src=\"" + u + '"></audio></div>'; }).join("") +
+        next(t.length >= (b.need || 1) && !AIS.recording);
+    } else if (b.t === "word") {
+      body += aiSegHtml([["ja", b.ja], ["ne", b.ne]]) + "</div>" + '<div class="ai-big">' + esc(b.ja) + "</div>" + again + next(true);
+    } else if (b.t === "pick") {
+      body += aiSegHtml(b.play) + "</div>" + again +
+        '<div class="ai-choices' + (b.ne ? " is-ne" : "") + '">' + b.choices.map(function (c, k) {
+          var cls = AIS.picked == null ? "" : (c === b.answer ? " ok" : (k === AIS.picked ? " ng" : ""));
+          return '<button class="ai-choice' + cls + '" data-act="ai-pick" data-k="' + k + '"' + (AIS.picked != null ? " disabled" : "") + ">" + esc(c) + "</button>";
+        }).join("") + "</div>" + (AIS.picked != null ? next(true) : "");
+    }
+    view.innerHTML = '<section class="lesson hw2 ai">' + head + '<div class="hw-card3">' + body + "</div>" +
+      '<button class="btn ai-pause" data-act="ai-pause">' + (AIS.paused ? "▶ चलाऊ ／ Play" : "⏸ रोक ／ Pause") + "</button>" +
+      '<button class="btn ai-quit" data-act="ai-quit">बन्द गर（पछि जारी राख्न सकिन्छ） ／ Close</button></section>';
+    if (b.t === "trace") aiCanvas(b);
+  }
+
+  /* なぞる＝書き順の番号と うすい字の上に 指で書く。書いた量（ink）が たりないと 進めない */
+  function aiCanvas(b) {
+    var cv = document.getElementById("aiCv");
+    if (!cv) return;
+    var ctx = cv.getContext("2d"), down = false;
+    ctx.lineWidth = 16; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = "#12294B";
+    var pos = function (e) { var r = cv.getBoundingClientRect(), p = e.touches ? e.touches[0] : e; return [(p.clientX - r.left) * cv.width / r.width, (p.clientY - r.top) * cv.height / r.height]; };
+    var start = function (e) { e.preventDefault(); down = true; var p = pos(e); ctx.beginPath(); ctx.moveTo(p[0], p[1]); };
+    var move = function (e) {
+      if (!down) return; e.preventDefault(); var p = pos(e); ctx.lineTo(p[0], p[1]); ctx.stroke();
+      AIS.ink++;
+      if (AIS.ink === 41) { var nb = document.querySelector('[data-act="ai-next"]'); if (nb && !AIS.speaking) nb.disabled = false; }
+    };
+    var end = function () { down = false; };
+    cv.addEventListener("mousedown", start); cv.addEventListener("mousemove", move); window.addEventListener("mouseup", end);
+    cv.addEventListener("touchstart", start, { passive: false }); cv.addEventListener("touchmove", move, { passive: false }); cv.addEventListener("touchend", end);
+  }
+
+  /* 書き順＝1本ずつ 線を出しながら AI が「いち・に・さん」と数える */
+  function aiStrokeRun() {
+    var b = aiBeat(); AIS.strokeAt = 0; render();
+    aiPlay(b.intro, function () {
+      var go1 = function () {
+        if (!AIS || aiBeat() !== b) return;
+        if (AIS.strokeAt >= b.paths.length) { render(); aiAuto(900); return; }
+        AIS.strokeAt++; render();
+        var el = document.querySelector('.ai-anim path[data-k="' + (AIS.strokeAt - 1) + '"]');
+        if (el && el.getTotalLength) { var L = el.getTotalLength(); el.style.strokeDasharray = L; el.style.strokeDashoffset = L; el.getBoundingClientRect(); el.style.transition = "stroke-dashoffset 1.1s ease"; el.style.strokeDashoffset = "0"; }
+        aiPlay(b.count[AIS.strokeAt - 1], function () { setTimeout(go1, 350); });
+      };
+      go1();
+    });
+  }
+
+  /* 話すだけの所は 話し終わったら 自動で次へ（代表 2026-10-03「書くまで 5分以上。プロセスが長い」）。
+     生徒が押すのは 自分で やる所（なぞる・言う・選ぶ）だけ。⏸ で止められる */
+  function aiAuto(delay) {
+    var si = AIS.si, bi = AIS.bi;
+    setTimeout(function () {
+      if (AIS && !AIS.paused && !AIS.finished && AIS.si === si && AIS.bi === bi && !AIS.recording) aiForward();
+    }, delay || 600);
+  }
+  function aiEnterBeat() {
+    var b = aiBeat();
+    AIS.picked = null; AIS.ink = 0; AIS.noVoice = false;
+    if (b.t === "stroke") return aiStrokeRun();
+    var seg = b.t === "say" ? b.seg : b.t === "word" ? [["ja", b.ja], ["ne", b.ne], ["ja", b.ja]] : b.t === "pick" ? b.play : b.seg;
+    aiPlay(seg, b.t === "say" || b.t === "word" ? function () { aiAuto(700); } : null);
+    render();
+  }
+  function aiForward() {
+    var sc = AIC.scenes[AIS.si];
+    if (AIS.bi < sc.beats.length - 1) { AIS.bi++; }
+    else if (AIS.si < AIC.scenes.length - 1) { AIS.si++; AIS.bi = 0; aiSave(); }
+    else { AIS.finished = true; aiStop(); aiSave(); render(); return; }
+    aiEnterBeat();
+  }
+
+  function aiFinish() {
+    var idx = AIL.lessons.indexOf(AIC), nx = AIL.lessons[idx + 1];
+    view.innerHTML = '<section class="lesson hw2 ai"><div class="hw-result"><div class="ai-em">🎉</div><h1>' + esc(AIC.id) + " सकियो！</h1>" +
+      '<div class="ai-sum"><div><b>' + AIS.traced + '</b><span>लेखेको अक्षर</span></div><div><b>' + AIS.recs + '</b><span>भनेको（आवाज सुनिएको）</span></div>' +
+      "<div><b>" + AIS.test + " / " + AIS.testTotal + "</b><span>परीक्षा</span></div></div>" +
+      '<a class="btn btn-primary btn-xl hw-wide" href="#/student/homework/' + esc(AIC.day) + '">गृहकार्य ▶ Homework</a>' +
+      (nx ? '<button class="btn btn-xl hw-wide" data-act="ai-start" data-l="' + esc(nx.id) + '">अर्को पाठ ' + esc(nx.id) + " ▶</button>" : "") +
+      '<button class="btn btn-xl hw-wide" data-act="ai-list">पाठको सूची ／ All lessons</button></div></section>';
+  }
+
+  /* 録音＝声の大きさを測る。0.3秒以上 声が出ていなければ 数えない（「言った」と押すだけ にしない） */
+  function aiRecToggle() {
+    if (AIS.recording) { if (AIS.mr && AIS.mr.state === "recording") AIS.mr.stop(); return; }
+    if (!canRecord()) { toast("यो फोनमा रेकर्ड हुँदैन ／ Recording is not available on this device"); return; }
+    var key = AIS.si + "|" + AIS.bi;
+    /* ★音を測る部品は ボタンを押した その時に作る（あとで作ると 端末の決まりで 止まったまま＝いつも「聞こえない」になる） */
+    var actx = null;
+    try { actx = new (window.AudioContext || window.webkitAudioContext)(); if (actx.resume) actx.resume(); } catch (e) { actx = null; }
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+      var chunks = [], mr = new MediaRecorder(stream), voiced = 0, an = null, buf = null, raf = 0, last = performance.now();
+      try {
+        if (actx && actx.state === "suspended" && actx.resume) actx.resume();
+        an = actx.createAnalyser(); an.fftSize = 1024; buf = new Float32Array(an.fftSize);
+        actx.createMediaStreamSource(stream).connect(an);
+      } catch (e) { an = null; }
+      var meter = function () {
+        if (!an) return;
+        an.getFloatTimeDomainData(buf);
+        var sum = 0; for (var i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+        var rms = Math.sqrt(sum / buf.length), now = performance.now();
+        if (rms > 0.02) voiced += now - last;
+        last = now;
+        var m = document.getElementById("aiMeter"); if (m) m.style.width = Math.min(100, Math.round(rms * 600)) + "%";
+        raf = requestAnimationFrame(meter);
+      };
+      AIS.mr = mr;
+      mr.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
+      mr.onstop = function () {
+        cancelAnimationFrame(raf);
+        /* 測れない端末（部品が止まったまま等）では 数える＝声を出した生徒を 止めない（何と言ったかは 先生が録音を聞く）。★閉じる前に 判定する */
+        var heard = an && actx && actx.state === "running" ? voiced >= 300 : true;
+        stream.getTracks().forEach(function (t) { t.stop(); }); if (actx) actx.close();
+        AIS.recording = false;
+        if (chunks.length && heard) {
+          (AIS.takes[key] = AIS.takes[key] || []).push(URL.createObjectURL(new Blob(chunks, { type: mr.mimeType || "audio/webm" })));
+          AIS.recs++; AIS.noVoice = false;
+        } else AIS.noVoice = true;
+        render();
+        if (heard && chunks.length) {
+          var bb = aiBeat(), tk = AIS.takes[key] || [];
+          aiPlay([["ja", "いい"]], tk.length >= ((bb && bb.need) || 1) ? function () { aiAuto(500); } : null);
+        }
+      };
+      mr.start(); AIS.recording = true; render(); meter();
+      setTimeout(function () { if (mr.state === "recording") mr.stop(); }, 8000);   /* 8秒で とまる */
+    }).catch(function () { if (actx) actx.close(); toast("माइक अनुमति दिनुहोस् ／ Please allow the microphone"); });
+  }
+
+  function aiAct(act, el) {
+    if (act === "ai-list") { aiStop(); AIS = null; render(); return true; }
+    if (act === "ai-start" || act === "ai-restart" || act === "ai-resume") {
+      aiStop();
+      if (el && el.getAttribute("data-l")) AIC = aiLessonById(el.getAttribute("data-l"));
+      if (!AIC) AIC = aiLessonById("O1");
+      var sv = act === "ai-resume" ? aiSaved() : null;
+      AIS = { si: sv ? sv.scene : 0, bi: 0, takes: {}, recs: sv ? sv.recs || 0 : 0, traced: sv ? sv.traced || 0 : 0,
+        test: sv ? sv.test || 0 : 0, testTotal: sv ? sv.total || 0 : 0, picked: null, ink: 0, strokeAt: 0, finished: false, segAt: -1 };
+      aiAudioEl().play().catch(function () { /* 音を出す許可を ここで取る */ });
+      aiEnterBeat(); return true;
+    }
+    if (!AIS) return false;
+    var b = aiBeat();
+    if (act === "ai-quit") { aiStop(); aiSave(); AIS = null; go("#/student"); return true; }
+    if (act === "ai-replay") { if (b.t === "stroke") aiStrokeRun(); else aiEnterBeat(); return true; }
+    if (act === "ai-showorder") { var keep = AIS.ink; AIS.strokeAt = 0; aiStrokeRunTrace(b, keep); return true; }
+    if (act === "ai-rec") { aiRecToggle(); return true; }
+    if (act === "ai-pause") {
+      AIS.paused = !AIS.paused;
+      if (AIS.paused) aiStop(); else if ((b.t === "say" || b.t === "word") && !AIS.speaking) aiForward();
+      render(); return true;
+    }
+    if (act === "ai-clear") { var cv = document.getElementById("aiCv"); if (cv) cv.getContext("2d").clearRect(0, 0, cv.width, cv.height); AIS.ink = 0; var nb = document.querySelector('[data-act="ai-next"]'); if (nb) nb.disabled = true; return true; }
+    if (act === "ai-pick" && AIS.picked == null) {
+      AIS.picked = parseInt(el.getAttribute("data-k"), 10);
+      var ok = b.choices[AIS.picked] === b.answer;
+      AIS.testTotal++; if (ok) AIS.test++;
+      aiPlay(ok ? [["ja", "いい"]] : [["ne", "होइन, सही उत्तर："]].concat(b.ne ? [] : b.play), function () { aiAuto(ok ? 600 : 1200); });
+      render(); return true;
+    }
+    if (act === "ai-next") {
+      if (b.t === "trace") AIS.traced++;
+      aiStop(); aiForward(); return true;
+    }
+    return false;
+  }
+  /* なぞる画面で「書く順番」を もう一度 見る（書いた線は 消さない） */
+  function aiStrokeRunTrace(b) {
+    var svg = document.querySelector(".ai-ghost2");
+    if (!svg) return;
+    var ps = svg.querySelectorAll("path"), k = 0;
+    var one = function () {
+      if (k >= ps.length) return;
+      var el = ps[k]; el.setAttribute("class", "on now");
+      var L = el.getTotalLength(); el.style.strokeDasharray = L; el.style.strokeDashoffset = L; el.getBoundingClientRect();
+      el.style.transition = "stroke-dashoffset 1s ease"; el.style.strokeDashoffset = "0";
+      var c = b.paths.length ? AIC.scenes[AIS.si].beats.filter(function (x) { return x.t === "stroke"; })[0] : null;
+      aiPlay(c ? c.count[k] : [], function () { el.setAttribute("class", "off"); el.style.transition = ""; el.style.strokeDasharray = ""; el.style.strokeDashoffset = ""; k++; setTimeout(one, 250); });
+    };
+    one();
+  }
+
   function renderLive(hub, item, n) {
     var k = hub + "/" + item;
     if (k === "teacher/today") return renderTeacherDay(n);
@@ -2956,6 +3281,7 @@
     if (k === "teacher/inbox") return renderTeacherInbox(n);
     if (k === "teacher/photos") return renderTeacherPhotos();
     if (k === "teacher/report") return renderTeacherReport();
+    if (k === "student/ai") return renderAiLesson();
     if (k === "teacher/voices") return renderTeacherVoices();
   }
 
@@ -3686,7 +4012,8 @@
     var c = r.cid ? findCand(r.cid) : null;
     if (r.cid && !c) { toast("候補者が見つかりません"); r = { name: "home" }; }
     document.body.setAttribute("data-screen", r.name);
-    if (!(r.name === "soon" && r.item === "report")) RP_REMOTE = null;   /* 報告の画面に入るたびに返事を読み直す */
+    if (!(r.name === "soon" && r.item === "report")) RP_REMOTE = null;
+    if (!(r.name === "soon" && r.item === "ai") && AIS) { aiStop(); AIS = null; }   /* AIの授業から出たら声と録音を止める（続きは保存してある） */   /* 報告の画面に入るたびに返事を読み直す */
     if (r.name === "setfield") {
       if (fieldList().some(function (f) { return f.code === r.code; })) { setField(r.code); toast(currentField().label + "コースにしました"); }
       go("#/student/media");
@@ -3752,6 +4079,7 @@
     else if (act === "drill-prev" && quiz) { quiz.idx = Math.max(0, quiz.idx - 1); render(); }
     else if (act === "drill-again" && quiz) { quiz = null; render(); }
     else if (/^hw-/.test(act) && hwAct(act, el)) { /* 宿題の中の操作 */ }
+    else if (/^ai-/.test(act) && aiAct(act, el)) { /* AIの授業の中の操作 */ }
     else if (act === "set-lang") { var sl = settings(); sl.teacher_lang = el.getAttribute("data-lang"); writeJSON(SETTINGS_KEY, sl); render(); }
     else if (act === "rp-kind") { RP_FORM.kind = el.getAttribute("data-k"); render(); }
     else if (act === "rp-send") rpSend();
