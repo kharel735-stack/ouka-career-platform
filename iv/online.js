@@ -23,7 +23,7 @@
   var SETTINGS_KEY = "ouka_interview_settings_v1";   /* app.js と同じ */
   var CONTENT_KEY = "ouka_iv_content_v1";            /* 教材の控え（細い回線のため） */
   var SENT_KEY = "ouka_iv_sent_v1";                  /* 送った記録の指紋 */
-  var WATCH = { ouka_drill_v1: 1, ouka_homework_v1: 1, ouka_teacher_study_v1: 1, ouka_grade_v1: 1, ouka_report_v1: 1 };
+  var WATCH = { ouka_drill_v1: 1, ouka_homework_v1: 1, ouka_teacher_study_v1: 1, ouka_grade_v1: 1, ouka_report_v1: 1, ouka_ai_nepali_v1: 1, ouka_feedback_v1: 1, ouka_assign_v1: 1 };
   var INTERVIEW_ROUTES = { candidates: 1, upload: 1, "new": 1, start: 1, q: 1, result: 1, results: 1 };
 
   var clerkReady = null, loginStarted = false, codeStep = null, who = null, appLoaded = false;
@@ -275,13 +275,14 @@
     if (n === "home") return !!who.can.teacher;         /* 生徒のホームは「生徒・学習」 */
     return n === "setfield";
   }
-  function home() { return who && who.can.teacher ? "#/" : "#/student"; }
+  /* 先生・代表＝ホーム／生徒＝生徒の画面／ネパール語を学ぶ人＝さくら先生のネパール語（2026-10-04） */
+  function home() { return who && who.can.teacher ? "#/" : who && who.can.student ? "#/student" : "#/nepali/learn"; }
 
   /* 名前は本人のアカウントの名前で決まる（打たせない＝ほかの人の名前で出せない） */
   function setNames() {
     var s = {};
     try { s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}") || {}; } catch (x) { s = {}; }
-    s.student_name = who.role === "STUDENT" ? who.name : "";
+    s.student_name = who.role === "STUDENT" || who.role === "NEPALI_LEARNER" ? who.name : "";
     s.teacher_name = who.can.teacher ? who.name : "";
     try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); } catch (x) { /* 止めない */ }
   }
@@ -290,7 +291,7 @@
     if (!who.can.teacher) {
       Array.prototype.forEach.call(view.querySelectorAll('a[href="#/"]'), function (a) { a.style.display = "none"; });
     }
-    ["hwName", "tsName", "rpName"].forEach(function (id) {
+    ["hwName", "tsName", "rpName", "asName"].forEach(function (id) {
       var el = view.querySelector("#" + id);
       if (!el) return;
       el.readOnly = true;
@@ -309,8 +310,8 @@
     var have = cached && cached.content_ver ? cached.content_ver : "";
     return api("content", { have: have }).then(function (res) {
       if (res && res.ok && res.same && cached) return cached;
-      if (res && res.ok && res.lessons) {
-        var c = { content_ver: res.content_ver, lessons: res.lessons, study: res.study || null, ne: res.ne || null };
+      if (res && res.ok && (res.lessons || res.nepali)) {
+        var c = { content_ver: res.content_ver, lessons: res.lessons || null, study: res.study || null, ne: res.ne || null, nepali: res.nepali || null };
         try { localStorage.setItem(CONTENT_KEY, JSON.stringify(c)); } catch (x) { /* 入らなくても今は使える */ }
         return c;
       }
@@ -360,6 +361,9 @@
       else if (r.type === "study") { if (!(who.can.teacher && r.who === who.name)) return false; }
       else if (r.type === "grade") { if (!who.can.teacher) return false; }
       else if (r.type === "report") { if (!(who.can.teacher && r.who === who.name)) return false; }
+      else if (r.type === "nepali") { if (!(who.can.nepali && r.who === who.name)) return false; }
+      else if (r.type === "assign") { if (!(who.can.teacher && r.who === who.name)) return false; }
+      else if (r.type === "feedback") { if (!((who.role === "STUDENT" || who.role === "NEPALI_LEARNER") && r.who === who.name)) return false; }
       else return false;
       return sent[keyOf(r)] !== sigOf(r);
     });
@@ -457,7 +461,7 @@
         catch (x) { who.id = who.name; }
       });
     }).then(function () {
-      if (!who.can.student && !who.can.teacher) {
+      if (!who.can.student && !who.can.teacher && !who.can.nepali) {
         throw { oukaCategory: "APP_LAYER_ERROR", detail: "no_learning",
                 message: "このアカウントは面接用です。面接は学校のMacの面接アプリで行ってください。" };
       }
@@ -467,13 +471,14 @@
       window.OUKA_LESSONS = c.lessons;
       window.OUKA_TEACHER_STUDY = who.can.teacher ? c.study : null;
       window.OUKA_LESSONS_NE = who.can.teacher ? c.ne || null : null;
+      window.OUKA_AI_NEPALI = who.can.nepali ? c.nepali || null : null;
       setNames();
       window.OUKA_ONLINE = {
         role: who.role, name: who.name, can: who.can, students: who.students,
         allow: allow, home: home, changed: changed, afterRender: afterRender, api: api, photosChanged: photosChanged
       };
       $("who").textContent = who.name + "（" + ({ STUDENT: "生徒", TEACHER: "先生", CEO: "代表",
-        SCHOOL_ADMIN: "校長", SUPER_ADMIN: "管理者" }[who.role] || who.role) + "）";
+        SCHOOL_ADMIN: "校長", SUPER_ADMIN: "管理者", NEPALI_LEARNER: "ネパール語" }[who.role] || who.role) + "）";
       /* 面接の入口は出さない（学校のMac版） */
       Array.prototype.forEach.call(document.querySelectorAll('.bar-nav a[href="#/candidates"], .bar-nav a[href="#/results"]'),
         function (a) { a.hidden = true; a.style.display = "none"; });   /* .btn の display が hidden に勝つため */

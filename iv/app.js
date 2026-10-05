@@ -981,6 +981,7 @@
     student: {
       title: "生徒・学習", icon: "▶",
       items: [
+        { key: "start", label: "はじめての人の入口（試作）／ सुरु", note: "日本語を習ったことがない人のための入口。習った分だけ日本語が増える・漢字は必ずふりがな" },
         { key: "ai", label: "AIの授業（試作）／ AI शिक्षक", note: "AIの せんせいが ネパール語・English・日本語で、さいしょ（O1 あ行・か行）から 教える。書き順・なぞる・言う" },
         { key: "homework", label: "宿題 ／ गृहकार्य", note: "今日の しゅくだい（たんご・じゅぎょうの ふくしゅう・ノートの しゃしん）。ここから 出す" },
         { key: "today", label: "今日の教材", note: "その日に使う教材（プリント・スライド）がここに並ぶ" },
@@ -1000,6 +1001,7 @@
         { key: "materials", label: "教材", note: "その授業で配る教材の一覧" },
         { key: "report", label: "報告を送る", note: "生徒のこと・授業のこと・直してほしい所を書いて送る（Claudeが読んで、直すか代表に聞くか決める）" },
         { key: "study", label: "先生の勉強", note: "先生が自分で日本語を勉強する本（N5→N1・雑学・漢字・教え方メモ）" },
+        { key: "nepali", label: "ネパール語を学ぶ（さくら先生・試作）", note: "日本人向け。ネパール語ゼロから、さくら先生と 聞いて・まねして・言う（あいさつ・数字・教室・命を守ることば）" },
         { key: "guide", label: "Teacher Guide", note: "教え方・板書・つまずきへの対応（SOP/教師授業マニュアル を入れる予定）" },
         { key: "assign", label: "宿題を出す", note: "クラス・生徒を選んで宿題を割り当てる" },
         { key: "inbox", label: "提出物確認", note: "誰が出した・出していないかの一覧" },
@@ -1010,6 +1012,14 @@
       ]
     }
   };  /* AIの授業（試作）は データ（声つき）がある時だけ入口を出す＝いまは学校のMac版だけ */
+  HUBS.teacher.items = HUBS.teacher.items.filter(function (it) { return it.key !== "nepali" || window.OUKA_AI_NEPALI; });
+  /* ネパール語を学ぶ人（日本人）＝画面は日本語だけ（2026-10-04 代表「ネパール語を勉強したい人は ネパール語の生徒画面」） */
+  HUBS.nepali = { title: "ネパール語の勉強", icon: "▶", items: [
+    { key: "learn", label: "さくら先生の ネパール語", note: "N1 あいさつ から。聞いて・まねして・言う。1回 10分くらい" }
+  ] };
+  if (!(window.OUKA_AI_NEPALI) || !ONLINE) delete HUBS.nepali;   /* 学校のMac版は 先生メニューの「ネパール語」から入る（入口の区画を増やさない） */
+  /* はじめての人の入口（試作・承認前）は 学校のMac版だけ（オンラインの生徒には まだ出さない） */
+  if (ONLINE) HUBS.student.items = HUBS.student.items.filter(function (it) { return it.key !== "start"; });
   HUBS.student.items = HUBS.student.items.filter(function (it) {
     return it.key !== "ai" || window.OUKA_AI_LESSON || (window.OUKA_LESSONS && window.OUKA_LESSONS.ai_lesson);
   });
@@ -1141,9 +1151,9 @@
       '<span class="media-title">' + esc(m.title) + "</span>" +
       '<span class="media-meta">' + esc(m.org) + "　／　" + esc(m.lang) + "</span></a>";
   }
-  var LIVE = { "student/ai": 1, "teacher/report": 1, "teacher/today": 1, "teacher/materials": 1, "student/today": 1, "student/drill": 1, "student/homework": 1,
+  var LIVE = { "teacher/guide": 1, "teacher/assign": 1, "nepali/learn": 1, "student/start": 1, "student/ai": 1, "teacher/report": 1, "teacher/today": 1, "teacher/materials": 1, "student/today": 1, "student/drill": 1, "student/homework": 1,
     "student/media": 1, "student/emergency": 1, "student/submit": 1, "student/speak": 1, "teacher/inbox": 1,
-    "teacher/study": 1, "student/history": 1, "teacher/grade": 1, "teacher/photos": 1, "teacher/voices": 1 };
+    "teacher/study": 1, "student/history": 1, "teacher/grade": 1, "teacher/photos": 1, "teacher/voices": 1, "teacher/nepali": 1 };
   var MAT_BASE = "materials/";
 
   function dayCount() { return LESSONS ? LESSONS.days.length : 0; }
@@ -1515,6 +1525,18 @@
       out.push({ type: "drill", who: r.student, no: r.day, field: r.field || "",
         answered: r.answered, correct: r.correct, total: r.total, saved_at: r.saved_at || "" });
     });
+    /* ネパール語の勉強（2026-10-04）＝回ごとに 進み・なぞり・声・テスト。集計は 同じスプレッドシート */
+    var nall = readJSON("ouka_ai_nepali_v1", {});
+    Object.keys(nall).forEach(function (k) {
+      var r = nall[k], nm = String(r.student || "").trim(), m = /^N(\d+)$/.exec(String(r.lesson || ""));
+      if (!nm || !m) return;
+      out.push({ type: "nepali", who: nm, no: parseInt(m[1], 10), done: !!r.done, recs: r.recs || 0, traced: r.traced || 0,
+        test: r.test || 0, total: r.total || 0, saved_at: r.saved_at || "" });
+    });
+    /* 宿題を出す（2026-10-04）＝どの Day を どの班に 出したか */
+    asAll().forEach(function (r) { if (String(r.who || "").trim()) out.push(asRecord(r)); });
+    /* 生徒の声（2026-10-04）＝押した気持ちと理由（文は 書いた人だけ） */
+    readJSON(FB_KEY, []).forEach(function (r) { if (String(r.who || "").trim()) out.push(fbRecord(r)); });
     /* 先生の報告（2026-10-02）＝読むために送る文なので、本文も送る */
     rpAll().forEach(function (r) { if (String(r.who || "").trim()) out.push(rpRecord(r)); });
     var gall = grAll();
@@ -1995,6 +2017,11 @@
         "<p class='muted'>パソコンで <code>python3 配布用PDF/V_わかりやすい授業_試作/_tools/アプリ宿題データ.py</code> を実行すると入ります。</p></div></section>";
       return;
     }
+    /* 先生が出した宿題（📣）が 新しく 来ていたら、その Day を 開く（1回だけ。あとは 生徒が えらべる） */
+    var a0 = asForMe();
+    if (!n && a0 && String(a0.id) !== String(settings().hw_assign_seen || "")) {
+      n = parseInt(a0.day, 10); var s3 = settings(); s3.hw_assign_seen = a0.id; writeJSON(SETTINGS_KEY, s3);
+    }
     n = n || hwDayNo();
     if (!hwDayData(n)) n = 1;
     var s2 = settings(); if (s2.hw_day !== n) { s2.hw_day = n; writeJSON(SETTINGS_KEY, s2); }
@@ -2040,7 +2067,10 @@
     var part = function (p) { return hwTasks(n).filter(function (t) { return t.part === p; }).map(row).join(""); };
     var nw = f && !ori ? hwNewWords(f, n) : [];
     var ow = ori ? hwOriWords(n) : [];
-    var daySel = '<div class="hw-day"><a class="btn" href="#/student/homework/' + hwStep(n, -1) + '">‹</a>' +
+    var asg = asForMe();
+    var daySel = (asg ? '<a class="hw-assign" href="#/student/homework/' + esc(asg.day) + '">📣 Teacher / 先生から：<b>' + esc(asLabel(asg.day)) +
+        "</b>（つぎの授業まで）" + (parseInt(asg.day, 10) === n ? " ✓" : " ›") + "</a>" : "") +
+      '<div class="hw-day"><a class="btn" href="#/student/homework/' + hwStep(n, -1) + '">‹</a>' +
         '<select id="hwDaySel">' + hwOrder().map(function (x) {
           return '<option value="' + x + '"' + (x === n ? " selected" : "") + ">" + (x > 1000 ? hwLabel(x) + " オリエンテーション" : "Day " + x) + "</option>"; }).join("") + "</select>" +
         '<a class="btn" href="#/student/homework/' + hwStep(n, 1) + '">›</a>';
@@ -2960,11 +2990,45 @@
    *   say＝AIが話す／stroke＝書き順を1本ずつ見せる／trace＝指でなぞる／record＝言って録音／word＝ことば／pick＝聞いて選ぶ
    * ★「言った」かどうか＝録音中の声の大きさを この端末で測る（声が聞こえないと進めない）。何と言ったか・正しいかは 先生が録音を聞く。
    * ★録音は この端末の中だけ（送らない）。声は 日本語 Kyoko／英語 Rishi／ネパール語 Lekha（ヒンディー語の声・仮）。 */
-  var AIL = window.OUKA_AI_LESSON || (LESSONS && LESSONS.ai_lesson) || null;
+  var AIL_JA = window.OUKA_AI_LESSON || (LESSONS && LESSONS.ai_lesson) || null;
+  var AIL = AIL_JA;
   var AIC = null;   /* いま やっている 回（O1〜O10）。AIL.lessons の 1つ */
   function aiLessonById(id) { var l = (AIL && AIL.lessons) || []; for (var i = 0; i < l.length; i++) if (l[i].id === id) return l[i]; return l[0] || null; }
   var AI_KEY = "ouka_ai_lesson_v1";
-  var AIS = null, AI_AUDIO = null;
+  var AIS = null, AI_AUDIO = null, AI_MODE = "ja";
+  /* 2026-10-04 さくら先生の ネパール語（試作）＝同じ画面を 向きだけ逆にして使う（説明＝日本語、学ぶ＝ネパール語）。
+   * 中身＝data/ai_nepali.js（正本＝_tools/AIネパール語.py）。画面の文言は データの ui で上書き（無ければ 下の 日本語の授業のまま） */
+  var AI_UI = { next: "अर्को ▶ Next", again: "🔊 फेरि सुन ／ Again", rec: "🎙️ भन र रेकर्ड ／ Say it", stop: "■ रोक ／ Stop",
+    novoice: "आवाज सुनिएन। ठूलो स्वरमा फेरि भन। ／ I couldn't hear you. Say it louder.", pause: "⏸ रोक ／ Pause", play: "▶ चलाऊ ／ Play",
+    quit: "बन्द गर（पछि जारी राख्न सकिन्छ） ／ Close", done: " सकियो！", said: "भनेको（आवाज सुनिएको）", test: "परीक्षा",
+    next_lesson: "अर्को पाठ ", list: "पाठको सूची ／ All lessons", norec: "यो फोनमा रेकर्ड हुँदैन ／ Recording is not available on this device",
+    mic: "माइक अनुमति दिनुहोस् ／ Please allow the microphone", back: "#/student", homework: true };
+  function aiT(k) {
+    if (k === "back" && AI_MODE === "ne" && route().hub === "nepali") return "#/nepali/learn";   /* ネパール語を学ぶ人は 先生の画面へ 戻さない */
+    var u = AIL && AIL.ui; return u && u[k] != null ? u[k] : AI_UI[k];
+  }
+  function aiUse(mode) {
+    if (AI_MODE !== mode) { aiStop(); AIS = null; AIC = null; }
+    AI_MODE = mode;
+    AIL = mode === "ne" ? window.OUKA_AI_NEPALI || null : AIL_JA;
+    AI_KEY = mode === "ne" ? "ouka_ai_nepali_v1" : "ouka_ai_lesson_v1";
+  }
+  /* ネパール語版の 回をえらぶ画面（日本語の授業の一覧とは 別に持つ＝あちらの文言を 変えない） */
+  function aiStartUi() {
+    var u = AIL.ui, next = null;
+    var rows = AIL.lessons.map(function (l) {
+      var sv = aiSaved(l.id), st = sv && sv.done ? "done" : sv && sv.scene > 0 ? "mid" : "";
+      if (!next && st !== "done") next = l;
+      return '<div class="ai-les' + (st ? " is-" + st : "") + '"><div class="ai-les-t"><b>' + esc(l.id) + "</b> " + esc(l.title.replace(l.id + " ", "")) +
+        '<span class="muted small">' + esc(l.title_ne || "") + "</span></div>" +
+        (st === "mid" ? '<button class="btn btn-primary" data-act="ai-resume" data-l="' + esc(l.id) + '">' + esc(u.resume) + "</button>" : "") +
+        '<button class="btn' + (st ? "" : " btn-primary") + '" data-act="ai-start" data-l="' + esc(l.id) + '">' + esc(st === "done" ? u.again_done : u.start) + "</button></div>";
+    }).join("");
+    view.innerHTML = '<section class="lesson hw2 ai"><div class="ai-start"><div class="ai-em">🧑‍🏫</div>' +
+      "<h1>" + esc(AIL.teacher.name) + "</h1>" + '<p class="ai-goal"><b>' + esc(u.title) + "</b><br>" + u.goal + "</p>" +
+      (next ? '<button class="btn btn-primary btn-xl hw-wide" data-act="ai-start" data-l="' + esc(next.id) + '">' + esc(next.id) + esc(u.start_next) + "</button>" : "") +
+      '<div class="ai-les-list">' + rows + "</div>" + '<p class="muted small">' + esc(u.note) + "</p></div></section>";
+  }
   var AI_LANG_MARK = { ne: "नेपाली", en: "English", ja: "日本語" };
   function aiAudioEl() { if (!AI_AUDIO) { AI_AUDIO = new Audio(); AI_AUDIO.preload = "auto"; } return AI_AUDIO; }
   /* 声の並び（[[lang,text],…]）を 順に話す。話している所は 画面で 光る */
@@ -3023,12 +3087,13 @@
   }
 
   function renderAiLesson() {
-    headName.textContent = "AIの じゅぎょう（しさく）";
+    headName.textContent = AI_MODE === "ne" ? "さくら先生の ネパール語（しさく）" : "AIの じゅぎょう（しさく）";
     if (!AIL) {
       view.innerHTML = '<section class="start"><div class="soon"><p><b>AIの授業のデータが入っていません。</b></p>' +
-        "<p class='muted'>パソコンで <code>python3 OUKA_INTERVIEW_APP/_tools/AI授業.py</code> を実行すると入ります。</p></div></section>";
+        "<p class='muted'>パソコンで <code>python3 OUKA_INTERVIEW_APP/_tools/" + (AI_MODE === "ne" ? "AIネパール語.py" : "AI授業.py") + "</code> を実行すると入ります。</p></div></section>";
       return;
     }
+    if (!AIS && AIL.ui) return aiStartUi();
     if (!AIS) {
       /* 回をえらぶ（O1〜O10）。おわった回は ✓、とちゅうの回は「つづき」 */
       var next = null;
@@ -3038,13 +3103,13 @@
         return '<div class="ai-les' + (st ? " is-" + st : "") + '"><div class="ai-les-t"><b>' + esc(l.id) + "</b> " + esc(l.title.replace(l.id + " ", "")) +
           '<span class="ne">' + esc(l.title_ne || "") + "</span></div>" +
           (st === "mid" ? '<button class="btn btn-primary" data-act="ai-resume" data-l="' + esc(l.id) + '">जारी ▶</button>' : "") +
-          '<button class="btn' + (st ? "" : " btn-primary") + '" data-act="ai-start" data-l="' + esc(l.id) + '">' + (st === "done" ? "✓ फेरि" : "सुरु ▶") + "</button></div>";
+          '<button class="btn' + (st ? "" : " btn-primary") + '" data-act="ai-start" data-l="' + esc(l.id) + '">' + (st === "done" ? '✓ もういちど<small class="btn-ne">फेरि</small>' : 'はじめる ▶<small class="btn-ne">सुरु</small>') + "</button></div>";
       }).join("");
       view.innerHTML = '<section class="lesson hw2 ai"><div class="ai-start"><div class="ai-em">🧑‍🏫</div>' +
         "<h1>" + esc(AIL.teacher.name) + "</h1>" +
-        '<p class="ai-goal">म नेपाली र जापानीमा, एकदम सुरुबाट सिकाउँछु।<br><small>Hiragana from zero — O1 to O10.</small></p>' +
-        '<p class="muted small">🔊 आवाज खोल ／ Turn on the sound</p>' +
-        (next ? '<button class="btn btn-primary btn-xl hw-wide" data-act="ai-start" data-l="' + esc(next.id) + '">' + esc(next.id) + " सुरु गरौं ▶</button>" : "") +
+        '<p class="ai-goal"><b>ひらがなを ゼロから おしえます</b><span class="ai-goal-ne">म नेपाली र जापानीमा, एकदम सुरुबाट सिकाउँछु।</span></p>' +
+        '<p class="ai-sound">🔊 おとを だしてね<span class="ai-goal-ne">आवाज खोल</span></p>' +
+        (next ? '<button class="btn btn-primary btn-xl hw-wide" data-act="ai-start" data-l="' + esc(next.id) + '">' + esc(next.id) + ' を はじめる ▶<small class="btn-ne">सुरु गरौं</small></button>' : "") +
         '<div class="ai-les-list">' + rows + "</div>" +
         '<p class="muted small">しさく：ネパール語の 声は ヒンディー語の 声で 読んでいる 仮の声です（Mac に ネパール語の 声が ない）。' +
         "ろくおんは この たんまつの 中だけ。" + esc(AIL.credit) + "</p></div></section>";
@@ -3056,9 +3121,9 @@
       '<div class="hw-bar"><i style="width:' + Math.round(AIS.si / tot * 100) + '%"></i></div>';
     var wait = AIS.speaking ? ' disabled data-wait="1"' : "";
     var next = function (ok, label) {
-      return '<button class="btn btn-primary btn-xl hw-wide" data-act="ai-next"' + (ok ? wait : " disabled") + ">" + (label || "अर्को ▶ Next") + "</button>";
+      return '<button class="btn btn-primary btn-xl hw-wide" data-act="ai-next"' + (ok ? wait : " disabled") + ">" + (label || aiT("next")) + "</button>";
     };
-    var again = '<button class="btn hw-wide" data-act="ai-replay">🔊 फेरि सुन ／ Again</button>';
+    var again = '<button class="btn hw-wide" data-act="ai-replay">' + aiT("again") + "</button>";
     var body = '<div class="ai-teacher"><span class="ai-face' + (AIS.speaking ? " is-talk" : "") + '">🧑‍🏫</span>';
     if (b.t === "say") {
       body += aiSegHtml(b.seg, b.en) + "</div>" + (b.big ? '<div class="ai-big">' + esc(b.big).replace(/\n/g, "<br>") + "</div>" : "") + again + next(true);
@@ -3073,13 +3138,18 @@
         next(AIS.ink > 40, "लेखें ▶ Done");
     } else if (b.t === "record") {
       var t = AIS.takes[AIS.si + "|" + AIS.bi] || [];
-      body += aiSegHtml(b.seg, b.en) + "</div>" + '<div class="ai-big">' + esc(b.ja) + "</div>" + again +
+      body += aiSegHtml(b.seg, b.en) + "</div>" + '<div class="ai-big' + (b.sub ? " ai-dev" : "") + '">' + esc(b.ja) + "</div>" +
+        (b.sub ? '<div class="ai-kana-read">' + esc(b.sub) + "</div>" : "") + again +
         '<button class="btn btn-xl hw-wide hw-recbtn' + (AIS.recording ? " is-rec" : "") + '" data-act="ai-rec"' + (AIS.speaking && !AIS.recording ? " disabled data-wait=\"1\"" : "") + ">" +
-          (AIS.recording ? "■ रोक ／ Stop" : "🎙️ भन र रेकर्ड ／ Say it") + "</button>" +
+          (AIS.recording ? aiT("stop") : aiT("rec")) + "</button>" +
         (AIS.recording ? '<div class="ai-meter"><i id="aiMeter"></i></div>' : "") +
-        (AIS.noVoice ? '<div class="ai-novoice">आवाज सुनिएन। ठूलो स्वरमा फेरि भन। ／ I couldn\'t hear you. Say it louder.</div>' : "") +
+        (AIS.noVoice ? '<div class="ai-novoice">' + esc(aiT("novoice")) + "</div>" : "") +
         t.map(function (u, k) { return '<div class="hw-take"><span>' + (k + 1) + "</span><audio controls src=\"" + u + '"></audio></div>'; }).join("") +
         next(t.length >= (b.need || 1) && !AIS.recording);
+    } else if (b.t === "nword") {   /* ネパール語の ことば：大きい字＋カタカナ読み＋ローマ字＋意味 */
+      body += aiSegHtml([["ne", b.ne], ["ja", b.ja]]) + "</div>" + '<div class="ai-big ai-dev">' + esc(b.ne) + "</div>" +
+        '<div class="ai-kana-read">' + esc(b.kana) + " <small>" + esc(b.roma) + "</small></div>" +
+        '<div class="ai-mean">' + esc(b.ja) + "</div>" + again + next(true);
     } else if (b.t === "word") {
       body += aiSegHtml([["ja", b.ja], ["ne", b.ne]]) + "</div>" + '<div class="ai-big">' + esc(b.ja) + "</div>" + again + next(true);
     } else if (b.t === "pick") {
@@ -3090,8 +3160,8 @@
         }).join("") + "</div>" + (AIS.picked != null ? next(true) : "");
     }
     view.innerHTML = '<section class="lesson hw2 ai">' + head + '<div class="hw-card3">' + body + "</div>" +
-      '<button class="btn ai-pause" data-act="ai-pause">' + (AIS.paused ? "▶ चलाऊ ／ Play" : "⏸ रोक ／ Pause") + "</button>" +
-      '<button class="btn ai-quit" data-act="ai-quit">बन्द गर（पछि जारी राख्न सकिन्छ） ／ Close</button></section>';
+      '<button class="btn ai-pause" data-act="ai-pause">' + (AIS.paused ? aiT("play") : aiT("pause")) + "</button>" +
+      '<button class="btn ai-quit" data-act="ai-quit">' + esc(aiT("quit")) + "</button></section>";
     if (b.t === "trace") aiCanvas(b);
   }
 
@@ -3141,8 +3211,8 @@
     var b = aiBeat();
     AIS.picked = null; AIS.ink = 0; AIS.noVoice = false;
     if (b.t === "stroke") return aiStrokeRun();
-    var seg = b.t === "say" ? b.seg : b.t === "word" ? [["ja", b.ja], ["ne", b.ne], ["ja", b.ja]] : b.t === "pick" ? b.play : b.seg;
-    aiPlay(seg, b.t === "say" || b.t === "word" ? function () { aiAuto(700); } : null);
+    var seg = b.t === "say" ? b.seg : b.t === "word" ? [["ja", b.ja], ["ne", b.ne], ["ja", b.ja]] : b.t === "nword" ? [["ne", b.ne], ["ja", b.ja], ["ne", b.ne]] : b.t === "pick" ? b.play : b.seg;
+    aiPlay(seg, b.t === "say" || b.t === "word" || b.t === "nword" ? function () { aiAuto(700); } : null);
     render();
   }
   function aiForward() {
@@ -3155,18 +3225,21 @@
 
   function aiFinish() {
     var idx = AIL.lessons.indexOf(AIC), nx = AIL.lessons[idx + 1];
-    view.innerHTML = '<section class="lesson hw2 ai"><div class="hw-result"><div class="ai-em">🎉</div><h1>' + esc(AIC.id) + " सकियो！</h1>" +
-      '<div class="ai-sum"><div><b>' + AIS.traced + '</b><span>लेखेको अक्षर</span></div><div><b>' + AIS.recs + '</b><span>भनेको（आवाज सुनिएको）</span></div>' +
-      "<div><b>" + AIS.test + " / " + AIS.testTotal + "</b><span>परीक्षा</span></div></div>" +
-      '<a class="btn btn-primary btn-xl hw-wide" href="#/student/homework/' + esc(AIC.day) + '">गृहकार्य ▶ Homework</a>' +
-      (nx ? '<button class="btn btn-xl hw-wide" data-act="ai-start" data-l="' + esc(nx.id) + '">अर्को पाठ ' + esc(nx.id) + " ▶</button>" : "") +
-      '<button class="btn btn-xl hw-wide" data-act="ai-list">पाठको सूची ／ All lessons</button></div></section>';
+    var hw = aiT("homework");   /* ネパール語版は 書く・宿題画面が無い */
+    setTimeout(function () { if (route().item === "ai" || route().item === "learn") fbOpen(); }, 1200);   /* 授業のあとに「どうだった？」（押すだけ） */
+    view.innerHTML = '<section class="lesson hw2 ai"><div class="hw-result"><div class="ai-em">🎉</div><h1>' + esc(AIC.id) + esc(aiT("done")) + "</h1>" +
+      '<div class="ai-sum">' + (hw ? "<div><b>" + AIS.traced + "</b><span>लेखेको अक्षर</span></div>" : "") +
+      "<div><b>" + AIS.recs + "</b><span>" + esc(aiT("said")) + "</span></div>" +
+      "<div><b>" + AIS.test + " / " + AIS.testTotal + "</b><span>" + esc(aiT("test")) + "</span></div></div>" +
+      (hw ? '<a class="btn btn-primary btn-xl hw-wide" href="#/student/homework/' + esc(AIC.day) + '">गृहकार्य ▶ Homework</a>' : "") +
+      (nx ? '<button class="btn btn-xl hw-wide' + (hw ? "" : " btn-primary") + '" data-act="ai-start" data-l="' + esc(nx.id) + '">' + esc(aiT("next_lesson")) + esc(nx.id) + " ▶</button>" : "") +
+      '<button class="btn btn-xl hw-wide" data-act="ai-list">' + esc(aiT("list")) + "</button></div></section>";
   }
 
   /* 録音＝声の大きさを測る。0.3秒以上 声が出ていなければ 数えない（「言った」と押すだけ にしない） */
   function aiRecToggle() {
     if (AIS.recording) { if (AIS.mr && AIS.mr.state === "recording") AIS.mr.stop(); return; }
-    if (!canRecord()) { toast("यो फोनमा रेकर्ड हुँदैन ／ Recording is not available on this device"); return; }
+    if (!canRecord()) { toast(aiT("norec")); return; }
     var key = AIS.si + "|" + AIS.bi;
     /* ★音を測る部品は ボタンを押した その時に作る（あとで作ると 端末の決まりで 止まったまま＝いつも「聞こえない」になる） */
     var actx = null;
@@ -3203,20 +3276,22 @@
         render();
         if (heard && chunks.length) {
           var bb = aiBeat(), tk = AIS.takes[key] || [];
-          aiPlay([["ja", "いい"]], tk.length >= ((bb && bb.need) || 1) ? function () { aiAuto(500); } : null);
+          aiPlay(aiOk(), tk.length >= ((bb && bb.need) || 1) ? function () { aiAuto(500); } : null);
         }
       };
       mr.start(); AIS.recording = true; render(); meter();
       setTimeout(function () { if (mr.state === "recording") mr.stop(); }, 8000);   /* 8秒で とまる */
-    }).catch(function () { if (actx) actx.close(); toast("माइक अनुमति दिनुहोस् ／ Please allow the microphone"); });
+    }).catch(function () { if (actx) actx.close(); toast(aiT("mic")); });
   }
 
+  /* ほめる声（ネパール語版は 回ごとに変わる＝「राम्रो」を 教えた後は ネパール語でほめる） */
+  function aiOk() { return (AIC && AIC.ok) || AIL.ok || [["ja", "いい"]]; }
   function aiAct(act, el) {
     if (act === "ai-list") { aiStop(); AIS = null; render(); return true; }
     if (act === "ai-start" || act === "ai-restart" || act === "ai-resume") {
       aiStop();
       if (el && el.getAttribute("data-l")) AIC = aiLessonById(el.getAttribute("data-l"));
-      if (!AIC) AIC = aiLessonById("O1");
+      if (!AIC) AIC = AIL.lessons[0];
       var sv = act === "ai-resume" ? aiSaved() : null;
       AIS = { si: sv ? sv.scene : 0, bi: 0, takes: {}, recs: sv ? sv.recs || 0 : 0, traced: sv ? sv.traced || 0 : 0,
         test: sv ? sv.test || 0 : 0, testTotal: sv ? sv.total || 0 : 0, picked: null, ink: 0, strokeAt: 0, finished: false, segAt: -1 };
@@ -3225,13 +3300,13 @@
     }
     if (!AIS) return false;
     var b = aiBeat();
-    if (act === "ai-quit") { aiStop(); aiSave(); AIS = null; go("#/student"); return true; }
+    if (act === "ai-quit") { aiStop(); aiSave(); AIS = null; go(aiT("back")); return true; }
     if (act === "ai-replay") { if (b.t === "stroke") aiStrokeRun(); else aiEnterBeat(); return true; }
     if (act === "ai-showorder") { var keep = AIS.ink; AIS.strokeAt = 0; aiStrokeRunTrace(b, keep); return true; }
     if (act === "ai-rec") { aiRecToggle(); return true; }
     if (act === "ai-pause") {
       AIS.paused = !AIS.paused;
-      if (AIS.paused) aiStop(); else if ((b.t === "say" || b.t === "word") && !AIS.speaking) aiForward();
+      if (AIS.paused) aiStop(); else if ((b.t === "say" || b.t === "word" || b.t === "nword") && !AIS.speaking) aiForward();
       render(); return true;
     }
     if (act === "ai-clear") { var cv = document.getElementById("aiCv"); if (cv) cv.getContext("2d").clearRect(0, 0, cv.width, cv.height); AIS.ink = 0; var nb = document.querySelector('[data-act="ai-next"]'); if (nb) nb.disabled = true; return true; }
@@ -3239,7 +3314,7 @@
       AIS.picked = parseInt(el.getAttribute("data-k"), 10);
       var ok = b.choices[AIS.picked] === b.answer;
       AIS.testTotal++; if (ok) AIS.test++;
-      aiPlay(ok ? [["ja", "いい"]] : [["ne", "होइन, सही उत्तर："]].concat(b.ne ? [] : b.play), function () { aiAuto(ok ? 600 : 1200); });
+      aiPlay(ok ? aiOk() : (AIL.ng || [["ne", "होइन, सही उत्तर："]]).concat(b.ne ? [] : b.play), function () { aiAuto(ok ? 600 : 1200); });
       render(); return true;
     }
     if (act === "ai-next") {
@@ -3264,6 +3339,361 @@
     one();
   }
 
+  /* ---------- 初心者の入口（試作・2026-10-04） ----------
+   * 代表「今のプラットフォームは俺仕様。日本語を習ったことがない人向けに。勉強した分だけ日本語を増やして。
+   *       漢字は振り仮名を上に。N4 を取り終わるまで徹底」
+   * ★画面の ことば（data/ui_words.js）は「習う回」を持つ。進み具合で 見せ方が 3段階に変わる：
+   *    習う前〜習った次の回＝日本語が大きく・ネパール語は下に小さく添える／2回あと＝日本語だけ（ネパール語を主役にしない＝2026-10-04 代表）
+   * ★漢字は rb() で 必ず上に ふりがな（data/yomi.js）。辞書に無い漢字は 赤い下線で 見つかるようにする（出さないための検査）。
+   * ★オリエンテーション中（O1〜O10）は かなで出す。本科（11〜）からは 漢字＋ふりがな。 */
+  var YOMI = window.OUKA_YOMI || [];
+  var UIW = window.OUKA_UI_WORDS || [];
+  var YOMI_IDX = null, RB_MISS = 0;
+  var KANJI_RE = /[一-鿿々]/;
+  function rb(text) {
+    if (!YOMI_IDX) {
+      YOMI_IDX = {};
+      YOMI.forEach(function (r) { (YOMI_IDX[r[0].charAt(0)] = YOMI_IDX[r[0].charAt(0)] || []).push(r); });
+    }
+    var s = String(text == null ? "" : text), out = "", i = 0;
+    while (i < s.length) {
+      var hit = null, list = YOMI_IDX[s.charAt(i)] || [];
+      for (var k = 0; k < list.length; k++) if (s.substr(i, list[k][0].length) === list[k][0]) { hit = list[k]; break; }
+      if (hit) {
+        var at = hit[0].indexOf(hit[1]);
+        out += esc(hit[0].slice(0, at)) + "<ruby>" + esc(hit[1]) + "<rt>" + esc(hit[2]) + "</rt></ruby>" + esc(hit[0].slice(at + hit[1].length));
+        i += hit[0].length;
+      } else if (KANJI_RE.test(s.charAt(i))) {
+        RB_MISS++; out += '<span class="no-yomi" title="ふりがな無し">' + esc(s.charAt(i)) + "</span>"; i++;
+      } else { out += esc(s.charAt(i)); i++; }
+    }
+    return out;
+  }
+  /* 進み具合＝終わった オリエンテーションの回の数（AI先生の授業の記録から）。試作では 見せ方を 切り替えて 確かめられる */
+  function begProgress() {
+    var sim = settings().beginner_sim;
+    if (sim != null && sim !== "") return parseInt(sim, 10);
+    var all = readJSON("ouka_ai_lesson_v1", {}), name = studentName() || "（なまえなし）", n = 0;
+    for (var i = 1; i <= 10; i++) { var r = all[name + "|O" + i]; if (r && r.done) n = i; else break; }
+    return n;
+  }
+  function W(id, p) {
+    var u = null; for (var i = 0; i < UIW.length; i++) if (UIW[i].id === id) u = UIW[i];
+    if (!u) return esc(id);
+    var ja = u.kanji && p >= 11 ? rb(u.kanji) : esc(u.ja);
+    /* 2026-10-04 代表「ネパール語がでかすぎる・日本語が灰色で見えない。携帯で使う。日本語を大きく、ネパール語は補助」
+     * ＝日本語はいつも主役（大きく・濃く）。ネパール語は 習って2回あとまで 下に小さく添えるだけ。ネパール語を主役にしない */
+    if (p < u.lesson + 2) return '<span class="bw-main">' + ja + '</span><span class="bw-sub ne">' + esc(u.ne) + "</span>";
+    return '<span class="bw-main">' + ja + "</span>";
+  }
+  function renderBeginnerHome() {
+    RB_MISS = 0;
+    var p = begProgress(), name = studentName();
+    headName.textContent = "";
+    var nextO = null;
+    var all = readJSON("ouka_ai_lesson_v1", {});
+    for (var i = 1; i <= 10; i++) { var r = all[(name || "（なまえなし）") + "|O" + i]; if (!(r && r.done)) { nextO = i; break; } }
+    if (settings().beginner_sim != null && settings().beginner_sim !== "") nextO = Math.min(10, p + 1);
+    var ori = HWD && HWD.ori ? HWD.ori[(nextO || 10) - 1] : null;
+    var hwHref = "#/student/homework/" + (ori ? ori.day : 1);
+    var dots = "";
+    for (var d = 1; d <= 10; d++) dots += '<i class="' + (d <= p ? "on" : "") + '">O' + d + "</i>";
+    var sim = settings().beginner_sim;
+    var simBar = '<div class="beg-sim"><b>試作：見せ方の確認</b>' + [["", "本当の進み"], [0, "O1の前"], [3, "O3のあと"], [6, "O6のあと"], [10, "O10のあと"], [20, "本科 Day10"]].map(function (x) {
+      return '<button class="btn btn-sm' + (String(sim == null ? "" : sim) === String(x[0]) ? " btn-primary" : "") + '" data-act="beg-sim" data-p="' + x[0] + '">' + x[1] + "</button>";
+    }).join("") + "</div>";
+    var goal = p >= 11 && LESSONS ? (dayData(Math.min(dayCount(), p - 10)) || {}).focus : (ori ? ori.goal.ja : "");
+    var goalNe = p >= 11 ? "" : (ori ? ori.goal.ne : "");
+    var card = function (id, icon, href, sub) {
+      return '<a class="beg-card" href="' + href + '"><span class="beg-ic">' + icon + '</span><span class="beg-w">' + W(id, p) + "</span>" +
+        (sub ? '<span class="beg-sub">' + sub + "</span>" : "") + "</a>";
+    };
+    view.innerHTML = '<section class="lesson hw2 beg">' + simBar +
+      '<div class="beg-hello">' + W("hello", p) + (name ? '<span class="beg-name">' + esc(name) + "</span>" : "") + "</div>" +
+      (name ? "" : '<div class="hw-name"><label>' + W("name", p) + '<input id="begName" placeholder="SITA RAI" autocomplete="off"></label></div>') +
+      '<div class="beg-level"><span>' + W("study", p) + '</span><div class="beg-dots">' + dots + "</div></div>" +
+      '<div class="beg-grid">' +
+        card("lesson", "🧑‍🏫", "#/student/ai", nextO && p < 11 ? "O" + nextO : "") +
+        card("homework", "✍️", hwHref, "") +
+        card("record", "📈", "#/student/history", "") +
+        card("help", "🆘", "#/student/emergency", "") +
+      "</div>" +
+      (goal ? '<div class="beg-goal"><div class="beg-goal-h">' + W("today", p) + "</div><div class=\"beg-goal-t\">" + rb(goal) + "</div>" +
+        (goalNe && p < 6 ? '<div class="beg-goal-ne ne">' + esc(goalNe) + "</div>" : "") + "</div>" : "") +
+      '<div class="beg-words"><div class="beg-goal-h">' + W("words", p) + '</div><div class="beg-wl">' +
+        ["listen", "say", "write", "read", "look", "yes", "no", "now", "tomorrow", "question"].map(function (id) { return '<span class="beg-chip">' + W(id, p) + "</span>"; }).join("") +
+      "</div></div>" +
+      '<p class="beg-check muted small">ふりがな検査：' + (RB_MISS ? '<b class="ng">ふりがなの無い漢字 ' + RB_MISS + " 字</b>" : "この画面の漢字は 全部 ふりがな つき") + "</p>" +
+      "</section>";
+    var nm = document.getElementById("begName");
+    if (nm) nm.addEventListener("change", function () { setStudentName(nm.value); render(); });
+  }
+
+  /* ---------- 生徒の声（意見書・2026-10-04） ----------
+   * 代表「生徒は生徒で報告する。わからないことは自発的に、どんどん言ってもらう。できるだけ簡単に。
+   *       わかりやすかった・わかりにくかった。最初から文章を書いて送ってもらうのではなく」
+   * ★押すだけ：😊わかった／😐すこし／😣わからない → （😐😣なら）理由を押す → 送る。文章は書きたい人だけ。
+   * ★どの画面・どの日かは 自動で付く（生徒に書かせない）。先生の報告とは別に「生徒の声」タブへ（同じスプレッドシート）。
+   * ★画面の言葉は 英語＋やさしい日本語（2026-10-04 代表決定）。 */
+  var FB_KEY = "ouka_feedback_v1";
+  var FB_MOODS = [
+    { m: 1, ic: "😊", en: "Easy", ja: "わかった" },
+    { m: 2, ic: "😐", en: "So-so", ja: "すこし" },
+    { m: 3, ic: "😣", en: "Hard", ja: "わからない" }
+  ];
+  var FB_TAGS = [
+    { k: "fast", en: "Too fast", ja: "はやい" },
+    { k: "hear", en: "Can't hear", ja: "きこえない" },
+    { k: "words", en: "Words are hard", ja: "ことばが むずかしい" },
+    { k: "where", en: "Where to tap?", ja: "どこを おす？" },
+    { k: "long", en: "Too long", ja: "ながい" },
+    { k: "boring", en: "Boring", ja: "つまらない" },
+    { k: "broken", en: "App doesn't work", ja: "うごかない" }
+  ];
+  var FB = null;   /* いま書いている声 { where, day, mood, tags, text, sent } */
+  function fbWhere() {
+    var r = route(), lab = { homework: "宿題", today: "今日の教材", drill: "問題", media: "動画", ai: "AIの授業", learn: "ネパール語の授業",
+      history: "記録", speak: "声で出す", start: "入口" }[r.item] || r.item || "ホーム";
+    var day = r.day || (r.item === "homework" ? hwDayNo() : 0);
+    if (r.item === "ai" && AIC) lab += " " + AIC.id;
+    if (r.item === "learn" && AIC) lab += " " + AIC.id;
+    return { where: lab, day: day >= 1001 ? "O" + (day - 1000) : (day ? "Day " + day : "") };
+  }
+  function fbFormHtml() {
+    var moods = FB_MOODS.map(function (x) {
+      return '<button class="fb-mood' + (FB.mood === x.m ? " on" : "") + '" data-act="fb-mood" data-m="' + x.m + '"><span class="fb-ic">' + x.ic +
+        "</span><b>" + x.en + "</b><span>" + x.ja + "</span></button>";
+    }).join("");
+    var tags = FB.mood > 1 ? '<div class="fb-q">What was hard? <span>なにが こまった？（いくつでも）</span></div><div class="fb-tags">' +
+      FB_TAGS.map(function (t) {
+        return '<button class="fb-tag' + (FB.tags.indexOf(t.k) >= 0 ? " on" : "") + '" data-act="fb-tag" data-k="' + t.k + '">' + t.en + "<span>" + t.ja + "</span></button>";
+      }).join("") + "</div>" : "";
+    var text = FB.mood ? '<details class="fb-more"' + (FB.text ? " open" : "") + '><summary>Write more (optional) <span>かきたい人だけ</span></summary>' +
+      '<textarea id="fbText" rows="3" placeholder="English / नेपाली / 日本語">' + esc(FB.text) + "</textarea></details>" : "";
+    return '<div class="fb">' +
+      '<div class="fb-q">How was it? <span>きょうの べんきょう、どうだった？</span></div>' +
+      '<div class="fb-where">' + esc(FB.where) + (FB.day ? "　" + esc(FB.day) : "") + "</div>" +
+      '<div class="fb-moods">' + moods + "</div>" + tags + text +
+      (FB.mood ? '<button class="btn btn-primary btn-xl hw-wide" data-act="fb-send">Send <span>おくる</span></button>' : "") +
+      "</div>";
+  }
+  function fbOpen() {
+    var w = fbWhere();
+    FB = { where: w.where, day: w.day, mood: 0, tags: [], text: "" };
+    openModal(fbFormHtml());
+  }
+  function fbRedraw() {
+    var box = modal.querySelector(".modal-box .fb");
+    if (box) box.outerHTML = fbFormHtml();
+    var t = document.getElementById("fbText");
+    if (t) t.addEventListener("input", function () { FB.text = t.value; });
+  }
+  function fbSend() {
+    if (!FB || !FB.mood) return;
+    var t = document.getElementById("fbText"); if (t) FB.text = t.value;
+    var now = Date.now(), list = readJSON(FB_KEY, []);
+    list.push({ id: "F-" + now + "-" + Math.random().toString(36).slice(2, 6), no: now, who: studentName() || "",
+      where: FB.where, day: FB.day, mood: FB.mood, tags: FB.tags.slice(), text: String(FB.text || "").trim().slice(0, 1000),
+      saved_at: new Date(now).toISOString() });
+    writeJSON(FB_KEY, list);
+    FB = null;
+    modal.querySelector(".modal-box").innerHTML = '<div class="fb fb-thanks"><div class="fb-ic">🙏</div><b>Thank you!</b><span>ありがとう！ せんせいに とどきます</span>' +
+      '<button class="btn btn-primary btn-xl hw-wide" data-act="close-modal">OK</button></div>';
+    if (SYNC_ON && !ONLINE && studentName()) fbSendLocal();
+  }
+  /* 学校のMac版＝その場で スプレッドシートへ（オンライン版は 自動送信が 送る） */
+  function fbSendLocal() {
+    var todo = readJSON(FB_KEY, []).filter(function (r) { return !r.sent_at && r.who; });
+    if (!todo.length) return;
+    fetch(CONFIG.sync_url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ token: CONFIG.sync_token, kind: "study", records: todo.map(fbRecord) }) })
+      .then(function (r) { return r.json(); }).then(function (out) {
+        if (!out || !out.ok) return;
+        var ids = {}; todo.forEach(function (r) { ids[r.id] = 1; });
+        var at = new Date().toISOString();
+        writeJSON(FB_KEY, readJSON(FB_KEY, []).map(function (r) { if (ids[r.id]) r.sent_at = at; return r; }));
+      }).catch(function () { /* 送れなくても 端末に残る（次に 送る） */ });
+  }
+  function fbRecord(r) {
+    return { type: "feedback", who: r.who, no: r.no, id: r.id, where: r.where, day: r.day, mood: r.mood, tags: r.tags, text: r.text, saved_at: r.saved_at };
+  }
+  /* 生徒の画面では いつも 上の帯に「🙋」＝わからない時に すぐ押せる。
+     ★右下に浮かせると「提出する」「次へ」の上に重なって 押せなくなった（2026-10-04）＝上の帯に置く */
+  function fbFab() {
+    var r = route(), show = (r.name === "soon" || r.name === "hub") && (r.hub === "student" || r.hub === "nepali");
+    var b = document.getElementById("fbFab");
+    if (!b) {
+      var nav = document.querySelector(".bar-nav");
+      if (!nav) return;
+      b = document.createElement("button");
+      b.id = "fbFab"; b.className = "btn btn-sm fb-top"; b.setAttribute("data-act", "fb-open");
+      b.innerHTML = "🙋 <span>Help</span>";
+      nav.insertBefore(b, nav.firstChild);
+    }
+    b.hidden = !show;
+    /* 生徒の画面では 上の帯から 先生・代表向けの「候補者」「全結果」を 外す（はみ出さない・迷わない） */
+    Array.prototype.forEach.call(document.querySelectorAll('.bar-nav a[href="#/candidates"], .bar-nav a[href="#/results"]'), function (a) {
+      if (ONLINE) return;                       /* オンライン版は もともと 出していない */
+      a.style.display = show ? "none" : "";
+    });
+  }
+
+  /* ---------- Teacher Guide（2026-10-04）＝作らない。出す。（02_残り4つの設計 §2） ----------
+   * 今日の Day に 関係する物だけを 並べる索引。中身は 全部 既存の正本（日次指示書・台本・教え方メモ・決まりの文書）。 */
+  var GUIDE = window.OUKA_GUIDE || (LESSONS && LESSONS.guide) || null;
+  /* 2026-10-04 代表「ティーチャーガイドは ネパール語でいい」＝見出しも 中身も ネパール語。
+   * その日の 文型・ACTION・できなかった生徒 は ネパール語版の日次指示書（LNE）から そのまま 抜く（新しく訳さない）。
+   * 生徒が言う 日本語（「」の中）は 日本語のまま。決まりの文書は 訳（草案）＋ 日本語の正本を 下に たたんで 置く。 */
+  function neDayField(n, label) {
+    if (!LNE || !LNE.days[n - 1]) return "";
+    var box = document.createElement("div");
+    box.innerHTML = LNE.days[n - 1];
+    var hit = "";
+    [].slice.call(box.querySelectorAll("td.k")).some(function (td) {
+      if (td.textContent.trim() !== label || !td.nextElementSibling) return false;
+      hit = td.nextElementSibling.innerHTML; return true;
+    });
+    if (!hit) [].slice.call(box.querySelectorAll(".box > b")).some(function (b) {
+      if (b.textContent.trim() !== label) return false;
+      var c = b.parentNode.cloneNode(true); c.removeChild(c.querySelector("b")); hit = c.innerHTML.trim(); return true;
+    });
+    return hit;
+  }
+  function renderTeacherGuide(n) {
+    if (!LESSONS) return noLessons();
+    n = n || currentDay();
+    var d = dayData(n);
+    headName.textContent = "शिक्षक／Teacher Guide Day " + n;
+    var units = (STUDY && STUDY.units) || [];
+    var scripts = matExtraItems().filter(function (m) { return /^(R|O4|O5|O6)/.test(m.file); });
+    var focus = neDayField(n, "आजको व्याकरण") || esc(d.focus);
+    var action = neDayField(n, "ACTION（भोलि गर्ने काम）") || d.action;
+    var fail = neDayField(n, "फेल भएमा") || d.fail_route;
+    view.innerHTML = '<section class="lesson gd" lang="ne">' + dayNav("teacher", "guide", n) +
+      '<div class="lesson-head"><h1>Teacher Guide <small>Day ' + n + "</small></h1></div>" +
+      '<div class="gd-today">' +
+        '<div class="box"><b>आजको व्याकरण</b>　' + focus + "</div>" +
+        (d.note ? '<div class="warn"><b>' + d.note.title + "</b>　" + d.note.text + "</div>" : "") +
+        '<div class="box"><b>ACTION（भोलि गर्ने काम）</b>　' + action + "</div>" +
+        '<div class="box"><b>नसकेका विद्यार्थी</b>　' + fail + "</div>" +
+        '<div class="gd-btns"><a class="btn btn-primary" href="#/teacher/today/' + n + '"' + (LNE ? ' data-act="set-lang" data-lang="ne"' : "") + ">आजको कक्षा（९ चरण）</a>" +
+          '<a class="btn" href="#/teacher/today/' + n + '" data-act="set-lang" data-lang="ja">日本語</a>' +
+          '<a class="btn" href="#/teacher/assign/' + n + '">गृहकार्य दिने</a><a class="btn" href="#/teacher/inbox/' + n + '">बुझाएको काम हेर्ने</a>' +
+          '<a class="btn" href="#/teacher/grade">अंक दिने（शुक्रबार）</a></div>' +
+      "</div>" +
+      (scripts.length ? '<h2 class="sec-h">के भन्ने（कक्षाको स्क्रिप्ट）</h2><div class="mat-row">' + scripts.map(function (m) { return matLink(m.file); }).join("") + "</div>" +
+        '<p class="muted small">पूरा दिनको स्क्रिप्ट अहिले Day1 को मात्र छ（शिक्षकले पढेर मात्र कक्षा चलाउन सकिने रूप）।</p>' : "") +
+      (units.length ? '<h2 class="sec-h">विद्यार्थी अड्किने ठाउँ・सिकाउने तरिका（शिक्षकको अध्ययन किताबबाट・जापानीमा）</h2>' + units.map(function (u) {
+        return '<details class="gd-d"><summary>UNIT ' + esc(u.no) + "　" + esc(u.title) + "</summary><ul>" +
+          (u.oshie || []).map(function (t) { return "<li>" + esc(t) + "</li>"; }).join("") + "</ul></details>";
+      }).join("") : "") +
+      (GUIDE ? '<h2 class="sec-h">नियमहरू（मूल कागजको अनुवाद）</h2>' + GUIDE.docs.map(function (g) {
+        var ne = g.html_ne != null;
+        return '<details class="gd-d"><summary>' + esc(ne ? g.title_ne : g.title) + '</summary><div class="gd-doc">' +
+          (g.stale ? '<div class="warn">जापानी मूल कागज अनुवादपछि बदलिएको छ। तलको जापानी मूल नै सही हो（अनुवाद मिलाउँदै छौं）।</div>' : "") +
+          (ne ? g.html_ne + '<details class="gd-d"><summary>日本語（正本）</summary><div lang="ja">' + g.html + "</div></details>" : g.html) +
+          '<p class="muted small">' + (ne ? "नेपाली अनुवाद＝मस्यौदा（मधु शिक्षकको जाँचअघि）／" : "") + "正本：" + esc(g.src) + "</p></div></details>";
+      }).join("") : "") +
+      '<p class="muted small">यहाँ नयाँ सिकाउने तरिका लेखिएको छैन（मूल कागज २ वटा नहोस् भनेर）। मूल कागज सच्याएपछि, अर्को अद्यावधिकमा यहाँ पनि बदलिन्छ।</p>' +
+      "</section>";
+    bindDaySel();
+  }
+
+  /* ---------- 宿題を出す（2026-10-04）＝1クリック（02_残り4つの設計 §3） ----------
+   * 先生：Day を選ぶ → 班（全員／A／B／C）を選ぶ → 出す。宿題の中身は Day に もう入っている＝先生に 文章を書かせない。
+   * 締切は「つぎの授業まで」の1種類だけ。班は 金曜ふるいの「今週」の A／B／C（新しい分け方を作らない）。 */
+  var AS_KEY = "ouka_assign_v1";
+  var AS_GROUPS = [{ g: "ALL", ja: "全員" }, { g: "A", ja: "A の班" }, { g: "B", ja: "B の班" }, { g: "C", ja: "C の班" }];
+  var AS_PICK = { day: 0, group: "ALL" };
+  function asAll() { return readJSON(AS_KEY, []); }
+  function asLabel(day) {
+    day = parseInt(day, 10);
+    if (day >= 1001 && HWD && HWD.ori) { var o = HWD.ori[day - 1001]; return o ? o.label + " " + o.title.ja : "O" + (day - 1000); }
+    return "Day " + day;
+  }
+  function asHwText(day) {
+    day = parseInt(day, 10);
+    if (!HWD) return "";
+    if (day >= 1001) { var o = HWD.ori && HWD.ori[day - 1001]; return o ? o.hw.ja : ""; }
+    var h = HWD.days[day - 1]; return h ? "たんごテスト・たんご録音・じゅぎょうのことば・ならべかえ・例文録音・ノートの写真（" + h.hw.ja + "）" : "";
+  }
+  function asRecord(r) { return { type: "assign", who: r.who, no: r.no, id: r.id, day: r.day, group: r.group, saved_at: r.saved_at }; }
+  function renderTeacherAssign(n) {
+    var name = teacherName();
+    headName.textContent = "先生／宿題を出す";
+    if (!AS_PICK.day || n) AS_PICK.day = n || AS_PICK.day || currentDay();
+    var opts = "";
+    if (HWD && HWD.ori) HWD.ori.forEach(function (o) { opts += '<option value="' + o.day + '"' + (AS_PICK.day == o.day ? " selected" : "") + ">" + esc(o.label + " " + o.title.ja) + "</option>"; });
+    for (var i = 1; i <= 128; i++) opts += '<option value="' + i + '"' + (AS_PICK.day == i ? " selected" : "") + ">Day " + i + (i === currentDay() ? " ← 今日" : "") + "</option>";
+    var mine = asAll().slice().sort(function (a, b) { return b.no - a.no; }).slice(0, 12);
+    view.innerHTML = '<section class="lesson hw2 as">' +
+      '<div class="lesson-head"><h1>宿題を出す</h1></div>' +
+      '<p class="muted">Day を えらぶ → 班を えらぶ → 出す。宿題の中身は Day に もう入っています。締切は「つぎの授業まで」です。</p>' +
+      '<div class="hw-name"><label>先生の なまえ<input id="asName" value="' + esc(name) + '" placeholder="例：MADHU" autocomplete="off"></label></div>' +
+      '<h2 class="hw-h">① Day</h2><select id="asDay" class="as-sel">' + opts + "</select>" +
+      '<div class="box small">' + esc(asHwText(AS_PICK.day)) + "</div>" +
+      '<h2 class="hw-h">② 班（金曜ふるいの 今週）</h2><div class="as-groups">' + AS_GROUPS.map(function (x) {
+        return '<button class="btn btn-xl' + (AS_PICK.group === x.g ? " btn-primary" : "") + '" data-act="as-group" data-g="' + x.g + '">' + esc(x.ja) + "</button>";
+      }).join("") + "</div>" +
+      '<button class="btn btn-primary btn-xl hw-wide" data-act="as-send"' + (name ? "" : " disabled") + ">③ 出す</button>" +
+      (name ? "" : '<div class="warn">さいしょに 先生の なまえを 入れてください</div>') +
+      '<h2 class="hw-h">出した宿題</h2>' +
+      (mine.length ? '<table class="rtable"><thead><tr><th>宿題</th><th>班</th><th>先生</th><th>いつ</th><th></th></tr></thead><tbody>' + mine.map(function (r) {
+        return "<tr><td>" + esc(asLabel(r.day)) + "</td><td>" + esc(r.group === "ALL" ? "全員" : r.group) + "</td><td>" + esc(r.who) + "</td><td>" + esc(jdate(r.saved_at)) +
+          '</td><td>' + (r.sent_at || ONLINE ? "" : '<span class="muted small">この端末だけ</span>') + "</td></tr>";
+      }).join("") + "</tbody></table>" : '<div class="soon"><p>まだ ありません。</p></div>') +
+      '<p class="muted small">生徒の「宿題」の画面の上に「📣 先生から」と出て、その宿題が すぐ開きます。班を えらんだ時は、その週の 金曜ふるいで その班の生徒にだけ 出ます。</p>' +
+      "</section>";
+    var sel = document.getElementById("asDay");
+    sel.addEventListener("change", function () { AS_PICK.day = parseInt(sel.value, 10); render(); });
+    var nm = document.getElementById("asName");
+    nm.addEventListener("change", function () { setTeacherName(nm.value); render(); });
+    if (ONLINE && ONLINE.afterRender) ONLINE.afterRender(view);
+  }
+  function asSend() {
+    var name = teacherName();
+    if (!name) { toast("先に 先生の なまえを 入れてください"); return; }
+    var now = Date.now(), list = asAll();
+    list.push({ id: "A-" + now + "-" + Math.random().toString(36).slice(2, 6), no: now, who: name, day: AS_PICK.day, group: AS_PICK.group,
+      saved_at: new Date(now).toISOString() });
+    writeJSON(AS_KEY, list);
+    toast(asLabel(AS_PICK.day) + " を " + (AS_PICK.group === "ALL" ? "全員" : AS_PICK.group + " の班") + " に 出しました");
+    if (SYNC_ON && !ONLINE) asSendLocal(); else render();
+  }
+  function asSendLocal() {
+    var todo = asAll().filter(function (r) { return !r.sent_at; });
+    if (!todo.length) { render(); return; }
+    fetch(CONFIG.sync_url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ token: CONFIG.sync_token, kind: "study", records: todo.map(asRecord) }) })
+      .then(function (r) { return r.json(); }).then(function (out) {
+        if (!out || !out.ok) throw new Error((out && out.error) || "応答なし");
+        var ids = {}; todo.forEach(function (r) { ids[r.id] = 1; });
+        var at = new Date().toISOString();
+        writeJSON(AS_KEY, asAll().map(function (r) { if (ids[r.id]) r.sent_at = at; return r; }));
+        render();
+      }).catch(function () { render(); });
+  }
+  /* 生徒の側：自分に出ている宿題（オンライン＝受け口が 班を見て 返す／Mac版＝この端末の 指示と 採点から） */
+  var AS_REMOTE = null, AS_LOADING = false;
+  function asForMe() {
+    if (ONLINE && ONLINE.api) {
+      if (!AS_REMOTE && !AS_LOADING) {
+        AS_LOADING = true;
+        ONLINE.api("assign_get", {}).then(function (res) { AS_LOADING = false; AS_REMOTE = res && res.ok ? res : { assign: null };
+          if (route().item === "homework" && !route().sub) render(); }, function () { AS_LOADING = false; });
+      }
+      return AS_REMOTE && AS_REMOTE.assign;
+    }
+    var name = studentName(), lv = "";
+    if (name) {
+      var g = Object.keys(grAll()).map(function (k) { return grAll()[k]; }).filter(function (r) { return String(r.student).trim() === name && r.level; })
+        .sort(function (a, b) { return a.week < b.week ? 1 : -1; })[0];
+      lv = g ? g.level : "";
+    }
+    var hit = asAll().filter(function (r) { return r.group === "ALL" || r.group === lv; }).sort(function (a, b) { return b.no - a.no; })[0];
+    return hit ? { id: hit.id, day: hit.day, group: hit.group, teacher: hit.who, at: hit.saved_at } : null;
+  }
+
   function renderLive(hub, item, n) {
     var k = hub + "/" + item;
     if (k === "teacher/today") return renderTeacherDay(n);
@@ -3281,7 +3711,11 @@
     if (k === "teacher/inbox") return renderTeacherInbox(n);
     if (k === "teacher/photos") return renderTeacherPhotos();
     if (k === "teacher/report") return renderTeacherReport();
-    if (k === "student/ai") return renderAiLesson();
+    if (k === "teacher/guide") return renderTeacherGuide(n);
+    if (k === "teacher/assign") return renderTeacherAssign(n);
+    if (k === "student/ai") { aiUse("ja"); return renderAiLesson(); }
+    if (k === "teacher/nepali" || k === "nepali/learn") { aiUse("ne"); return renderAiLesson(); }
+    if (k === "student/start") return renderBeginnerHome();
     if (k === "teacher/voices") return renderTeacherVoices();
   }
 
@@ -3982,7 +4416,8 @@
     if (h === "/upload") return { name: "upload" };
     if (h === "/student") return { name: "hub", hub: "student" };
     if (h === "/teacher") return { name: "hub", hub: "teacher" };
-    var mm = h.match(/^\/(student|teacher)\/([a-z_]+)(?:\/(\d+))?(?:\/([a-z]+))?$/);
+    if (h === "/nepali") return { name: "hub", hub: "nepali" };
+    var mm = h.match(/^\/(student|teacher|nepali)\/([a-z_]+)(?:\/(\d+))?(?:\/([a-z]+))?$/);
     if (mm) return { name: "soon", hub: mm[1], item: mm[2], day: mm[3] ? parseInt(mm[3], 10) : 0, sub: mm[4] || "" };
     if ((m = h.match(/^\/c\/([^/]+)\/q\/(\d+)$/))) return { name: "q", cid: decodeURIComponent(m[1]), n: parseInt(m[2], 10) };
     if ((m = h.match(/^\/c\/([^/]+)\/result$/))) return { name: "result", cid: decodeURIComponent(m[1]) };
@@ -4013,7 +4448,7 @@
     if (r.cid && !c) { toast("候補者が見つかりません"); r = { name: "home" }; }
     document.body.setAttribute("data-screen", r.name);
     if (!(r.name === "soon" && r.item === "report")) RP_REMOTE = null;
-    if (!(r.name === "soon" && r.item === "ai") && AIS) { aiStop(); AIS = null; }   /* AIの授業から出たら声と録音を止める（続きは保存してある） */   /* 報告の画面に入るたびに返事を読み直す */
+    if (!(r.name === "soon" && (r.item === "ai" || r.item === "nepali")) && AIS) { aiStop(); AIS = null; }   /* AIの授業から出たら声と録音を止める（続きは保存してある） */   /* 報告の画面に入るたびに返事を読み直す */
     if (r.name === "setfield") {
       if (fieldList().some(function (f) { return f.code === r.code; })) { setField(r.code); toast(currentField().label + "コースにしました"); }
       go("#/student/media");
@@ -4027,7 +4462,7 @@
       var kk = r.hub + "/" + r.item;
       if (kk === "teacher/study") renderLive(r.hub, r.item, r.day || 0);
       else if (kk === "student/homework" && LESSONS && r.day > 1000) renderLive(r.hub, r.item, r.day);   /* オリエンテーション O1〜O10＝1001〜1010 */
-      else if (LIVE[kk] && LESSONS) renderLive(r.hub, r.item, r.day && r.day <= dayCount() ? r.day : 0);
+      else if (LIVE[kk] && (LESSONS || r.hub === "nepali")) renderLive(r.hub, r.item, r.day && r.day <= dayCount() ? r.day : 0);
       else renderSoon(r.hub, r.item);
     }
     else if (r.name === "check") renderCheck();
@@ -4037,6 +4472,7 @@
     else if (r.name === "q") renderQuestion(c, r.n);
     else if (r.name === "result") renderResult(c);
     view.scrollTop = 0;
+    fbFab();
     if (ONLINE && ONLINE.afterRender) ONLINE.afterRender(view);
   }
 
@@ -4080,6 +4516,13 @@
     else if (act === "drill-again" && quiz) { quiz = null; render(); }
     else if (/^hw-/.test(act) && hwAct(act, el)) { /* 宿題の中の操作 */ }
     else if (/^ai-/.test(act) && aiAct(act, el)) { /* AIの授業の中の操作 */ }
+    else if (act === "fb-open") fbOpen();
+    else if (act === "as-group") { AS_PICK.group = el.getAttribute("data-g"); render(); }
+    else if (act === "as-send") asSend();
+    else if (act === "fb-mood" && FB) { FB.mood = parseInt(el.getAttribute("data-m"), 10); if (FB.mood === 1) FB.tags = []; fbRedraw(); }
+    else if (act === "fb-tag" && FB) { var tk = el.getAttribute("data-k"), ti = FB.tags.indexOf(tk); if (ti >= 0) FB.tags.splice(ti, 1); else FB.tags.push(tk); fbRedraw(); }
+    else if (act === "fb-send") fbSend();
+    else if (act === "beg-sim") { var sb = settings(); sb.beginner_sim = el.getAttribute("data-p"); writeJSON(SETTINGS_KEY, sb); render(); }
     else if (act === "set-lang") { var sl = settings(); sl.teacher_lang = el.getAttribute("data-lang"); writeJSON(SETTINGS_KEY, sl); render(); }
     else if (act === "rp-kind") { RP_FORM.kind = el.getAttribute("data-k"); render(); }
     else if (act === "rp-send") rpSend();

@@ -5,7 +5,7 @@
   --bg: #F5F6F8;
   --card: #FFFFFF;
   --ink: #1B1F27;
-  --muted: #667085;
+  --muted: #4A5468;   /* 2026-10-04 携帯の屋外でも読める濃さに（旧 #667085 は日本語が見えない）*/
   --line: #D9DDE4;
   --s1: #C8362B; --s2: #E07B39; --s3: #D9A520; --s4: #3F8F5A; --s5: #12294B;
   --bar-h: 56px;
@@ -412,7 +412,7 @@ details.kuwa > p { margin-top: 4px; }
   font-size: 24px; font-weight: 700; background: #fff; line-height: 1.4; }
 /* ふりがな＝漢字の上（（　）で横に書かない） */
 ruby { ruby-position: over; ruby-align: center; }
-rt { font-size: .5em; color: var(--muted); font-weight: 600; line-height: 1; }
+rt { font-size: .5em; color: #2E4A7A; font-weight: 700; line-height: 1; }
 .sec-box .easy p, .sec-box ul li, .kj-rules li, .ts-chk, .rtable td { line-height: 2.1; }
 .hist-sum { grid-template-columns: repeat(4, 1fr); margin-bottom: 10px; }
 .hist-sum .big-card { padding: 10px 14px; }
@@ -596,7 +596,11 @@ rt { font-size: .5em; color: var(--muted); font-weight: 600; line-height: 1; }
 .ai-em { font-size: 72px; line-height: 1.1; }
 .ai-start h1 { margin: 6px 0 0; font-size: 30px; }
 .ai-day { font-size: 22px; font-weight: 800; color: var(--shu); margin: 2px 0 10px; }
-.ai-goal { background: #F1F8F3; border-radius: 12px; padding: 10px; line-height: 1.6; }
+.ai-goal { background: #F1F8F3; border-radius: 12px; padding: 10px; line-height: 1.6; font-size: 20px; }
+.ai-goal-ne { display: block; font-size: 13px; font-weight: 500; color: #4A5468; font-family: "Noto Sans Devanagari", "Kohinoor Devanagari", sans-serif; }
+.ai-sound { font-size: 18px; font-weight: 700; margin: 10px 0; }
+.btn-ne { display: block; font-size: 12px; font-weight: 500; opacity: .85; font-family: "Noto Sans Devanagari", "Kohinoor Devanagari", sans-serif; }
+.btn:has(.btn-ne) { flex-direction: column; gap: 0; line-height: 1.25; }
 .ai-top { display: flex; justify-content: space-between; align-items: center; }
 .ai-step { font-size: 18px; font-weight: 800; color: var(--ai); }
 .ai-teacher { display: flex; gap: 10px; align-items: flex-start; }
@@ -656,3 +660,78 @@ rt { font-size: .5em; color: var(--muted); font-weight: 600; line-height: 1; }
 .ai-les.is-mid { border-color: var(--ai); }
 .ai-les-t { flex: 1; display: flex; flex-direction: column; font-size: 16px; }
 .ai-les-t .ne { font-size: 13px; color: #44506A; }
+
+/* ---------- 初心者の入口（試作・2026-10-04） ---------- */
+.beg ruby { ruby-position: over; }
+.beg rt, .hw2 rt { font-size: 0.5em; color: #2E4A7A; font-weight: 600; }
+.no-yomi { border-bottom: 3px solid var(--shu); }
+.beg-sim { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; background: #FFF6E5; border: 1px dashed #E0B65A; border-radius: 10px; padding: 6px 8px; margin-bottom: 12px; font-size: 13px; }
+.beg-hello { display: flex; flex-direction: column; align-items: center; margin: 6px 0 10px; }
+.beg-hello .bw-main { font-size: 36px; }
+.beg-hello .bw-sub { font-size: 15px; }
+.beg-name { font-size: 20px; font-weight: 800; color: var(--ink); }
+.bw-main { display: block; font-weight: 800; line-height: 1.5; color: var(--ink); }
+.bw-sub { display: block; font-size: 0.5em; font-weight: 500; color: #4A5468; line-height: 1.4; }
+.bw-sub.ne { font-family: "Noto Sans Devanagari", "Kohinoor Devanagari", sans-serif; }
+.ne.bw-main { font-family: "Noto Sans Devanagari", "Kohinoor Devanagari", sans-serif; }
+.beg-level { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; text-align: center; font-size: 22px; }
+.beg-dots { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; margin-top: 6px; }
+.beg-dots i { font-style: normal; font-size: 11px; font-weight: 700; padding: 6px 0; border-radius: 6px; background: #E4E9F1; color: #2E3A50; }
+.beg-dots i.on { background: #3F8F5A; color: #fff; }
+.beg-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 12px; }
+.beg-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 150px; background: var(--card); border: 2px solid var(--line); border-radius: 18px; text-decoration: none; color: inherit; padding: 10px; text-align: center; font-size: 30px; }
+.beg-card:active { background: #EEF1F6; }
+.beg-ic { font-size: 52px; line-height: 1.1; }
+.beg-sub { font-size: 14px; font-weight: 700; color: var(--shu); }
+.beg-goal, .beg-words { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; margin-top: 12px; }
+.beg-goal-h { font-size: 20px; color: var(--shu); font-weight: 800; }
+.beg-goal-h .bw-main { color: var(--shu); display: inline; }
+.beg-goal-h .bw-sub { display: inline; margin-left: 8px; font-size: 13px; }
+.beg-goal-t { font-size: 22px; font-weight: 700; line-height: 2.1; }
+.beg-goal-ne { font-size: 13px; color: #4A5468; margin-top: 2px; }
+.beg-wl { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.beg-chip { background: #EEF3FA; border-radius: 12px; padding: 6px 12px; font-size: 24px; text-align: center; }
+.beg-check { margin-top: 12px; }
+.beg-check .ng { color: var(--shu); }
+/* さくら先生の ネパール語（試作・2026-10-04）：大きいデーヴァナーガリー＋カタカナ読み＋意味 */
+.ai-big.ai-dev { font-family: "Noto Sans Devanagari", "Kohinoor Devanagari", sans-serif; font-size: 46px; line-height: 1.45; word-break: keep-all; }
+.ai-kana-read { text-align: center; font-size: 24px; font-weight: 700; color: #12294B; margin: 2px 0; }
+.ai-kana-read small { display: block; font-size: 14px; font-weight: 500; color: #4A5468; letter-spacing: .02em; }
+.ai-mean { text-align: center; font-size: 20px; background: #FFF6E5; border-radius: 10px; padding: 8px 10px; margin: 8px 0 10px; }
+@media (max-width: 420px) { .ai-big.ai-dev { font-size: 36px; } }
+
+/* ---------- 生徒の声（意見書・2026-10-04） ---------- */
+.fb { display: flex; flex-direction: column; gap: 10px; }
+.fb-q { font-size: 20px; font-weight: 800; }
+.fb-q span, .fb-tag span, .fb-more summary span, .fb .btn span { display: block; font-size: 14px; font-weight: 600; color: var(--muted); }
+.fb-where { font-size: 13px; color: var(--muted); }
+.fb-moods { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.fb-mood { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 12px 4px; border: 2px solid var(--line); border-radius: 16px; background: #fff; font: inherit; cursor: pointer; color: inherit; }
+.fb-mood.on { border-color: var(--ai); background: #EEF3FA; }
+.fb-mood b { font-size: 16px; }
+.fb-mood span:last-child { font-size: 13px; color: var(--muted); }
+.fb-ic { font-size: 44px; line-height: 1.1; }
+.fb-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.fb-tag { padding: 8px 12px; border: 2px solid var(--line); border-radius: 14px; background: #fff; font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; color: inherit; text-align: left; }
+.fb-tag.on { border-color: var(--shu); background: #FBE9E7; }
+.fb-more textarea { width: 100%; font: inherit; font-size: 17px; padding: 8px; border: 1.5px solid var(--line); border-radius: 10px; margin-top: 6px; }
+.fb-thanks { align-items: center; text-align: center; font-size: 20px; }
+.fb-fab { position: fixed; right: 14px; bottom: 16px; z-index: 50; display: flex; align-items: center; gap: 6px; padding: 10px 14px; border-radius: 999px; border: none; background: var(--shu); color: #fff; font: inherit; font-size: 22px; font-weight: 800; box-shadow: 0 4px 14px rgba(0,0,0,.2); cursor: pointer; }
+.fb-fab span { font-size: 14px; }
+.fb-fab[hidden] { display: none; }
+.topbar .fb-top { background: var(--shu); border-color: var(--shu); font-weight: 800; }
+.fb-top[hidden] { display: none; }
+@media (max-width: 480px) { .topbar .fb-top span { display: none; } .topbar .bar-nav { gap: 6px; } }
+
+/* ---------- Teacher Guide・宿題を出す（2026-10-04） ---------- */
+.gd-btns, .as-groups { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.gd-d { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; margin-top: 8px; }
+.gd-d summary { font-weight: 800; cursor: pointer; font-size: 17px; }
+.gd-doc { font-size: 15px; line-height: 1.7; }
+.gd-doc h2, .gd-doc h3, .gd-doc h4, .gd-doc h5 { font-size: 16px; margin: 14px 0 4px; color: var(--ai); }
+.gd-tw { overflow-x: auto; }
+.gd-doc table { border-collapse: collapse; font-size: 13px; min-width: 480px; }
+.gd-doc th, .gd-doc td { border: 1px solid var(--line); padding: 4px 6px; vertical-align: top; }
+.gd-doc blockquote { border-left: 4px solid var(--shu); margin: 8px 0; padding: 4px 10px; background: #FFF6F5; }
+.as-sel { font: inherit; font-size: 20px; min-height: 48px; padding: 0 10px; border: 1.5px solid var(--line); border-radius: 10px; width: 100%; }
+.hw-assign { display: block; background: #FFF1D6; border: 2px solid #E0B65A; border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; font-size: 17px; text-decoration: none; color: inherit; }
