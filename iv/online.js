@@ -35,6 +35,7 @@
     var b = $("loginBtn");
     if (b) { b.disabled = !!on; b.textContent = on ? (text || "ログイン中…") : "ログイン"; }
   }
+  function secretWipe() { clearSecret(); }
   function clearSecret() { var el = $("fPassword"); if (el) el.value = ""; }
   function toLogin(msg) {
     codeStep = null;
@@ -229,8 +230,37 @@
     });
   }
 
+  /* 2026-10-05 本番：スマホで 開いたままのタブが 古い画面（10/2）のまま ログインし「このアカウントは面接用です」と出た。
+   * 公開ページの config.js を 読み直し、画面の指紋（build）が 変わっていたら 自分で 読み込み直す。
+   * いつ見る＝ログインを押した時・タブに 戻ってきた時。読み込み直しは 1分に 1回まで（同じ所を ぐるぐる回らない）。 */
+  var STALE_KEY = "ouka_iv_reloaded_at";
+  function staleCheck() {
+    if (!CFG.build || !window.fetch) return Promise.resolve(false);
+    return fetch("config.js?t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.ok ? r.text() : ""; }).then(function (t) {
+      var m = /\.build = "([0-9a-f]+)"/.exec(t || "");
+      if (!m || m[1] === CFG.build) return false;
+      var last = 0; try { last = +sessionStorage.getItem(STALE_KEY) || 0; } catch (x) { /* 止めない */ }
+      if (Date.now() - last < 60000) return false;
+      try { sessionStorage.setItem(STALE_KEY, String(Date.now())); } catch (x) { /* 止めない */ }
+      location.reload();
+      return true;
+    }, function () { return false; });   /* 圏外＝そのまま使う */
+  }
+  document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") staleCheck(); });
+  window.addEventListener("pageshow", function (e) { if (e.persisted) staleCheck(); });
+
   function onLogin(e) {
     if (e && e.preventDefault) e.preventDefault();
+    if (!onLogin.checked) {
+      onLogin.checked = true;
+      setBusy(true, "確認中…");
+      staleCheck().then(function (reloading) {
+        if (reloading) { secretWipe(); setErr("新しい画面にしました。もう一度ログインしてください。"); return; }
+        setBusy(false); onLogin();
+      });
+      return;
+    }
+    onLogin.checked = false;
     setErr("");
     var secret = $("fPassword").value;
     var v = A.validate({ username: $("fUsername").value, password: secret });
@@ -614,6 +644,7 @@
       $("loginBtn").disabled = true;
       return;
     }
+    try { if (Date.now() - (+sessionStorage.getItem(STALE_KEY) || 0) < 15000) setErr("新しい画面にしました。もう一度ログインしてください。"); } catch (x) { /* 止めない */ }
     clerkReady = loadClerk();
     clerkReady.then(function (clerk) {
       return waitForSession(clerk, SESSION_WAIT_MS).then(function (sess) {
