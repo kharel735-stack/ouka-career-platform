@@ -3571,6 +3571,7 @@
     if (ONLINE) return ONLINE.role === "STUDENT" ? "student" : ONLINE.role === "NEPALI_LEARNER" ? "nepali" : ONLINE.can.teacher ? "teacher" : "";
     return r.name === "hub" || r.name === "soon" ? ({ student: "student", teacher: "teacher", nepali: "nepali" }[r.hub] || "") : "";
   }
+  var TOUR_URL_DONE = false;
   function tourSeen() { return readJSON(TOUR_KEY, {}); }
   function tourMaybe(r) {
     var k = tourKind(r), b = document.getElementById("tourBtn");
@@ -3584,6 +3585,8 @@
       }
     }
     if (b) b.hidden = !k && !!ONLINE;
+    var q = /[?&]tour=(student|teacher|nepali)/.exec(location.search);   /* ?tour=student 等で 開いた時は すぐ もう一度 見せる（見本を見せる用） */
+    if (q && !TOUR_URL_DONE) { TOUR_URL_DONE = true; tourOpen(q[1], 0); return; }
     if (!k || document.getElementById("tour")) return;
     if (localStorage.getItem("ouka_tour_off") === "1") return;   /* テスト用：自動では出さない */
     if (!tourSeen()[k]) tourOpen(k, 0);

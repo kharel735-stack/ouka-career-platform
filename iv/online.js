@@ -73,14 +73,27 @@
     return Promise.resolve(c.session.getToken());
   }
   /* Apps Script は OPTIONS を扱えない＝text/plain で送る（本番 /app/ と同じ作法） */
-  function api(action, extra) {
+  /* 2026-10-05 本番で起きた：教材（数MB）を受け取る時、Google の受け渡し先がたまに 404 を返し、
+   * 読めずに SyntaxError → ログイン画面へ戻された。読むだけの要求は 2回まで 自動でやり直す（書く要求はやり直さない＝二重に入れない）。 */
+  var RETRY_READ = { session: 1, content: 1, material: 1, assign_get: 1, report_list: 1, learn_list: 1, photo_list: 1, photo_get: 1 };
+  function api(action, extra, tries) {
+    tries = tries || 0;
     return freshToken().then(function (token) {
       if (!token) { toLogin(MSG.E_AUTH); throw new Error("E_AUTH"); }
       var body = A.buildBody(token, action, extra || {});
       body.session_token = token;
       return fetch(CFG.ivLayerUrl, {
         method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(body)
-      }).then(function (r) { return r.json(); }, function () { throw new Error("NETWORK"); });
+      }).then(function (r) {
+        return r.text().then(function (t) {
+          try { return JSON.parse(t); } catch (x) { throw new Error("NETWORK"); }   /* 404 の HTML などは 回線の失敗と同じ扱い */
+        });
+      }, function () { throw new Error("NETWORK"); });
+    }).catch(function (err) {
+      if (err && err.message === "NETWORK" && RETRY_READ[action] && tries < 2) {
+        return new Promise(function (ok) { setTimeout(ok, tries ? 5000 : 2000); }).then(function () { return api(action, extra, tries + 1); });
+      }
+      throw err;
     }).then(function (res) {
       if (res && res.error === "E_AUTH") toLogin(MSG.E_AUTH);
       return res;
