@@ -75,7 +75,7 @@
   /* Apps Script は OPTIONS を扱えない＝text/plain で送る（本番 /app/ と同じ作法） */
   /* 2026-10-05 本番で起きた：教材（数MB）を受け取る時、Google の受け渡し先がたまに 404 を返し、
    * 読めずに SyntaxError → ログイン画面へ戻された。読むだけの要求は 2回まで 自動でやり直す（書く要求はやり直さない＝二重に入れない）。 */
-  var RETRY_READ = { session: 1, content: 1, material: 1, assign_get: 1, report_list: 1, learn_list: 1, photo_list: 1, photo_get: 1 };
+  var RETRY_READ = { boot: 1, session: 1, content: 1, material: 1, assign_get: 1, report_list: 1, learn_list: 1, photo_list: 1, photo_get: 1 };
   function api(action, extra, tries) {
     tries = tries || 0;
     return freshToken().then(function (token) {
@@ -273,6 +273,7 @@
         var s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
         s.student_name = ""; s.teacher_name = "";
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+        localStorage.removeItem(WHO_KEY);   /* 次の人が 前の人として 開かない */
       } catch (x) { /* 使えなくても止めない */ }
       location.replace(location.pathname);
     });
@@ -463,52 +464,143 @@
   window.addEventListener("online", function () { flush(); flushPhotos(); });
   setInterval(function () { if (who && navigator.onLine !== false) { flush(); flushPhotos(); } }, 60000);
 
-  /* ------------------------------------------------------------ 起動 */
+  /* ------------------------------------------------------------ 起動
+   * 2026-10-05 代表「何より 入れるか。『読み込んでいます』が 長すぎる。生徒が 20〜30人に 増えても」
+   *  ① 2回目から＝この端末に 前回の「だれ」と 教材が あれば、待たずに 画面を出す（確かめは 裏で 1回。役割が 変わっていたら 入れ直す）。
+   *  ② 初めて＝受け口は 1回だけ（boot＝だれ＋教材の鍵）。教材の中身は 鍵つきで 公開ページの横（c/*.bin）から 取る＝速い・人数に強い。
+   *  ③ 鍵が使えない端末・古い受け口＝前の方法（session＋content）で 入る。★どこで失敗しても「入れない」は 作らない。 */
+  var WHO_KEY = "ouka_iv_who_v1";
+  function readWho() { try { return JSON.parse(localStorage.getItem(WHO_KEY) || "null"); } catch (x) { return null; } }
+  function saveWho(sub, s, ver) {
+    try { localStorage.setItem(WHO_KEY, JSON.stringify({ sub: sub, role: s.role, name: String(s.name || "").trim(), can: s.can || {}, students: s.students || [], ver: ver || "" })); }
+    catch (x) { /* 入らなくても 今は使える */ }
+  }
+  function clerkSub() { var c = window.Clerk; return (c && c.user && c.user.id) || ""; }
+  function sleep(ms) { return new Promise(function (ok) { setTimeout(ok, ms); }); }
+  function b64bytes(b) { var t = atob(b), u = new Uint8Array(t.length); for (var i = 0; i < t.length; i++) u[i] = t.charCodeAt(i); return u; }
+  function canParts() { return !!(window.crypto && crypto.subtle && typeof DecompressionStream !== "undefined" && window.Blob && Blob.prototype.stream); }
+  function fetchPart(p, tries) {
+    tries = tries || 0;
+    return fetch(p.file).then(function (r) {
+      if (!r.ok) throw new Error("PART_HTTP_" + r.status);
+      return r.arrayBuffer();
+    }).then(function (buf) {
+      var u = new Uint8Array(buf);
+      return crypto.subtle.importKey("raw", b64bytes(p.key), "AES-GCM", false, ["decrypt"]).then(function (k) {
+        return crypto.subtle.decrypt({ name: "AES-GCM", iv: u.slice(0, 12) }, k, u.slice(12));
+      });
+    }).then(function (z) {
+      return new Response(new Blob([z]).stream().pipeThrough(new DecompressionStream("gzip"))).text();
+    }).then(function (t) { return JSON.parse(t); }).catch(function (err) {
+      if (tries < 2) return sleep(tries ? 4000 : 1500).then(function () { return fetchPart(p, tries + 1); });
+      throw err;
+    });
+  }
+  function loadParts(res) {
+    if (!res || !res.parts || !res.parts.length || !canParts()) return Promise.reject(new Error("NO_PARTS"));
+    return Promise.all(res.parts.map(function (p) { return fetchPart(p); })).then(function (vals) {
+      var c = { content_ver: res.content_ver, lessons: null, study: null, ne: null, nepali: null };
+      res.parts.forEach(function (p, i) { c[p.part] = vals[i]; });
+      try { localStorage.setItem(CONTENT_KEY, JSON.stringify(c)); } catch (x) { /* 入らなくても今は使える */ }
+      return c;
+    });
+  }
+  function noLearning() {
+    return { oukaCategory: "APP_LAYER_ERROR", detail: "no_learning",
+             message: "このアカウントは面接用です。面接は学校のMacの面接アプリで行ってください。" };
+  }
+  function idFromToken() {
+    return freshToken().then(function (t) {
+      try { who.id = JSON.parse(atob(String(t).split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))).sub || ""; }
+      catch (x) { who.id = who.name; }
+    });
+  }
   function start() {
+    var sub = clerkSub(), w = readWho(), cc = readContent();
+    if (sub && w && w.sub === sub && w.ver && cc && cc.content_ver === w.ver && (w.can.student || w.can.teacher || w.can.nepali)) {
+      who = { id: sub, role: w.role, name: w.name, can: w.can, students: w.students || [] };
+      showApp(cc);
+      recheck(sub, w, cc);
+      return Promise.resolve();
+    }
     setBusy(true, "確認中…");
+    var s0 = null;
+    return api("boot", {}).then(function (s) {
+      if (s && !s.ok && (s.error === "E_ACTION" || s.error === "E_FORBIDDEN")) return oldStart();   /* 古い受け口 */
+      if (!s || !s.ok) throw { oukaCategory: "APP_LAYER_ERROR", detail: s && s.error, message: msgOf(s) };
+      s0 = s;
+      who = { id: "", role: s.role, name: String(s.name || "").trim(), can: s.can || {}, students: s.students || [] };
+      return idFromToken().then(function () {
+        if (!who.can.student && !who.can.teacher && !who.can.nepali) throw noLearning();
+        setBusy(true, "教材を読み込んでいます…");
+        var c1 = readContent();
+        if (c1 && s.content_ver && c1.content_ver === s.content_ver) return c1;
+        return loadParts(s).catch(function () { return loadContent(); });    /* 鍵が使えない時は 前の方法 */
+      }).then(function (c) {
+        saveWho(who.id, s0, c.content_ver === s0.content_ver ? s0.content_ver : "");
+        showApp(c);
+      });
+    });
+  }
+  /* 待たずに 開いた後の 確かめ（裏で 1回）。役割が 外された・止められた＝すぐ ログイン画面へ。回線の失敗では 何もしない。 */
+  function recheck(sub, w, cc) {
+    api("boot", {}).then(function (s) {
+      if (!s) return;
+      if (!s.ok) {
+        if (s.error === "E_NO_ROLE" || s.error === "E_DISABLED" || s.error === "E_NOT_YET" || s.error === "E_EXPIRED") {
+          try { localStorage.removeItem(WHO_KEY); } catch (x) { /* 止めない */ }
+          toLogin(msgOf(s));
+          show($("appShell"), false); show($("loginView"), true);
+        }
+        return;
+      }
+      var same = s.role === w.role && String(s.name || "").trim() === w.name && JSON.stringify(s.can || {}) === JSON.stringify(w.can || {});
+      if (!same) { saveWho(sub, s, ""); location.reload(); return; }
+      if (s.content_ver && s.content_ver !== cc.content_ver) {
+        loadParts(s).then(function () { saveWho(sub, s, s.content_ver); }, function () { /* 次の起動で 取る */ });
+      }
+    }, function () { /* 圏外＝前回の教材で そのまま 使える */ });
+  }
+  /* 前の方法（session＋content の 2回）。古い受け口・鍵が使えない時だけ */
+  function oldStart() {
     return api("session", {}).then(function (s) {
       if (!s || !s.ok) throw { oukaCategory: "APP_LAYER_ERROR", detail: s && s.error, message: msgOf(s) };
       who = { id: "", role: s.role, name: String(s.name || "").trim(), can: s.can || {}, students: s.students || [] };
-      return freshToken().then(function (t) {
-        try { who.id = JSON.parse(atob(String(t).split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))).sub || ""; }
-        catch (x) { who.id = who.name; }
-      });
+      return idFromToken();
     }).then(function () {
-      if (!who.can.student && !who.can.teacher && !who.can.nepali) {
-        throw { oukaCategory: "APP_LAYER_ERROR", detail: "no_learning",
-                message: "このアカウントは面接用です。面接は学校のMacの面接アプリで行ってください。" };
-      }
+      if (!who.can.student && !who.can.teacher && !who.can.nepali) throw noLearning();
       setBusy(true, "教材を読み込んでいます…");
       return loadContent();
-    }).then(function (c) {
-      window.OUKA_LESSONS = c.lessons;
-      window.OUKA_TEACHER_STUDY = who.can.teacher ? c.study : null;
-      window.OUKA_LESSONS_NE = who.can.teacher ? c.ne || null : null;
-      window.OUKA_AI_NEPALI = who.can.nepali ? c.nepali || null : null;
-      setNames();
-      window.OUKA_ONLINE = {
-        role: who.role, name: who.name, can: who.can, students: who.students,
-        allow: allow, home: home, changed: changed, afterRender: afterRender, api: api, photosChanged: photosChanged
-      };
-      $("who").textContent = who.name + "（" + ({ STUDENT: "生徒", TEACHER: "先生", CEO: "代表",
-        SCHOOL_ADMIN: "校長", SUPER_ADMIN: "管理者", NEPALI_LEARNER: "ネパール語" }[who.role] || who.role) + "）";
-      /* 面接の入口は出さない（学校のMac版） */
-      Array.prototype.forEach.call(document.querySelectorAll('.bar-nav a[href="#/candidates"], .bar-nav a[href="#/results"]'),
-        function (a) { a.hidden = true; a.style.display = "none"; });   /* .btn の display が hidden に勝つため */
-      $("homeBtn").setAttribute("href", home());
-      document.querySelector(".brand").setAttribute("href", home());
-      show($("loginView"), false);
-      show($("appShell"), true);
-      setBusy(false);
-      if (!location.hash || location.hash === "#/" && !who.can.teacher) location.replace(home());
-      if (!appLoaded) {
-        appLoaded = true;
-        var el = document.createElement("script");
-        el.src = "app.js" + (CFG.appVersion ? "?v=" + CFG.appVersion : "");   /* 古い app.js を使わせない */
-        el.onload = function () { flush(); flushPhotos(); };
-        document.body.appendChild(el);
-      }
-    });
+    }).then(showApp);
+  }
+  function showApp(c) {
+    window.OUKA_LESSONS = c.lessons;
+    window.OUKA_TEACHER_STUDY = who.can.teacher ? c.study : null;
+    window.OUKA_LESSONS_NE = who.can.teacher ? c.ne || null : null;
+    window.OUKA_AI_NEPALI = who.can.nepali ? c.nepali || null : null;
+    setNames();
+    window.OUKA_ONLINE = {
+      role: who.role, name: who.name, can: who.can, students: who.students,
+      allow: allow, home: home, changed: changed, afterRender: afterRender, api: api, photosChanged: photosChanged
+    };
+    $("who").textContent = who.name + "（" + ({ STUDENT: "生徒", TEACHER: "先生", CEO: "代表",
+      SCHOOL_ADMIN: "校長", SUPER_ADMIN: "管理者", NEPALI_LEARNER: "ネパール語" }[who.role] || who.role) + "）";
+    /* 面接の入口は出さない（学校のMac版） */
+    Array.prototype.forEach.call(document.querySelectorAll('.bar-nav a[href="#/candidates"], .bar-nav a[href="#/results"]'),
+      function (a) { a.hidden = true; a.style.display = "none"; });   /* .btn の display が hidden に勝つため */
+    $("homeBtn").setAttribute("href", home());
+    document.querySelector(".brand").setAttribute("href", home());
+    show($("loginView"), false);
+    show($("appShell"), true);
+    setBusy(false);
+    if (!location.hash || location.hash === "#/" && !who.can.teacher) location.replace(home());
+    if (!appLoaded) {
+      appLoaded = true;
+      var el = document.createElement("script");
+      el.src = "app.js" + (CFG.appVersion ? "?v=" + CFG.appVersion : "");   /* 古い app.js を使わせない */
+      el.onload = function () { flush(); flushPhotos(); };
+      document.body.appendChild(el);
+    }
   }
 
   function boot() {
