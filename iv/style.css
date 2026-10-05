@@ -735,3 +735,17 @@ rt { font-size: .5em; color: #2E4A7A; font-weight: 700; line-height: 1; }
 .gd-doc blockquote { border-left: 4px solid var(--shu); margin: 8px 0; padding: 4px 10px; background: #FFF6F5; }
 .as-sel { font: inherit; font-size: 20px; min-height: 48px; padding: 0 10px; border: 1.5px solid var(--line); border-radius: 10px; width: 100%; }
 .hw-assign { display: block; background: #FFF1D6; border: 2px solid #E0B65A; border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; font-size: 17px; text-decoration: none; color: inherit; }
+
+/* はじめての使い方（2026-10-05）＝最初の1回だけ・上の「？」でもう一度 */
+.tour { position: fixed; inset: 0; z-index: 9000; background: rgba(18, 41, 75, .55); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.tour-card { background: var(--card); color: var(--ink); border-radius: 20px; max-width: 440px; width: 100%; padding: 24px 20px 18px; text-align: center; box-shadow: 0 12px 40px rgba(0,0,0,.25); max-height: calc(100vh - 32px); overflow-y: auto; }
+.tour-ic { font-size: 56px; line-height: 1.1; }
+.tour-card h2 { font-size: 22px; margin: 8px 0 10px; }
+.tour-card p { font-size: 17px; line-height: 1.6; margin: 0 0 8px; text-align: left; }
+.tour-card .tour-ja { font-size: 15px; color: var(--muted); text-align: center; }
+.tour-dots { display: flex; gap: 6px; justify-content: center; margin: 12px 0; }
+.tour-dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+.tour-dots i.on { background: var(--ai); }
+.tour-btns { display: grid; grid-template-columns: 1fr 1.4fr; gap: 10px; }
+.tour-btns .btn { min-height: 52px; font-size: 16px; }
+.tour-q { font-weight: 800; min-width: 36px; }

@@ -3538,6 +3538,81 @@
     });
   }
 
+  /* ---------- はじめての使い方（2026-10-05 代表「アプリに入った 一番最初だけ、やり方を教えて」） ----------
+   * 役割ごとに 1回だけ 出す（生徒＝ネパール語＋ひらがな／先生＝ネパール語／ネパール語を学ぶ人＝日本語）。
+   * 見たかどうかは この端末に 残す（別の端末では もう1回 出る）。上の「？」で いつでも もう1回 見られる。
+   * ★ここに 新しい ルールや 約束は 書かない＝いま アプリに ある ボタンの 押し方だけ。 */
+  var TOUR_KEY = "ouka_tour_v1";
+  var TOURS = {
+    student: { lang: "ne", done: "सुरु गरौं ／ はじめる", steps: [
+      { ic: "👋", t: "स्वागत छ！", b: "यो OUKA को पढ्ने एप हो। सुरुमा, कसरी चलाउने ५ वटा कुरा मात्र हेरौं।", ja: "ようこそ。つかいかたを 5つ みます。" },
+      { ic: "📝", t: "गृहकार्य（宿題）", b: "हरेक दिन「宿題 ／ गृहकार्य」खोल्नुहोस्। गरेको कुरा आफैं सेभ हुन्छ। सबै सकेपछि अन्तिममा「ていしゅつ する ／ पेश गर्ने」एक पटक मात्र थिच्नुहोस्।", ja: "まいにち しゅくだい。さいごに 1かい「ていしゅつ する」。" },
+      { ic: "🌸", t: "AI शिक्षक（さくら先生）", b: "「AIの授業 ／ AI शिक्षक」मा साकुरा सेन्सेईले あ बाट सिकाउनुहुन्छ। सुन्ने → पछि-पछि भन्ने → लेख्ने। माइक माग्यो भने「Allow／अनुमति」थिच्नुहोस्।", ja: "きく → いう → かく。" },
+      { ic: "🙋", t: "बुझिएन भने", b: "माथिको「🙋 Help」थिच्नुहोस्।「बुझें／बुझिनँ」थिचे मात्र पुग्छ — लेख्नु पर्दैन। शिक्षकले हेर्नुहुन्छ।", ja: "わからない とき「🙋」。おす だけ。" },
+      { ic: "📶", t: "इन्टरनेट नभए पनि ठीक छ", b: "इन्टरनेट नभएको बेला गरेको काम फोनमै बस्छ, जोडिएपछि आफैं पठाइन्छ। माथि「未送信」देखिए, इन्टरनेट भएको ठाउँमा एप खोल्नुहोस्।", ja: "インターネットが なくても だいじょうぶ。" },
+      { ic: "✅", t: "अब सुरु गरौं！", b: "फेरि यो हेर्न चाहे, माथिको「？」थिच्नुहोस्।", ja: "もういちど みる とき「？」。" }
+    ] },
+    teacher: { lang: "ne", done: "सुरु गरौं ／ はじめる", steps: [
+      { ic: "👋", t: "स्वागत छ, शिक्षक！", b: "यो OUKA को शिक्षकको एप हो। हरेक दिन प्रयोग गर्ने ठाउँ मात्र छोटकरीमा हेरौं।", ja: "先生の 使い方（6つ）" },
+      { ic: "📖", t: "आजको कक्षा（今日の授業）", b: "「今日の授業」मा आजको Day को ९ चरण १ पानामा छ।「नेपाली」थिचे नेपालीमा पढ्न सकिन्छ। Teacher Guide मा आजको व्याकरण・ACTION・नसकेका विद्यार्थीलाई के गर्ने भन्ने छ।", ja: "今日の授業 ／ Teacher Guide" },
+      { ic: "📣", t: "गृहकार्य दिने（宿題を出す）", b: "Day छान्ने → समूह（सबै／A／B／C）छान्ने →「出す」। गृहकार्यको विषय Day मा पहिले नै छ — तपाईंले लेख्नु पर्दैन।", ja: "宿題を出す：Day → 班 → 出す" },
+      { ic: "📥", t: "बुझाएको काम हेर्ने", b: "「提出物確認」मा कसले बुझायो/बुझाएन देखिन्छ।「ノートの写真」「生徒の声」मा कापीको फोटो र रेकर्ड हेरेर ○△× लगाउनुहोस्।", ja: "提出物確認・ノートの写真・生徒の声" },
+      { ic: "🗓", t: "शुक्रबार：अंक दिने（採点）", b: "शुक्रबार「採点」मा ५ सीपको अंक हाल्नुहोस्। A/B/C आफैं तय हुन्छ। विद्यार्थीलाई शुक्रबार नभन्ने — सोमबार बिहानको सभामा घोषणा।", ja: "金曜は 採点。発表は 月曜の朝礼。" },
+      { ic: "✉️", t: "समस्या भए（報告を送る）", b: "विद्यार्थीको कुरा, कक्षाको कुरा, सच्याउनु पर्ने ठाउँ —「報告を送る」बाट पठाउनुहोस्। जवाफ पनि त्यहीँ आउँछ। फेरि यो हेर्न: माथिको「？」।", ja: "報告を送る ／ もう一度見る＝「？」" }
+    ] },
+    nepali: { lang: "ja", done: "はじめる", steps: [
+      { ic: "👋", t: "ようこそ", b: "ここは ネパール語を ゼロから 学ぶ 画面です。使い方は 3つだけ。", ja: "" },
+      { ic: "🌸", t: "さくら先生の ネパール語", b: "N1 あいさつ から 順番に。聞く → まねして 言う → 次へ。1回 10分くらい。マイクを 聞かれたら「許可」を 押してください。", ja: "" },
+      { ic: "🙋", t: "わからない時", b: "上の「🙋 Help」で「わかった／わからない」を 押すだけで 届きます。やった記録は 自動で 届きます（送るボタンは ありません）。", ja: "" },
+      { ic: "✅", t: "はじめましょう", b: "もう一度 見たい時は、上の「？」を 押してください。", ja: "" }
+    ] }
+  };
+  function tourKind(r) {
+    if (ONLINE) return ONLINE.role === "STUDENT" ? "student" : ONLINE.role === "NEPALI_LEARNER" ? "nepali" : ONLINE.can.teacher ? "teacher" : "";
+    return r.name === "hub" || r.name === "soon" ? ({ student: "student", teacher: "teacher", nepali: "nepali" }[r.hub] || "") : "";
+  }
+  function tourSeen() { return readJSON(TOUR_KEY, {}); }
+  function tourMaybe(r) {
+    var k = tourKind(r), b = document.getElementById("tourBtn");
+    if (!b) {
+      var nav = document.querySelector(".bar-nav");
+      if (nav) {
+        b = document.createElement("button");
+        b.id = "tourBtn"; b.className = "btn btn-sm tour-q"; b.title = "使い方 ／ प्रयोग गर्ने तरिका"; b.textContent = "？";
+        b.addEventListener("click", function () { tourOpen(tourKind(route()) || "teacher", 0); });
+        nav.insertBefore(b, nav.firstChild);
+      }
+    }
+    if (b) b.hidden = !k && !!ONLINE;
+    if (!k || document.getElementById("tour")) return;
+    if (localStorage.getItem("ouka_tour_off") === "1") return;   /* テスト用：自動では出さない */
+    if (!tourSeen()[k]) tourOpen(k, 0);
+  }
+  function tourOpen(k, i) {
+    var T = TOURS[k]; if (!T) return;
+    var old = document.getElementById("tour"); if (old) old.remove();
+    var s = T.steps[i], last = i === T.steps.length - 1, ne = T.lang === "ne";
+    var el = document.createElement("div");
+    el.id = "tour"; el.className = "tour"; el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true");
+    el.innerHTML = '<div class="tour-card"' + (ne ? ' lang="ne"' : "") + '>' +
+      '<div class="tour-ic">' + s.ic + "</div><h2>" + esc(s.t) + "</h2><p>" + esc(s.b) + "</p>" +
+      (s.ja ? '<p class="tour-ja" lang="ja">' + esc(s.ja) + "</p>" : "") +
+      '<div class="tour-dots">' + T.steps.map(function (x, j) { return "<i" + (j === i ? ' class="on"' : "") + "></i>"; }).join("") + "</div>" +
+      '<div class="tour-btns">' +
+        (i ? '<button class="btn btn-xl" data-t="back">' + (ne ? "पछाडि ／ もどる" : "もどる") + "</button>" : '<button class="btn btn-xl" data-t="skip">' + (ne ? "छोड्ने ／ とばす" : "とばす") + "</button>") +
+        '<button class="btn btn-primary btn-xl" data-t="' + (last ? "done" : "next") + '">' + (last ? T.done : ne ? "अर्को ／ つぎ" : "つぎ") + "</button>" +
+      "</div></div>";
+    el.addEventListener("click", function (e) {
+      var t = e.target.closest("[data-t]"); if (!t) return;
+      var a = t.getAttribute("data-t");
+      if (a === "next") tourOpen(k, i + 1);
+      else if (a === "back") tourOpen(k, i - 1);
+      else { var seen = tourSeen(); seen[k] = new Date().toISOString(); writeJSON(TOUR_KEY, seen); el.remove(); }
+    });
+    document.body.appendChild(el);
+    var f = el.querySelector(".btn-primary"); if (f) f.focus();
+  }
+
   /* ---------- Teacher Guide（2026-10-04）＝作らない。出す。（02_残り4つの設計 §2） ----------
    * 今日の Day に 関係する物だけを 並べる索引。中身は 全部 既存の正本（日次指示書・台本・教え方メモ・決まりの文書）。 */
   var GUIDE = window.OUKA_GUIDE || (LESSONS && LESSONS.guide) || null;
@@ -4473,6 +4548,7 @@
     else if (r.name === "result") renderResult(c);
     view.scrollTop = 0;
     fbFab();
+    tourMaybe(r);
     if (ONLINE && ONLINE.afterRender) ONLINE.afterRender(view);
   }
 
