@@ -4558,7 +4558,7 @@
     if (r.cid && !c) { toast("候補者が見つかりません"); r = { name: "home" }; }
     document.body.setAttribute("data-screen", r.name);
     if (!(r.name === "soon" && r.item === "report")) RP_REMOTE = null;
-    if (!(r.name === "soon" && (r.item === "ai" || r.item === "nepali")) && AIS) { aiStop(); AIS = null; }   /* AIの授業から出たら声と録音を止める（続きは保存してある） */   /* 報告の画面に入るたびに返事を読み直す */
+    if (!(r.name === "soon" && (r.item === "ai" || r.item === "nepali" || (r.hub === "nepali" && r.item === "learn"))) && AIS) { aiStop(); AIS = null; }   /* 2026-10-05 翔太の入口（#/nepali/learn）を 数え忘れていて「N1を はじめる」が 押せなかった */   /* AIの授業から出たら声と録音を止める（続きは保存してある） */   /* 報告の画面に入るたびに返事を読み直す */
     if (r.name === "setfield") {
       if (fieldList().some(function (f) { return f.code === r.code; })) { setField(r.code); toast(currentField().label + "コースにしました"); }
       go("#/student/media");
