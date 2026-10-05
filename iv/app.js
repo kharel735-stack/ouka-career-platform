@@ -3585,6 +3585,7 @@
       }
     }
     if (b) b.hidden = !k && !!ONLINE;
+    qrBtn();
     var q = /[?&]tour=(student|teacher|nepali)/.exec(location.search);   /* ?tour=student 等で 開いた時は すぐ もう一度 見せる（見本を見せる用） */
     if (q && !TOUR_URL_DONE) { TOUR_URL_DONE = true; tourOpen(q[1], 0); return; }
     if (!k || document.getElementById("tour")) return;
@@ -3614,6 +3615,37 @@
     });
     document.body.appendChild(el);
     var f = el.querySelector(".btn-primary"); if (f) f.focus();
+  }
+
+  /* ---------- QR（2026-10-05 代表「押したら 最新の QR。今までの QR は 全部消して」） ----------
+   * 行き先は オンライン版 1つだけ（data/qr.js＝_tools/QRを作る.py）。学校の Mac の Wi-Fi の QR は 出さない（IP が変わると 使えない）。
+   * 先生・代表の画面にだけ ボタンを出す＝生徒に 見せて 読み取ってもらう用。 */
+  function qrBtn() {
+    var Q = window.OUKA_QR, b = document.getElementById("qrBtn");
+    var staff = !ONLINE || ONLINE.can.teacher;
+    if (!Q || !staff) { if (b) b.hidden = true; return; }
+    if (!b) {
+      var nav = document.querySelector(".bar-nav"); if (!nav) return;
+      b = document.createElement("button");
+      b.id = "qrBtn"; b.className = "btn btn-sm tour-q"; b.textContent = "QR"; b.title = "アプリの QR コード";
+      b.addEventListener("click", qrOpen);
+      nav.insertBefore(b, nav.firstChild);
+    }
+    var r = route();
+    b.hidden = !!ONLINE ? false : (r.hub === "student" || r.hub === "nepali");
+  }
+  function qrOpen() {
+    var Q = window.OUKA_QR; if (!Q) return;
+    var old = document.getElementById("tour"); if (old) old.remove();
+    var el = document.createElement("div");
+    el.id = "tour"; el.className = "tour"; el.setAttribute("role", "dialog");
+    el.innerHTML = '<div class="tour-card"><h2>OUKA アプリ</h2>' +
+      '<img class="qr-img" alt="QR" src="' + Q.png + '">' +
+      '<p class="tour-ja" style="font-size:17px;word-break:break-all"><b>' + esc(Q.url) + "</b></p>" +
+      '<p class="tour-ja">カメラで 読み取る → ログイン（ID・パスワードは 学校が 渡します）<br><span lang="ne">क्यामेराले स्क्यान गर्नुहोस् → लगइन</span></p>' +
+      '<div class="tour-btns" style="grid-template-columns:1fr"><button class="btn btn-primary btn-xl" data-t="done">とじる</button></div></div>';
+    el.addEventListener("click", function (e) { if (e.target === el || e.target.closest("[data-t]")) el.remove(); });
+    document.body.appendChild(el);
   }
 
   /* ---------- Teacher Guide（2026-10-04）＝作らない。出す。（02_残り4つの設計 §2） ----------

@@ -749,3 +749,4 @@ rt { font-size: .5em; color: #2E4A7A; font-weight: 700; line-height: 1; }
 .tour-btns { display: grid; grid-template-columns: 1fr 1.4fr; gap: 10px; }
 .tour-btns .btn { min-height: 52px; font-size: 16px; }
 .tour-q { font-weight: 800; min-width: 36px; }
+.qr-img { width: min(300px, 70vw); height: auto; image-rendering: pixelated; display: block; margin: 8px auto; }
