@@ -5,4 +5,4 @@ window.OUKA_ONLINE_CONFIG = {
   ivLayerUrl: "https://script.google.com/macros/s/AKfycbzgJQbxay-XaL5QnzBF4qRHDEq-gF6DnU-OQcmWPAsns-HtBCmeckRtItGWQihBuegtqg/exec"
 };
 window.OUKA_ONLINE_CONFIG.appVersion = "1da85cc2bf";
-window.OUKA_ONLINE_CONFIG.build = "09dd25a02c";
+window.OUKA_ONLINE_CONFIG.build = "1cf57236d9";

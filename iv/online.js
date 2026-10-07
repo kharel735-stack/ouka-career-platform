@@ -377,7 +377,7 @@
       if (!res || !res.ok) throw new Error(msgOf(res));
       var bin = atob(res.data), buf = new Uint8Array(bin.length);
       for (var i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
-      matCache[file] = URL.createObjectURL(new Blob([buf], { type: res.type || "application/pdf" }));
+      matCache[file] = URL.createObjectURL(new Blob([buf], { type: /\.mp4$/i.test(file) ? "video/mp4" : (res.type || "application/pdf") }));   /* 動画（先生用）も同じ口で届く */
       done(matCache[file]);
     }).catch(function (err) {
       if (w) w.document.body.innerHTML = '<p style="font:16px sans-serif;padding:24px">開けませんでした：' +
