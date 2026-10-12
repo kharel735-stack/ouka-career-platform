@@ -1,0 +1,12 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="robots" content="noindex">
+<title>Connecting… | OUKA SNS Tool</title></head>
+<body style="font-family:-apple-system,Helvetica,Arial,sans-serif;max-width:640px;margin:40px auto;padding:0 16px;color:#12294B">
+<h1 style="font-size:22px">OUKA SNS Tool</h1>
+<p id="m">Returning to OUKA SNS Tool on this computer…</p>
+<p style="color:#5b6b85;font-size:14px">If nothing happens, please start OUKA SNS Tool on the office computer and try “Connect TikTok” again.</p>
+<script>
+// TikTok からの戻り先。コードは画面に出さず、このPCで動いている OUKA SNS Tool（localhost）へそのまま渡す
+var q = location.search || "";
+if (/[?&](code|error)=/.test(q)) { location.replace("http://localhost:8790/callback/" + q); }
+else { document.getElementById("m").textContent = "This page is used only when connecting TikTok to OUKA SNS Tool."; }
+</script></body></html>
