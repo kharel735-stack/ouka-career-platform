@@ -1,0 +1,10 @@
+{
+ "name": "さくら先生の ネパール語",
+ "short_name": "ネパール語",
+ "start_url": "./#/nepali/learn",
+ "scope": "./",
+ "display": "standalone",
+ "background_color": "#ffffff",
+ "theme_color": "#12294B",
+ "lang": "ja"
+}

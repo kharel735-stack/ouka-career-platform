@@ -1002,6 +1002,7 @@
         { key: "report", label: "報告を送る", note: "生徒のこと・授業のこと・直してほしい所を書いて送る（Claudeが読んで、直すか代表に聞くか決める）" },
         { key: "study", label: "先生の勉強", note: "先生が自分で日本語を勉強する本（N5→N1・雑学・漢字・教え方メモ）" },
         { key: "nepali", label: "ネパール語を学ぶ（さくら先生・試作）", note: "日本人向け。ネパール語ゼロから、さくら先生と 聞いて・まねして・言う（あいさつ・数字・教室・命を守ることば）" },
+        { key: "nepali_answer", label: "ネパール語の質問に答える", note: "ネパール語を学ぶ人から来た「わからない」に答える（オンライン版）" },
         { key: "guide", label: "Teacher Guide", note: "教え方・板書・つまずきへの対応（SOP/教師授業マニュアル を入れる予定）" },
         { key: "assign", label: "宿題を出す", note: "クラス・生徒を選んで宿題を割り当てる" },
         { key: "inbox", label: "提出物確認", note: "誰が出した・出していないかの一覧" },
@@ -1012,10 +1013,11 @@
       ]
     }
   };  /* AIの授業（試作）は データ（声つき）がある時だけ入口を出す＝いまは学校のMac版だけ */
-  HUBS.teacher.items = HUBS.teacher.items.filter(function (it) { return it.key !== "nepali" || window.OUKA_AI_NEPALI; });
+  HUBS.teacher.items = HUBS.teacher.items.filter(function (it) { return (it.key !== "nepali" || window.OUKA_AI_NEPALI) && (it.key !== "nepali_answer" || ONLINE); });
   /* ネパール語を学ぶ人（日本人）＝画面は日本語だけ（2026-10-04 代表「ネパール語を勉強したい人は ネパール語の生徒画面」） */
   HUBS.nepali = { title: "ネパール語の勉強", icon: "▶", items: [
-    { key: "learn", label: "さくら先生の ネパール語", note: "N1 あいさつ から。聞いて・まねして・言う。1回 10分くらい" }
+    { key: "learn", label: "さくら先生の ネパール語", note: "N1 あいさつ から。聞いて・まねして・言う。1回 10分くらい" },
+    { key: "qa", label: "❓ 質問と答え", note: "わからない所を 送ると、先生が 答えます" }
   ] };
   if (!(window.OUKA_AI_NEPALI) || !ONLINE) delete HUBS.nepali;   /* 学校のMac版は 先生メニューの「ネパール語」から入る（入口の区画を増やさない） */
   /* はじめての人の入口（試作・承認前）は 学校のMac版だけ（オンラインの生徒には まだ出さない） */
@@ -1153,7 +1155,7 @@
   }
   var LIVE = { "teacher/guide": 1, "teacher/assign": 1, "nepali/learn": 1, "student/start": 1, "student/ai": 1, "teacher/report": 1, "teacher/today": 1, "teacher/materials": 1, "student/today": 1, "student/drill": 1, "student/homework": 1,
     "student/media": 1, "student/emergency": 1, "student/submit": 1, "student/speak": 1, "teacher/inbox": 1,
-    "teacher/study": 1, "student/history": 1, "teacher/grade": 1, "teacher/photos": 1, "teacher/voices": 1, "teacher/nepali": 1 };
+    "teacher/study": 1, "student/history": 1, "teacher/grade": 1, "teacher/photos": 1, "teacher/voices": 1, "teacher/nepali": 1, "nepali/qa": 1, "teacher/nepali_qa": 1, "teacher/nepali_answer": 1 };
   var MAT_BASE = "materials/";
 
   function dayCount() { return LESSONS ? LESSONS.days.length : 0; }
@@ -1537,6 +1539,8 @@
     asAll().forEach(function (r) { if (String(r.who || "").trim()) out.push(asRecord(r)); });
     /* 生徒の声（2026-10-04）＝押した気持ちと理由（文は 書いた人だけ） */
     readJSON(FB_KEY, []).forEach(function (r) { if (String(r.who || "").trim()) out.push(fbRecord(r)); });
+    /* ネパール語の質問（2026-10-10）＝読んで 答えるために送る文なので、本文も送る */
+    nqAll().forEach(function (r) { if (String(r.who || "").trim()) out.push(nqRecord(r)); });
     /* 先生の報告（2026-10-02）＝読むために送る文なので、本文も送る */
     rpAll().forEach(function (r) { if (String(r.who || "").trim()) out.push(rpRecord(r)); });
     var gall = grAll();
@@ -3022,13 +3026,21 @@
       return '<div class="ai-les' + (st ? " is-" + st : "") + '"><div class="ai-les-t"><b>' + esc(l.id) + "</b> " + esc(l.title.replace(l.id + " ", "")) +
         '<span class="muted small">' + esc(l.title_ne || "") + "</span></div>" +
         (st === "mid" ? '<button class="btn btn-primary" data-act="ai-resume" data-l="' + esc(l.id) + '">' + esc(u.resume) + "</button>" : "") +
-        '<button class="btn' + (st ? "" : " btn-primary") + '" data-act="ai-start" data-l="' + esc(l.id) + '">' + esc(st === "done" ? u.again_done : u.start) + "</button></div>";
+        '<button class="btn' + (st ? "" : " btn-primary") + '" data-act="ai-start" data-l="' + esc(l.id) + '">' + esc(st === "done" ? u.again_done : st === "mid" ? "↺ 最初から" : u.start) + "</button></div>";
     }).join("");
     view.innerHTML = '<section class="lesson hw2 ai"><div class="ai-start"><div class="ai-em">🧑‍🏫</div>' +
       "<h1>" + esc(AIL.teacher.name) + "</h1>" + '<p class="ai-goal"><b>' + esc(u.title) + "</b><br>" + u.goal + "</p>" +
+      '<button class="btn hw-wide ai-mute-sw' + (aiMute() ? " is-on" : "") + '" data-act="ai-mute">' + (aiMute() ? "🔇 音なしモード：オン（押すと 音あり）" : "🔈 音なしモードに する（電車の中など）") + "</button>" +
       (next ? '<button class="btn btn-primary btn-xl hw-wide" data-act="ai-start" data-l="' + esc(next.id) + '">' + esc(next.id) + esc(u.start_next) + "</button>" : "") +
-      '<div class="ai-les-list">' + rows + "</div>" + '<p class="muted small">' + esc(u.note) + "</p></div></section>";
+      '<a class="btn hw-wide" href="' + nqHome() + '">❓ 質問と答え（わからない所を 先生に きく）</a>' +
+      '<div class="ai-les-list">' + rows + "</div>" +
+      '<button class="btn hw-wide ai-reset" data-act="ai-reset">↺ 進み具合を ぜんぶ リセット（この端末）</button>' +
+      '<p class="muted small">' + esc(u.note) + "</p></div></section>";
   }
+  /* 2026-10-08 試作：音なしモード（要望「電車の中でも イヤホンなしで」）。ネパール語版だけ。
+   * 声を流さず、字を読む時間だけ待って 進む。録音の場面は「心の中で 言って 次へ」にする（声は出せない前提）。
+   * 記録の「言えた回数」には 数えない（言っていないので）。 */
+  function aiMute() { return AI_MODE === "ne" && readJSON("ouka_ai_mute", false) === true; }
   var AI_LANG_MARK = { ne: "नेपाली", en: "English", ja: "日本語" };
   function aiAudioEl() { if (!AI_AUDIO) { AI_AUDIO = new Audio(); AI_AUDIO.preload = "auto"; } return AI_AUDIO; }
   /* 声の並び（[[lang,text],…]）を 順に話す。話している所は 画面で 光る */
@@ -3041,7 +3053,8 @@
       if (i >= seg.length) { AIS.speaking = false; AIS.segAt = -1; aiRefresh(); if (then) then(); return; }
       AIS.segAt = i; aiMark();
       var s = seg[i++], f = AIL.audio[s[0] + "|" + s[1]], a = aiAudioEl();
-      if (readJSON("ouka_ai_fast", false)) { setTimeout(step, 20); return; }   /* 自動テストの時だけ 声を飛ばす（声のファイルは テストが別に確かめる） */
+      if (readJSON("ouka_ai_fast", false)) { setTimeout(step, 20); return; }
+      if (aiMute()) { setTimeout(step, Math.min(2600, 700 + String(s[1]).length * 70)); return; }   /* 音なし＝読む時間だけ 待つ */   /* 自動テストの時だけ 声を飛ばす（声のファイルは テストが別に確かめる） */
       if (!f) { if (s[0] === "ja") hwSpeak(s[1]); setTimeout(step, 900); return; }
       a.onended = step; a.onerror = function () { setTimeout(step, 300); };
       a.src = AIL.audio_base + f;
@@ -3079,7 +3092,9 @@
   }
   /* 書き順の図（KanjiVG の 109×109）。upto＝何本目まで濃く出すか、num＝番号を出すか */
   function aiKanaSvg(b, upto, cls) {
-    return '<svg class="ai-kana ' + (cls || "") + '" viewBox="0 0 109 109">' +
+    /* 2026-10-12 本物の字（b.glyph）の上を 1画ずつ なぞっていく（先生が パーツを 押して 決めた 書き順） */
+    return '<svg class="ai-kana ' + (b.glyph ? "is-glyph " : "") + (cls || "") + '" viewBox="0 0 109 109">' +
+      (b.glyph ? '<path class="glyph" d="' + b.glyph + '"/>' : "") +
       b.paths.map(function (d, k) {
         return '<path d="' + d + '" class="' + (k < upto ? "on" : "off") + (k === upto - 1 ? " now" : "") + '" data-k="' + k + '"/>';
       }).join("") +
@@ -3117,7 +3132,9 @@
     }
     if (AIS.finished) return aiFinish();
     var sc = AIC.scenes[AIS.si], b = aiBeat(), tot = AIC.scenes.length;
-    var head = '<div class="ai-top"><span class="ai-step">' + esc(sc.icon) + " " + esc(sc.step) + '</span><span class="hw-cnt">' + (AIS.si + 1) + " / " + tot + "</span></div>" +
+    var head = '<div class="ai-top"><span class="ai-step">' + esc(sc.icon) + " " + esc(sc.step) + '</span>' +
+      (AI_MODE === "ne" && studentName() ? '<button class="btn btn-sm nq-btn" data-act="nq-open">❓ 質問</button>' : "") +
+      '<span class="hw-cnt">' + (AIS.si + 1) + " / " + tot + "</span></div>" +
       '<div class="hw-bar"><i style="width:' + Math.round(AIS.si / tot * 100) + '%"></i></div>';
     var wait = AIS.speaking ? ' disabled data-wait="1"' : "";
     var next = function (ok, label) {
@@ -3130,12 +3147,16 @@
     } else if (b.t === "stroke") {
       body += aiSegHtml(b.intro.concat(AIS.strokeAt > 0 ? b.count[AIS.strokeAt - 1] : []), b.en) + "</div>" +
         aiKanaSvg(b, AIS.strokeAt, "ai-anim") +
-        '<button class="btn hw-wide" data-act="ai-replay">🔁 फेरि हेर ／ Watch again</button>' + next(AIS.strokeAt >= b.paths.length);
+        '<button class="btn hw-wide" data-act="ai-replay">' + (AI_MODE === "ne" ? "🔁 もう一度 見る" : "🔁 फेरि हेर ／ Watch again") + "</button>" + next(AIS.strokeAt >= b.paths.length);
     } else if (b.t === "trace") {
       body += aiSegHtml(b.seg, b.en) + "</div>" +
         '<div class="ai-trace-wrap">' + aiKanaSvg(b, 0, "ai-ghost2") + '<canvas id="aiCv" width="300" height="300"></canvas></div>' +
-        '<div class="ai-ctl"><button class="btn" data-act="ai-clear">मेटाऊ ／ Clear</button><button class="btn" data-act="ai-showorder">लेख्ने क्रम ／ Order</button></div>' +
-        next(AIS.ink > 40, "लेखें ▶ Done");
+        '<div class="ai-ctl"><button class="btn" data-act="ai-clear">' + (AI_MODE === "ne" ? "消す" : "मेटाऊ ／ Clear") + '</button><button class="btn" data-act="ai-showorder">' + (AI_MODE === "ne" ? "書き順" : "लेख्ने क्रम ／ Order") + "</button></div>" +
+        next(AIS.ink > 40, AI_MODE === "ne" ? "書けた ▶" : "लेखें ▶ Done");
+    } else if (b.t === "record" && aiMute()) {
+      body += aiSegHtml(b.seg, b.en) + "</div>" + '<div class="ai-big' + (b.sub ? " ai-dev" : "") + '">' + esc(b.ja) + "</div>" +
+        (b.sub ? '<div class="ai-kana-read">' + esc(b.sub) + "</div>" : "") +
+        '<div class="ai-compare">🔇 音なしモード：心の中で 3回 言ってから「次へ」。<br><small>声を出せる所では 音ありに して 録音してみてください。</small></div>' + next(true);
     } else if (b.t === "record") {
       var t = AIS.takes[AIS.si + "|" + AIS.bi] || [];
       body += aiSegHtml(b.seg, b.en) + "</div>" + '<div class="ai-big' + (b.sub ? " ai-dev" : "") + '">' + esc(b.ja) + "</div>" +
@@ -3144,17 +3165,49 @@
           (AIS.recording ? aiT("stop") : aiT("rec")) + "</button>" +
         (AIS.recording ? '<div class="ai-meter"><i id="aiMeter"></i></div>' : "") +
         (AIS.noVoice ? '<div class="ai-novoice">' + esc(aiT("novoice")) + "</div>" : "") +
+        (AI_MODE === "ne" && t.length && !AIS.noVoice ? '<div class="ai-compare">🔊 お手本 → 🎙️ あなたの声。同じに 聞こえますか？<br><small>ちがったら もう一度 録音。アプリは 正しいか どうかを 判定していません。</small></div>' : "") +
         t.map(function (u, k) { return '<div class="hw-take"><span>' + (k + 1) + "</span><audio controls src=\"" + u + '"></audio></div>'; }).join("") +
-        next(t.length >= (b.need || 1) && !AIS.recording);
+        next(t.length >= (b.need || 1) && !AIS.recording) +
+        (AI_MODE === "ne" && t.length < (b.need || 1) && !AIS.recording ? '<button class="btn hw-wide ai-skip" data-act="ai-next">とばす ▶<small>（言えた回数には 数えません）</small></button>' : "");
     } else if (b.t === "nword") {   /* ネパール語の ことば：大きい字＋カタカナ読み＋ローマ字＋意味 */
       body += aiSegHtml([["ne", b.ne], ["ja", b.ja]]) + "</div>" + '<div class="ai-big ai-dev">' + esc(b.ne) + "</div>" +
         '<div class="ai-kana-read">' + esc(b.kana) + " <small>" + esc(b.roma) + "</small></div>" +
-        '<div class="ai-mean">' + esc(b.ja) + "</div>" + again + next(true);
+        '<div class="ai-mean">' + esc(b.ja) + "</div>" +
+        /* 2026-10-12 代表「先生が 実際に やってみせる 動画が 見れる欄」＝撮った物だけ 出す。無い時は 無いと 書く（動くふりを しない） */
+        (b.video ? '<video class="ai-video" src="' + esc(b.video) + '" controls playsinline preload="none"></video>'
+                 : '<div class="ai-video-none">🎬 先生が やってみせる 動画：じゅんび中</div>') +
+        again + next(true);
+    } else if (b.t === "parts") {   /* 2026-10-06 試作：ことばの 分解（部品ごとの 意味）＋ 同じ部品で 作れる ほかの文 */
+      body += aiSegHtml([["ja", "ことばを 分けてみよう"]], b.en) + "</div>" +
+        '<div class="ai-parts-src ai-dev">' + esc(b.ne) + '<small>' + esc(b.ja) + "</small></div>" +
+        '<div class="ai-parts">' + b.parts.map(function (x) {
+          return '<div class="ai-part"><b class="ai-dev">' + esc(x.ne) + "</b><span>" + esc(x.kana) + "</span><i>" + esc(x.ja) + "</i></div>";
+        }).join('<div class="ai-plus">＋</div>') + "</div>" +
+        '<div class="ai-uses-h">同じ 形で ほかにも 言えます</div><div class="ai-uses">' + b.uses.map(function (u, k) {
+          return '<button class="ai-use" data-act="ai-sayne" data-k="' + k + '"><span class="ai-dev">🔊 ' + esc(u.ne) + "</span><small>" + esc(u.kana) + "</small><i>" + esc(u.ja) + "</i></button>";
+        }).join("") + "</div>" + again + next(true);
     } else if (b.t === "word") {
       body += aiSegHtml([["ja", b.ja], ["ne", b.ne]]) + "</div>" + '<div class="ai-big">' + esc(b.ja) + "</div>" + again + next(true);
+    } else if (b.t === "pick" && AI_MODE === "ne") {   /* 2026-10-09 試作：クイズ番組ふう（代表「NHKのクイズ番組みたいに 色とキャラ」） */
+      var qs = [], qi = 0;
+      AIC.scenes.forEach(function (sc, si) { sc.beats.forEach(function (bb, bi) { if (bb.t === "pick") { if (si === AIS.si && bi === AIS.bi) qi = qs.length; qs.push(1); } }); });
+      var ans = AIS.picked != null, hit = ans && b.choices[AIS.picked] === b.answer;
+      body += aiSegHtml(b.play) + "</div>" +
+        '<div class="qs-stage' + (ans ? (hit ? " is-hit" : " is-miss") : "") + '">' +
+          '<div class="qs-top"><span class="qs-no">第' + (qi + 1) + "問</span><span class=\"qs-score\">⭐ " + AIS.test + " / " + AIS.testTotal +
+            (AIS.combo > 1 ? '　<b class="qs-combo">🔥' + AIS.combo + "連続！</b>" : "") + "</span></div>" +
+          '<div class="qs-q ai-dev">' + esc((b.play && b.play[0] && b.play[0][1]) || "") +
+            (b.kana ? '<small class="qs-kana">' + esc(b.kana) + "</small>" : "") + "</div>" +   /* 2026-10-12 代表「読めない人がいる」＝読み方を 必ず 下に */
+          '<div class="qs-host">' +   /* 2026-10-12 司会の キャラ（代表の絵）は 外した＝キャラは 使わない */
+            '<div class="qs-bubble">' + (!ans ? ((b.play && b.play[0] && String(b.play[0][1]).length <= 3) ? "この 字の 読み方は？" : "この ことばの 意味は？") : hit ? "⭕ 正解！ すごい！" : "❌ ざんねん！ 正解は「" + esc(b.answer) + "」") + "</div></div>" +
+          again +
+          '<div class="qs-choices' + (b.ne ? " is-ne" : "") + '">' + b.choices.map(function (c, k) {
+            var cls = !ans ? "" : (c === b.answer ? " ok" : (k === AIS.picked ? " ng" : " off"));
+            return '<button class="qs-btn qs-c' + k + cls + '" data-act="ai-pick" data-k="' + k + '"' + (ans ? " disabled" : "") + '><span class="qs-mark">' + "ABC".charAt(k) + "</span>" + esc(c) + "</button>";
+          }).join("") + "</div></div>" + (ans ? next(true) : "");
     } else if (b.t === "pick") {
       body += aiSegHtml(b.play) + "</div>" + again +
-        '<div class="ai-choices' + (b.ne ? " is-ne" : "") + '">' + b.choices.map(function (c, k) {
+        '<div class="ai-choices' + (b.ne ? " is-ne" : "") + (AI_MODE === "ne" && !b.ne ? " is-mean" : "") + '">' + b.choices.map(function (c, k) {
           var cls = AIS.picked == null ? "" : (c === b.answer ? " ok" : (k === AIS.picked ? " ng" : ""));
           return '<button class="ai-choice' + cls + '" data-act="ai-pick" data-k="' + k + '"' + (AIS.picked != null ? " disabled" : "") + ">" + esc(c) + "</button>";
         }).join("") + "</div>" + (AIS.picked != null ? next(true) : "");
@@ -3212,7 +3265,7 @@
     AIS.picked = null; AIS.ink = 0; AIS.noVoice = false;
     if (b.t === "stroke") return aiStrokeRun();
     var seg = b.t === "say" ? b.seg : b.t === "word" ? [["ja", b.ja], ["ne", b.ne], ["ja", b.ja]] : b.t === "nword" ? [["ne", b.ne], ["ja", b.ja], ["ne", b.ne]] : b.t === "pick" ? b.play : b.seg;
-    aiPlay(seg, b.t === "say" || b.t === "word" || b.t === "nword" ? function () { aiAuto(700); } : null);
+    aiPlay(seg, b.t === "say" || b.t === "word" || b.t === "nword" ? function () { aiAuto(700); } : null);   /* 分解（parts）は 自分で 読んで 押してから 次へ＝自動で 進めない */
     render();
   }
   function aiForward() {
@@ -3268,6 +3321,7 @@
         /* 測れない端末（部品が止まったまま等）では 数える＝声を出した生徒を 止めない（何と言ったかは 先生が録音を聞く）。★閉じる前に 判定する */
         var heard = an && actx && actx.state === "running" ? voiced >= 300 : true;
         stream.getTracks().forEach(function (t) { t.stop(); }); if (actx) actx.close();
+        if (!AIS) return;   /* 録音中に 授業を とじた（2026-10-08 テストで 見つかった：画面のエラーで 落ちていた） */
         AIS.recording = false;
         if (chunks.length && heard) {
           (AIS.takes[key] = AIS.takes[key] || []).push(URL.createObjectURL(new Blob(chunks, { type: mr.mimeType || "audio/webm" })));
@@ -3275,8 +3329,17 @@
         } else AIS.noVoice = true;
         render();
         if (heard && chunks.length) {
-          var bb = aiBeat(), tk = AIS.takes[key] || [];
-          aiPlay(aiOk(), tk.length >= ((bb && bb.need) || 1) ? function () { aiAuto(500); } : null);
+          var bb = aiBeat(), tk = AIS.takes[key] || [], enough = tk.length >= ((bb && bb.need) || 1);
+          /* 2026-10-05 代表「いいですね って 誰が検証してるの」＝声の大きさしか 見ていない＝ほめない。
+           * ネパール語版は お手本 → 自分の声 を 続けて流し、同じに 聞こえるかを 本人が 比べる（正しいかは アプリは 決めない） */
+          if (AI_MODE === "ne" && bb && bb.ja) {
+            AIS.compare = true;
+            aiPlay([["ne", bb.ja]], function () {
+              var a = new Audio(tk[tk.length - 1]);
+              a.onended = a.onerror = function () { if (enough) aiAuto(800); };
+              a.play().catch(function () { if (enough) aiAuto(800); });
+            });
+          } else aiPlay(aiOk(), enough ? function () { aiAuto(500); } : null);
         }
       };
       mr.start(); AIS.recording = true; render(); meter();
@@ -3285,6 +3348,19 @@
   }
 
   /* ほめる声（ネパール語版は 回ごとに変わる＝「राम्रो」を 教えた後は ネパール語でほめる） */
+  function aiChime() {
+    try {
+      var c = new (window.AudioContext || window.webkitAudioContext)(), t = c.currentTime;
+      [[880, 0], [1320, 0.12]].forEach(function (n) {
+        var o = c.createOscillator(), g = c.createGain();
+        o.frequency.value = n[0]; o.connect(g); g.connect(c.destination);
+        g.gain.setValueAtTime(0.0001, t + n[1]); g.gain.exponentialRampToValueAtTime(0.25, t + n[1] + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + n[1] + 0.35);
+        o.start(t + n[1]); o.stop(t + n[1] + 0.4);
+      });
+      setTimeout(function () { if (c.close) c.close(); }, 800);
+    } catch (e) { /* 音が出せない端末は 色だけ */ }
+  }
   function aiOk() { return (AIC && AIC.ok) || AIL.ok || [["ja", "いい"]]; }
   function aiAct(act, el) {
     if (act === "ai-list") { aiStop(); AIS = null; render(); return true; }
@@ -3298,12 +3374,22 @@
       aiAudioEl().play().catch(function () { /* 音を出す許可を ここで取る */ });
       aiEnterBeat(); return true;
     }
+    if (act === "ai-mute") { writeJSON("ouka_ai_mute", !aiMute()); render(); return true; }   /* 一覧の画面で 押す（授業の前） */
+    if (act === "ai-reset") {   /* 2026-10-09 代表「リセットはできない？」＝この端末の 進み具合だけ 消す（送った 記録は 消えない） */
+      if (window.confirm("この端末の 進み具合（つづき・✓）を ぜんぶ 消して、最初からに しますか？\n（先生・代表に 送った 記録は 消えません）")) {
+        var pre = (studentName() || "（なまえなし）") + "|", all = readJSON(AI_KEY, {});   /* この人の 分だけ（共用の端末でも ほかの人の 進み具合は 消さない） */
+        Object.keys(all).forEach(function (k) { if (k.indexOf(pre) === 0) delete all[k]; });
+        writeJSON(AI_KEY, all); toast("リセットしました"); render();
+      }
+      return true;
+    }
     if (!AIS) return false;
     var b = aiBeat();
     if (act === "ai-quit") { aiStop(); aiSave(); AIS = null; go(aiT("back")); return true; }
     if (act === "ai-replay") { if (b.t === "stroke") aiStrokeRun(); else aiEnterBeat(); return true; }
     if (act === "ai-showorder") { var keep = AIS.ink; AIS.strokeAt = 0; aiStrokeRunTrace(b, keep); return true; }
     if (act === "ai-rec") { aiRecToggle(); return true; }
+    if (act === "ai-sayne" && b.uses) { var u = b.uses[parseInt(el.getAttribute("data-k"), 10)]; if (u) { aiStop(); aiPlay([["ne", u.ne], ["ja", u.ja]], null); } return true; }
     if (act === "ai-pause") {
       AIS.paused = !AIS.paused;
       if (AIS.paused) aiStop(); else if ((b.t === "say" || b.t === "word" || b.t === "nword") && !AIS.speaking) aiForward();
@@ -3314,7 +3400,10 @@
       AIS.picked = parseInt(el.getAttribute("data-k"), 10);
       var ok = b.choices[AIS.picked] === b.answer;
       AIS.testTotal++; if (ok) AIS.test++;
-      aiPlay(ok ? aiOk() : (AIL.ng || [["ne", "होइन, सही उत्तर："]]).concat(b.ne ? [] : b.play), function () { aiAuto(ok ? 600 : 1200); });
+      AIS.combo = ok ? (AIS.combo || 0) + 1 : 0;   /* クイズ番組ふう：連続正解 */
+      /* ネパール語版は 正解の時 声でほめない＝「ピンポン」だけ（代表 2026-10-05「いいですね が イライラする」） */
+      if (ok && AI_MODE === "ne") { aiChime(); aiAuto(900); }
+      else aiPlay(ok ? aiOk() : (AIL.ng || [["ne", "होइन, सही उत्तर："]]).concat(b.ne ? [] : b.play), function () { aiAuto(ok ? 600 : 1200); });
       render(); return true;
     }
     if (act === "ai-next") {
@@ -3516,6 +3605,175 @@
   }
   function fbRecord(r) {
     return { type: "feedback", who: r.who, no: r.no, id: r.id, where: r.where, day: r.day, mood: r.mood, tags: r.tags, text: r.text, saved_at: r.saved_at };
+  }
+
+  /* ---------- ネパール語の質問と答え（2026-10-10 代表「わからない所を出してもらい、我々が答える。おいおいは オンライン授業へ」） ----------
+   * 学ぶ人：授業の画面の「❓ 質問」→ どの授業の どの場面か・画面のことばは 自動で付く → 書いて送る。答えは「質問と答え」に出る。
+   * 答える人（先生・代表・校長）：「ネパール語の質問に答える」で まだの質問に 答えを書く（Claude は _tools/ネパール語の質問.py から 下書き）。
+   * ★届く先＝「OUKA_会話面接結果」の「ネパール語の質問」「ネパール語の答え」タブ。学ぶ人が見られるのは 自分の質問と 答えだけ。
+   * ★オンライン版は 受け口が「質問を受け取れる」と言った時だけ送る（古い受け口に送って ほかの記録まで 止めない）。 */
+  var NQ_KEY = "ouka_nepali_q_v1";
+  var NQ_CHIPS = ["発音が わからない", "意味が わからない", "いつ 使う？（ていねい・ふつう）", "文字の 読み方", "ほかの 言い方は？"];
+  var NQ_FORM = null;      /* いま書いている質問 { where, word, text } */
+  var NQ_REMOTE = null;    /* 受け口から読んだ { questions, answers } */
+  var NQ_LOADING = false;
+  function nqAll() { return readJSON(NQ_KEY, []); }
+  function nqPut(list) { return writeJSON(NQ_KEY, list); }
+  function nqRecord(r) { return { type: "nq", who: r.who, no: r.no, id: r.id, where: r.where, word: r.word, text: r.text, saved_at: r.saved_at }; }
+  function nqHome() { return route().hub === "nepali" ? "#/nepali/qa" : "#/teacher/nepali_qa"; }
+  /* 授業の中で 押した時＝いまの 回・場面・画面のことば を付ける */
+  function nqWhere() {
+    if (!AIC || !AIS || AIS.finished) return { where: "", word: "" };
+    var sc = AIC.scenes[AIS.si], b = aiBeat() || {};
+    return { where: (AIC.title || AIC.id) + "　" + (AIS.si + 1) + "/" + AIC.scenes.length + (sc && sc.step ? "（" + sc.step + "）" : ""),
+             word: String(b.ne || b.ja || "").slice(0, 120) };
+  }
+  function nqFormHtml() {
+    return '<div class="fb nq">' +
+      '<div class="fb-q">❓ 質問する <span>わからない所を 書いてください（日本語で OK）</span></div>' +
+      (NQ_FORM.where ? '<div class="fb-where">' + esc(NQ_FORM.where) + (NQ_FORM.word ? "　<b>" + esc(NQ_FORM.word) + "</b>" : "") + "</div>" : "") +
+      '<div class="fb-tags">' + NQ_CHIPS.map(function (c, i) {
+        return '<button class="fb-tag" data-act="nq-chip" data-i="' + i + '">' + esc(c) + "</button>";
+      }).join("") + "</div>" +
+      '<textarea id="nqText" rows="4" placeholder="例：「नमस्ते」は 夜も 使えますか？">' + esc(NQ_FORM.text) + "</textarea>" +
+      '<button class="btn btn-primary btn-xl hw-wide" data-act="nq-send">送る</button>' +
+      '<p class="muted small">先生が 答えます。答えは「質問と答え」に 出ます（すぐには 出ません）。</p></div>';
+  }
+  function nqOpen() {
+    var w = nqWhere();
+    NQ_FORM = { where: w.where, word: w.word, text: "" };
+    openModal(nqFormHtml());
+    var t = document.getElementById("nqText");
+    if (t) t.addEventListener("input", function () { NQ_FORM.text = t.value; });
+  }
+  function nqChip(i) {
+    var t = document.getElementById("nqText"); if (!t || !NQ_CHIPS[i]) return;
+    t.value = (t.value ? t.value.replace(/\s+$/, "") + "\n" : "") + NQ_CHIPS[i] + "：";
+    NQ_FORM.text = t.value; t.focus();
+  }
+  function nqSend() {
+    if (!NQ_FORM) return;
+    var t = document.getElementById("nqText"); if (t) NQ_FORM.text = t.value;
+    var text = String(NQ_FORM.text || "").trim();
+    if (!text) { toast("質問を 書いてください"); return; }
+    var now = Date.now(), list = nqAll();
+    list.push({ id: "Q-" + now + "-" + Math.random().toString(36).slice(2, 6), no: now, who: studentName() || "",
+      where: NQ_FORM.where.slice(0, 120), word: NQ_FORM.word.slice(0, 120), text: text.slice(0, 1000),
+      saved_at: new Date(now).toISOString(), sent_at: "" });
+    if (!nqPut(list)) return;
+    NQ_FORM = null; NQ_REMOTE = null;
+    modal.querySelector(".modal-box").innerHTML = '<div class="fb fb-thanks"><div class="fb-ic">🙏</div><b>送りました</b><span>先生が 答えます。答えは「質問と答え」に 出ます。</span>' +
+      '<button class="btn btn-primary btn-xl hw-wide" data-act="close-modal">OK</button></div>';
+    if (SYNC_ON && !ONLINE) nqSendLocal();
+  }
+  /* 学校のMac版＝その場で スプレッドシートへ（オンライン版は 自動送信が 送る） */
+  function nqSendLocal() {
+    var todo = nqAll().filter(function (r) { return !r.sent_at && r.who; });
+    if (!todo.length) return;
+    fetch(CONFIG.sync_url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ token: CONFIG.sync_token, kind: "study", records: todo.map(nqRecord) }) })
+      .then(function (r) { return r.json(); }).then(function (out) {
+        if (!out || !out.ok) return;
+        var ids = {}; todo.forEach(function (r) { ids[r.id] = 1; });
+        var at = new Date().toISOString();
+        nqPut(nqAll().map(function (r) { if (ids[r.id]) r.sent_at = at; return r; }));
+      }).catch(function () { /* 送れなくても 端末に残る（次に 送る） */ });
+  }
+  /* 受け口から 質問と答えを読む（オンライン＝自分の分だけ届く／ローカル＝合言葉で読み、自分の分だけ出す） */
+  function nqLoad() {
+    if (NQ_LOADING || NQ_REMOTE) return;
+    var p = null;
+    if (ONLINE && ONLINE.api) p = ONLINE.api("nq_list", {});
+    else if (SYNC_ON) p = fetch(CONFIG.sync_url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ token: CONFIG.sync_token, kind: "nq_list" }) }).then(function (r) { return r.json(); });
+    if (!p) return;
+    NQ_LOADING = true;
+    p.then(function (res) {
+      NQ_LOADING = false;
+      if (!res || !res.ok) return;
+      NQ_REMOTE = { questions: res.questions || [], answers: res.answers || [] };
+      var got = {}; NQ_REMOTE.questions.forEach(function (q) { got[q["質問ID"]] = 1; });
+      var at = new Date().toISOString(), ch = false;
+      var list = nqAll().map(function (r) { if (got[r.id] && !r.sent_at) { r.sent_at = at; ch = true; } return r; });
+      if (ch) nqPut(list);
+      var it = route().item;
+      if (it === "qa" || it === "nepali_qa" || it === "nepali_answer") render();
+    }, function () { NQ_LOADING = false; });
+  }
+  function nqAnsMap() { var m = {}; ((NQ_REMOTE && NQ_REMOTE.answers) || []).forEach(function (a) { m[a["質問ID"]] = a; }); return m; }
+  /* 学ぶ人：自分の質問と 答え */
+  function renderNepaliQa() {
+    headName.textContent = "さくら先生の ネパール語／質問と答え";
+    var name = studentName(), ans = nqAnsMap();
+    var mine = nqAll().filter(function (r) { return r.who === name; });
+    /* ほかの端末から 送った自分の質問（受け口にだけ ある）も 出す */
+    var have = {}; mine.forEach(function (r) { have[r.id] = 1; });
+    ((NQ_REMOTE && NQ_REMOTE.questions) || []).forEach(function (q) {
+      if (!have[q["質問ID"]] && String(q["学ぶ人"]) === name) mine.push({ id: q["質問ID"], where: q["どこ"], word: q["ことば"], text: q["質問"], saved_at: q["書いた日時"], sent_at: q["最終送信"], no: 0 });
+    });
+    mine.sort(function (a, b) { return String(b.saved_at) < String(a.saved_at) ? -1 : 1; });
+    var back = route().hub === "nepali" ? "#/nepali/learn" : "#/teacher/nepali";
+    view.innerHTML = '<section class="lesson hw2 rp">' +
+      '<div class="lesson-head"><h1>❓ 質問と答え</h1></div>' +
+      '<p class="muted">授業の 画面の <b>「❓ 質問」</b> から 送れます。ここからも 送れます。先生が 読んで 答えます。</p>' +
+      (name ? "" : '<div class="warn">名前が 入っていないので 送れません（ログインして 使ってください）</div>') +
+      '<button class="btn btn-primary btn-xl hw-wide" data-act="nq-open"' + (name ? "" : " disabled") + ">❓ 質問を 書く</button>" +
+      '<h2 class="hw-h">送った 質問</h2>' +
+      (mine.length ? mine.map(function (r) {
+        var a = ans[r.id];
+        var st = a && a["状態"] === "答えた" ? "" : a ? "先生が 調べています" :
+          r.sent_at ? "とどきました（まだ 答えていません）" : (ONLINE || SYNC_ON ? "まだ 送れていません（つながったら 送ります）" : "この たんまつに あります");
+        return '<div class="rp-item"><div class="rp-head">' + (r.where ? "<b>" + esc(r.where) + "</b>" : "<b>質問</b>") +
+          (r.word ? "　" + esc(r.word) : "") + '<span class="muted small">' + esc(jdate(r.saved_at)) + "</span></div>" +
+          '<div class="rp-text">' + esc(r.text) + "</div>" +
+          (st ? '<div class="rp-st">' + esc(st) + "</div>" : "") +
+          (a && a["状態"] === "答えた" ? '<div class="rp-reply"><b>答え</b>（' + esc(a["答えた人"]) + "）<br>" + esc(a["答え"]).replace(/\n/g, "<br>") + "</div>" : "") + "</div>";
+      }).join("") : '<div class="soon"><p>まだ ありません。</p></div>') +
+      '<a class="btn hw-wide" href="' + back + '">◀ 授業の 一覧へ</a></section>';
+    if (ONLINE && ONLINE.afterRender) ONLINE.afterRender(view);
+    nqLoad();
+  }
+  /* 答える人（先生・代表・校長）：まだの質問に 答えを書く。オンライン版だけ（学校のMacからは Claude の道具で） */
+  var NQ_DRAFT = {};
+  function renderNepaliAnswer() {
+    headName.textContent = "先生／ネパール語の質問に答える";
+    if (!ONLINE) {
+      view.innerHTML = '<section class="start"><div class="soon"><p><b>答えるのは オンライン版から です。</b></p>' +
+        "<p class='muted'>学校のMacでは Claude に「ネパール語の質問を見て」と言うと、下書きを作って 書き込みます。</p></div></section>";
+      return;
+    }
+    var ans = nqAnsMap(), qs = ((NQ_REMOTE && NQ_REMOTE.questions) || []).slice();
+    qs.sort(function (a, b) { var x = !!(ans[a["質問ID"]] && ans[a["質問ID"]]["状態"] === "答えた"), y = !!(ans[b["質問ID"]] && ans[b["質問ID"]]["状態"] === "答えた");
+      return x !== y ? (x ? 1 : -1) : String(a["書いた日時"]) < String(b["書いた日時"]) ? -1 : 1; });
+    var todo = qs.filter(function (q) { var a = ans[q["質問ID"]]; return !a || a["状態"] !== "答えた"; }).length;
+    view.innerHTML = '<section class="lesson hw2 rp">' +
+      '<div class="lesson-head"><h1>ネパール語の質問に答える</h1></div>' +
+      '<p class="muted">まだ 答えていない質問 <b>' + todo + "</b> 件 ／ ぜんぶ " + qs.length + " 件。" +
+        "<br>答えは やさしい日本語で 短く。ネパール語の 正しさに 自信が ない時は「調べています」に して、マドゥ先生に 確かめてから 答える。</p>" +
+      (NQ_REMOTE ? "" : '<div class="soon"><p>読みこんでいます…</p></div>') +
+      qs.map(function (q) {
+        var id = q["質問ID"], a = ans[id], done = a && a["状態"] === "答えた";
+        return '<div class="rp-item' + (done ? "" : " is-urgent") + '"><div class="rp-head"><b>' + esc(q["学ぶ人"]) + "</b>　" + esc(q["どこ"]) +
+          (q["ことば"] ? "　" + esc(q["ことば"]) : "") + '<span class="muted small">' + esc(jdate(q["書いた日時"])) + "</span></div>" +
+          '<div class="rp-text">' + esc(q["質問"]) + "</div>" +
+          '<textarea class="nq-ans" data-id="' + esc(id) + '" rows="3" placeholder="答えを 書く">' + esc(NQ_DRAFT[id] != null ? NQ_DRAFT[id] : (a ? a["答え"] : "")) + "</textarea>" +
+          '<div class="rp-row"><button class="btn btn-primary" data-act="nq-answer" data-id="' + esc(id) + '" data-st="答えた">答えを 送る</button>' +
+          '<button class="btn" data-act="nq-answer" data-id="' + esc(id) + '" data-st="調べています">調べています</button>' +
+          (a ? '<span class="muted small">いま：' + esc(a["状態"]) + "（" + esc(a["答えた人"]) + "）</span>" : "") + "</div></div>";
+      }).join("") + "</section>";
+    Array.prototype.forEach.call(view.querySelectorAll(".nq-ans"), function (el) {
+      el.addEventListener("input", function () { NQ_DRAFT[el.getAttribute("data-id")] = el.value; });
+    });
+    nqLoad();
+  }
+  function nqAnswer(id, state) {
+    if (!ONLINE || !ONLINE.api) return;
+    var el = view.querySelector('.nq-ans[data-id="' + id + '"]'), text = el ? el.value.trim() : "";
+    if (state === "答えた" && !text) { toast("答えを 書いてください"); return; }
+    ONLINE.api("nq_answer", { answers: [{ id: id, text: text, state: state }] }).then(function (res) {
+      if (!res || !res.ok) throw new Error((res && res.error) || "応答なし");
+      delete NQ_DRAFT[id]; NQ_REMOTE = null; toast(state === "答えた" ? "答えを 送りました" : "「調べています」に しました"); render();
+    }).catch(function (err) { toast("送れませんでした（" + err.message + "）"); });
   }
   /* 生徒の画面では いつも 上の帯に「🙋」＝わからない時に すぐ押せる。
      ★右下に浮かせると「提出する」「次へ」の上に重なって 押せなくなった（2026-10-04）＝上の帯に置く */
@@ -3825,6 +4083,8 @@
     if (k === "teacher/assign") return renderTeacherAssign(n);
     if (k === "student/ai") { aiUse("ja"); return renderAiLesson(); }
     if (k === "teacher/nepali" || k === "nepali/learn") { aiUse("ne"); return renderAiLesson(); }
+    if (k === "nepali/qa" || k === "teacher/nepali_qa") return renderNepaliQa();
+    if (k === "teacher/nepali_answer") return renderNepaliAnswer();
     if (k === "student/start") return renderBeginnerHome();
     if (k === "teacher/voices") return renderTeacherVoices();
   }
@@ -4558,6 +4818,7 @@
     if (r.cid && !c) { toast("候補者が見つかりません"); r = { name: "home" }; }
     document.body.setAttribute("data-screen", r.name);
     if (!(r.name === "soon" && r.item === "report")) RP_REMOTE = null;
+    if (!(r.name === "soon" && (r.item === "qa" || r.item === "nepali_qa" || r.item === "nepali_answer"))) NQ_REMOTE = null;   /* 質問と答えの画面に 入るたびに 読み直す */
     if (!(r.name === "soon" && (r.item === "ai" || r.item === "nepali" || (r.hub === "nepali" && r.item === "learn"))) && AIS) { aiStop(); AIS = null; }   /* 2026-10-05 翔太の入口（#/nepali/learn）を 数え忘れていて「N1を はじめる」が 押せなかった */   /* AIの授業から出たら声と録音を止める（続きは保存してある） */   /* 報告の画面に入るたびに返事を読み直す */
     if (r.name === "setfield") {
       if (fieldList().some(function (f) { return f.code === r.code; })) { setField(r.code); toast(currentField().label + "コースにしました"); }
@@ -4633,6 +4894,10 @@
     else if (act === "fb-mood" && FB) { FB.mood = parseInt(el.getAttribute("data-m"), 10); if (FB.mood === 1) FB.tags = []; fbRedraw(); }
     else if (act === "fb-tag" && FB) { var tk = el.getAttribute("data-k"), ti = FB.tags.indexOf(tk); if (ti >= 0) FB.tags.splice(ti, 1); else FB.tags.push(tk); fbRedraw(); }
     else if (act === "fb-send") fbSend();
+    else if (act === "nq-open") nqOpen();
+    else if (act === "nq-chip") nqChip(parseInt(el.getAttribute("data-i"), 10));
+    else if (act === "nq-send") nqSend();
+    else if (act === "nq-answer") nqAnswer(el.getAttribute("data-id"), el.getAttribute("data-st"));
     else if (act === "beg-sim") { var sb = settings(); sb.beginner_sim = el.getAttribute("data-p"); writeJSON(SETTINGS_KEY, sb); render(); }
     else if (act === "set-lang") { var sl = settings(); sl.teacher_lang = el.getAttribute("data-lang"); writeJSON(SETTINGS_KEY, sl); render(); }
     else if (act === "rp-kind") { RP_FORM.kind = el.getAttribute("data-k"); render(); }

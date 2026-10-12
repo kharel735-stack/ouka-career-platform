@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>さくら先生の ネパール語</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#12294B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ネパール語">
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="style.css?v=ea24b9768d">
+<link rel="stylesheet" href="online.css?v=397da3987f">
+</head>
+<body data-screen="home">
+<!-- ログイン（本番 /app/ と同じ Clerk のアカウント。パスワードはどこにも保存しない） -->
+<section class="login" id="loginView">
+  <div class="login-card">
+    <h1>🧑‍🏫 さくら先生の <b>ネパール語</b></h1>
+    <p class="muted">ログインしてください</p>
+    <form id="loginForm" autocomplete="on">
+      <label>ユーザー名（Username）<input id="fUsername" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>
+      <label>パスワード（Password）<input id="fPassword" name="password" type="password" autocomplete="current-password" required></label>
+      <button class="btn btn-primary btn-xl" id="loginBtn" type="submit">ログイン</button>
+    </form>
+    <form id="codeForm" hidden>
+      <p id="codeHint"></p>
+      <label>確認コード（6桁）<input id="fCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6"></label>
+      <button class="btn btn-primary btn-xl" id="codeBtn" type="submit">確認</button>
+      <button class="btn" id="codeCancel" type="button">やめる</button>
+    </form>
+    <div id="taskBox" hidden>
+      <p id="taskHint" style="white-space:pre-line"></p>
+      <div id="taskMount"></div>
+      <button class="btn" id="taskCancel" type="button">やめる（ログアウト）</button>
+    </div>
+    <p class="login-err" id="loginErr" role="alert"></p>
+    <p class="muted small">アカウントは ABAS（桜花）から お渡しします。わからない時は 送ってくれた人に 聞いてください。</p>
+  </div>
+</section>
+
+<div id="appShell" hidden>
+  <header class="topbar">
+    <a class="brand" href="#/nepali/learn">🧑‍🏫 さくら先生の <b>ネパール語</b></a>
+    <span class="head-name" id="headName"></span>
+    <nav class="bar-nav">
+      <span class="sync-badge" id="syncBadge" hidden></span>
+      <span class="who" id="who"></span>
+      <a class="btn btn-sm" id="homeBtn" href="#/nepali/learn">授業</a><a class="btn btn-sm" href="#/nepali/qa">❓ 質問</a>
+      <button class="btn btn-sm" id="logoutBtn" type="button">ログアウト</button>
+    </nav>
+  </header>
+  <main id="view"></main>
+  <div class="modal" id="modal" hidden></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</div>
+<noscript>JavaScriptを有効にしてください。</noscript>
+<!-- 教材の中身（Day1〜128・546問・先生の勉強）はここに無い。ログインしてから受け口から受け取る -->
+<script src="data/questions.js?v=58786fcaab"></script>
+<script src="data/candidates.js?v=acf2b3a6f3"></script>
+<script src="data/fields.js?v=a38d3a8516"></script>
+<script src="data/videos.js?v=4d2ab10dc3"></script>
+<script src="data/emergency.js?v=c089661a5b"></script>
+<script src="data/qr.js?v=60a60243b5"></script>
+<script>
+  /* ネパール語学習の入口（2026-10-10）＝この ページでは ネパール語学習と 質問に答える画面だけ */
+  (function () {
+    function ok(h) { return /^#\/nepali(\/|$)/.test(h) || h.indexOf("#/teacher/nepali_answer") === 0; }
+    if (!ok(location.hash || "")) location.replace("#/nepali/learn");
+    window.addEventListener("hashchange", function () { if (!ok(location.hash || "")) location.replace("#/nepali/learn"); });
+  })();
+</script>
+<script src="config.js?v=44be2df872"></script>
+<script src="auth.js?v=68b5adfa8e"></script>
+<script src="online.js?v=10de389db2"></script>
+</body>
+</html>

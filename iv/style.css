@@ -605,7 +605,7 @@ rt { font-size: .5em; color: #2E4A7A; font-weight: 700; line-height: 1; }
 .ai-step { font-size: 18px; font-weight: 800; color: var(--ai); }
 .ai-teacher { display: flex; gap: 10px; align-items: flex-start; }
 .ai-face { font-size: 54px; line-height: 1; }
-.ai-face.is-talk { animation: hwpulse .8s infinite; }
+/* 2026-10-12 代表「アニメーションいらない。色分けぐらいでいい」＝話している時も 顔は 動かさない */
 .ai-bubble { flex: 1; background: #EEF3FA; border-radius: 4px 16px 16px 16px; padding: 12px 14px; font-size: 22px; font-weight: 700; line-height: 1.55; }
 .ai-ne { margin-top: 8px; font-size: 16px; font-weight: 600; color: #44506A; font-family: "Noto Sans Devanagari", "Kohinoor Devanagari", sans-serif; }
 .ai-ctl { display: flex; gap: 8px; margin-top: 14px; }
@@ -632,8 +632,9 @@ rt { font-size: .5em; color: #2E4A7A; font-weight: 700; line-height: 1; }
 .ai-langs { display: flex; justify-content: center; gap: 6px; margin: 4px 0 10px; }
 .ai-langs span { background: #EEF3FA; border-radius: 999px; padding: 3px 10px; font-size: 14px; font-weight: 700; }
 .ai-segs { flex: 1; display: grid; gap: 6px; }
-.ai-seg { background: #EEF3FA; border-radius: 4px 14px 14px 14px; padding: 8px 12px; font-size: 19px; line-height: 1.5; opacity: .55; transition: opacity .2s; }
-.ai-seg.is-now { opacity: 1; box-shadow: 0 0 0 2px var(--ai) inset; }
+.ai-seg { background: #EEF3FA; border-radius: 4px 14px 14px 14px; padding: 8px 12px; font-size: 19px; line-height: 1.5; color: #8A93A3; }
+/* いま読んでいる行＝色だけで分ける（うすく→こく の動きは やめた・2026-10-12） */
+.ai-seg.is-now { color: inherit; box-shadow: 0 0 0 3px var(--ai) inset; }
 .ai-seg.ai-ne { font-family: "Noto Sans Devanagari", "Kohinoor Devanagari", sans-serif; }
 .ai-seg.ai-ja { background: #FFF1E8; font-size: 24px; font-weight: 800; }
 .ai-seg.ai-en { background: #F2F2F2; font-size: 16px; }
@@ -646,11 +647,19 @@ rt { font-size: .5em; color: #2E4A7A; font-weight: 700; line-height: 1; }
 .ai-kana path.now { stroke: var(--shu); }
 .ai-kana text { font-size: 9px; fill: #B0B6C2; font-weight: 700; }
 .ai-kana text.on { fill: var(--shu); }
+/* 本物の字の上を なぞっていく 書き順（2026-10-12）＝字は うすく、なぞった 線は 字の太さに 近く */
+.ai-kana.is-glyph path.glyph { fill: #E3E8F0; stroke: none; }
+.ai-kana.is-glyph path.on, .ai-kana.is-glyph path.off { stroke-width: 6.5; }
+.ai-kana.is-glyph path.off { stroke: transparent; }
+.ai-kana.is-glyph text { font-size: 8px; }
 .ai-trace-wrap .ai-kana { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; border: none; z-index: 1; }
 .ai-trace-wrap .ai-kana text { fill: var(--shu); font-size: 10px; }
 .ai-meter { height: 12px; background: var(--line); border-radius: 9px; overflow: hidden; margin-top: 8px; }
 .ai-meter i { display: block; height: 100%; width: 0; background: #3F8F5A; transition: width .08s; }
 .ai-novoice { margin-top: 8px; background: #FBE9E7; color: #9A2B20; border-radius: 10px; padding: 8px 10px; font-weight: 700; }
+/* ネパール語版：意味をえらぶ＝横書きの 横長ボタンを たてに3つ（細い3列だと 字が1文字ずつ 縦に 折れていた） */
+.ai-choices.is-mean { grid-template-columns: 1fr; }
+.ai-choices.is-mean .ai-choice { min-height: 68px; font-size: 26px; text-align: left; padding: 12px 20px; line-height: 1.3; }
 .ai-choices.is-ne .ai-choice { font-size: 22px; font-family: "Noto Sans Devanagari", "Kohinoor Devanagari", sans-serif; }
 .ai-en { font-size: 13px; color: var(--muted); padding-left: 4px; }
 .ai-pause { width: 100%; margin-top: 10px; }
@@ -750,3 +759,53 @@ rt { font-size: .5em; color: #2E4A7A; font-weight: 700; line-height: 1; }
 .tour-btns .btn { min-height: 52px; font-size: 16px; }
 .tour-q { font-weight: 800; min-width: 36px; }
 .qr-img { width: min(300px, 70vw); height: auto; image-rendering: pixelated; display: block; margin: 8px auto; }
+.ai-compare { margin: 8px 0; padding: 10px 12px; border-radius: 12px; background: #EEF3FA; font-size: 16px; line-height: 1.5; }
+.ai-compare small { color: var(--muted); font-size: 13px; }
+/* ことばの 分解（2026-10-06 試作） */
+.ai-parts-src { font-size: 30px; text-align: center; margin: 6px 0 2px; }
+.ai-parts-src small { display: block; font-size: 15px; color: var(--muted); }
+.ai-parts { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; margin: 10px 0; }
+.ai-part { border: 2px solid var(--ai); border-radius: 12px; padding: 6px 10px; text-align: center; min-width: 64px; background: #fff; }
+.ai-part b { display: block; font-size: 22px; }
+.ai-part span { display: block; font-size: 13px; color: var(--muted); }
+.ai-part i { display: block; font-style: normal; font-size: 14px; font-weight: 700; color: var(--shu); }
+.ai-plus { font-size: 18px; color: var(--muted); }
+.ai-uses-h { font-weight: 800; margin: 10px 0 6px; }
+.ai-uses { display: grid; gap: 8px; }
+.ai-use { display: grid; text-align: left; gap: 2px; padding: 10px 12px; border: 2px solid var(--line); border-radius: 12px; background: #fff; font: inherit; color: inherit; cursor: pointer; }
+.ai-use span { font-size: 20px; } .ai-use small { color: var(--muted); } .ai-use i { font-style: normal; font-weight: 700; }
+/* 2026-10-06 スマホ幅で 上の帯が はみ出した（QR・？を足したため）＝狭い時は 候補者・全結果を 帯から外す（ホームの画面から 入れる） */
+@media (max-width: 520px) {
+  .topbar .bar-nav a[href="#/candidates"], .topbar .bar-nav a[href="#/results"] { display: none !important; }
+  .topbar .bar-nav .tour-q { min-width: 0; padding-left: 10px; padding-right: 10px; }
+}
+.ai-mute-sw { margin: 6px 0; } .ai-mute-sw.is-on { background: #EEF3FA; border-color: var(--ai); font-weight: 800; }
+/* クイズ番組ふう（2026-10-09 試作・ネパール語の授業） */
+.qs-stage { margin: 8px -8px 0; padding: 12px; border-radius: 18px; background: linear-gradient(160deg, #12294B, #24467d); color: #fff; }
+.qs-stage.is-hit { background: linear-gradient(160deg, #1f7a45, #3fa96b); }
+.qs-stage.is-miss { background: linear-gradient(160deg, #7a1f1f, #b5452f); }
+.qs-top { display: flex; justify-content: space-between; align-items: center; font-weight: 800; }
+.qs-no { background: #F2C14E; color: #12294B; padding: 4px 12px; border-radius: 999px; font-size: 18px; }
+.qs-score { font-size: 15px; } .qs-combo { color: #FFD66B; }
+.qs-host { display: flex; align-items: flex-end; gap: 8px; margin: 8px 0; }
+.qs-q { text-align: center; font-size: 56px; line-height: 1.2; font-weight: 800; background: rgba(255,255,255,.12); border-radius: 14px; margin: 8px 0; padding: 6px; }
+.qs-bubble { position: relative; background: #fff; color: #12294B; font-weight: 800; font-size: 18px; padding: 10px 14px; border-radius: 16px; margin-bottom: 20px; }
+.qs-stage .ai-again, .qs-stage .btn { color: #12294B; }
+.qs-choices { display: grid; gap: 10px; }
+.qs-btn { display: flex; align-items: center; gap: 12px; font: inherit; font-size: 20px; font-weight: 800; text-align: left; color: #fff; border: 0; border-radius: 14px; padding: 14px; cursor: pointer; box-shadow: 0 4px 0 rgba(0,0,0,.25); }
+.qs-choices.is-ne .qs-btn { font-size: 26px; }
+.qs-c0 { background: #2f6fd6; } .qs-c1 { background: #d6442f; } .qs-c2 { background: #2f9e5b; }
+.qs-mark { display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,.95); color: #12294B; font-size: 18px; flex-shrink: 0; }
+.qs-btn.ok { outline: 4px solid #FFD66B; transform: scale(1.03); }
+.qs-btn.ng { opacity: .75; text-decoration: line-through; }
+.qs-btn.off { opacity: .35; }
+.qs-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,.25); }
+.ai-reset { margin-top: 10px; color: var(--muted); } .ai-skip { margin-top: 6px; } .ai-skip small { display: block; font-size: 12px; color: var(--muted); }
+/* ネパール語の質問と答え（2026-10-10） */
+.nq textarea, .nq-ans { width: 100%; box-sizing: border-box; font: inherit; font-size: 16px; padding: 10px; border: 1.5px solid var(--line); border-radius: 10px; margin-top: 8px; }
+.ai-top .nq-btn { margin-left: auto; margin-right: 8px; }
+/* 2026-10-12 クイズの 読み方・先生の お手本動画 */
+.qs-kana { display: block; font-size: 22px; font-weight: 700; color: #FFE7A3; margin-top: 2px; }
+.qs-bubble { flex: 1; }
+.ai-video { display: block; width: 100%; max-height: 60vh; margin: 10px 0; border-radius: 12px; background: #000; }
+.ai-video-none { margin: 10px 0; padding: 8px 12px; border: 1px dashed var(--line); border-radius: 10px; color: var(--muted); font-size: 14px; text-align: center; }
