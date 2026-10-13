@@ -1,0 +1,100 @@
+<!doctype html><html lang="ne"><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>नेपाली आवाज रेकर्ड — साकुरा सेन्सेई</title>
+<style>
+body{margin:0;background:#F6F4EF;color:#1D2433;font-family:"Hiragino Sans","Kohinoor Devanagari","Nirmala UI","Noto Sans Devanagari","Noto Sans JP","Yu Gothic",Meiryo,sans-serif}
+.wrap{max-width:860px;margin:0 auto;padding:16px}
+h1{font-size:22px;margin:4px 0 8px}
+.how{background:#fff;border:1px solid #DDD6C8;border-radius:10px;padding:10px 14px;font-size:15px;line-height:1.7}
+.how b{color:#12294B}.how .en{color:#4A5468;font-size:13px}
+.card{background:#fff;border:2px solid #12294B;border-radius:14px;padding:18px;margin:14px 0;text-align:center}
+#les{color:#4A5468;font-size:14px}
+#t{font-size:30px;line-height:2.3;margin:10px 0;word-break:break-all}
+rt{font-size:13px;color:#C8362B}
+#sub{font-size:20px;color:#4A5468;margin-bottom:8px}
+.btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+button{font-size:18px;padding:12px 18px;border-radius:10px;border:1px solid #12294B;background:#fff;color:#12294B;cursor:pointer}
+button:disabled{opacity:.35}
+.rec{background:#C8362B;color:#fff;border-color:#C8362B;font-size:22px;padding:14px 30px}
+.rec.on{background:#1D2433;border-color:#1D2433}
+.model{background:#FFF4D6;border-color:#C9A227;color:#1D2433;font-size:20px;margin-bottom:10px}
+.meter{height:8px;background:#EEE;border-radius:4px;margin:12px auto;max-width:400px}#m{height:8px;width:0;background:#2E8B57;border-radius:4px}
+#msg{min-height:24px;color:#C8362B;font-weight:700}
+#prog{font-weight:700}
+.send{background:#12294B;color:#fff}
+#list{background:#fff;border:1px solid #DDD6C8;border-radius:10px;max-height:300px;overflow:auto;font-size:14px}
+#list div{display:flex;gap:10px;padding:6px 10px;border-bottom:1px solid #F0ECE3;cursor:pointer}#list div.cur{background:#FFF4D6}
+#list .d{color:#2E8B57;font-weight:800}
+#links a{display:block;margin:6px 0;font-size:17px}
+</style></head><body><div class="wrap">
+<h1>नेपाली आवाज रेकर्ड — साकुरा सेन्सेई</h1>
+<div class="how">
+<b>①</b> 🎙 थिच्नुहोस्, नेपाली वाक्य एकपटक स्पष्ट र बिस्तारै पढ्नुहोस्, अनि ■ थिचेर रोक्नुहोस्। आफैँ अर्कोमा जान्छ।<br>
+<b>②</b> बीचमा जुनसुकै बेला रोक्न सकिन्छ। उही ब्राउजरमा यही लिंक फेरि खोल्दा बाँकी भागबाट सुरु हुन्छ। (ब्राउजरको हिस्ट्री नमेटाउनुहोस्।)<br>
+<b>③</b> सबै सकिएपछि «📦 पठाउने फाइल बनाउनुहोस्» थिच्नुहोस्, अनि बनेको zip फाइल इमेलमा जोडेर पठाउनुहोस्। यो पेजले आफैँ केही पनि पठाउँदैन।<br>
+<b>④</b> शान्त कोठामा रेकर्ड गर्नुहोस्। माइक्रोफोनको अनुमति सोधेमा «Allow» थिच्नुहोस्।
+</div>
+<div class="card">
+<div id="les"></div><div id="t"></div><div id="sub"></div>
+<div class="btns"><button id="model" class="model" hidden></button></div>
+<div class="btns"><button id="prev"></button><button id="rec" class="rec"></button><button id="play" disabled></button><button id="next"></button></div>
+<div class="meter"><div id="m"></div></div><div id="msg"></div>
+</div>
+<p><span id="prog"></span>　<button id="mk" class="send"></button></p>
+<div id="links"></div>
+<div id="list"></div>
+<p style="color:#8A8F99;font-size:12px">桜花 OUKA ／ 2026-10-13 ／ <span id="foot"></span></p>
+</div>
+<script>
+var T={"prev": "← अघिल्लो", "rec": "🎙 रेकर्ड", "stop": "■ रोक्नुहोस्", "play": "▶ सुन्नुहोस्", "next": "अर्को →", "mk": "📦 पठाउने फाइल बनाउनुहोस्", "prog": "रेकर्ड भएका", "mic": "कृपया माइक्रोफोन चलाउन अनुमति दिनुहोस्।", "quiet": "आवाज धेरै सानो वा छोटो भयो। फेरि एकपटक भन्नुहोस्।", "none": "अहिलेसम्म एउटा पनि रेकर्ड भएको छैन।", "done": "फाइल बन्यो। डाउनलोड भएको zip फाइल इमेलमा जोडेर पठाउनुहोस्।", "foot": "यो पेज इन्टरनेटमा जोडिँदैन। आवाज यही कम्प्युटरको ब्राउजरभित्र मात्र रहन्छ।"},IT=[{"n": "nl_ne_9a8a68c8eebc", "f": "नमस्ते", "s": "ナマステ　＝　こんにちは（朝でも 夜でも OK）", "l": "N1"}, {"n": "nl_ne_4aea932922d5", "f": "धन्यवाद", "s": "ダンニャバード　＝　ありがとう", "l": "N1"}, {"n": "nl_ne_4351890db1ba", "f": "माफ गर्नुहोस्", "s": "マーフ ガルヌホス　＝　すみません・ごめんなさい", "l": "N1"}, {"n": "nl_ne_6625bbc8c80b", "f": "हजुर", "s": "ハジュル　＝　はい（ていねい）・呼ばれた時の返事", "l": "N1"}, {"n": "nl_ne_013ef2471014", "f": "होइन", "s": "ホイナ　＝　いいえ・ちがいます", "l": "N1"}, {"n": "nl_ne_d1f36505f7ec", "f": "ठिक छ", "s": "ティク チャ　＝　だいじょうぶ・OK", "l": "N1"}, {"n": "nl_ne_59beb29cecf7", "f": "फेरि भेटौँला", "s": "フェリ ベトウンラ　＝　またね", "l": "N1"}, {"n": "nl_ne_38fa1dd194e1", "f": "मेरो नाम साकुरा हो", "s": "メロ ナーム サクラ ホ　＝　わたしの 名前は さくら です", "l": "N2"}, {"n": "nl_ne_213aeb3890be", "f": "तपाईंको नाम के हो?", "s": "タパイコ ナーム ケ ホ？　＝　お名前は 何ですか？", "l": "N2"}, {"n": "nl_ne_ed826d76bec1", "f": "म जापानी हुँ", "s": "マ ジャパニ フン　＝　わたしは 日本人です", "l": "N2"}, {"n": "nl_ne_f75701b04803", "f": "म शिक्षक हुँ", "s": "マ シクシャク フン　＝　わたしは 先生です", "l": "N2"}, {"n": "nl_ne_7f8cf5686ef0", "f": "तपाईं कहाँबाट आउनुभयो?", "s": "タパイ カハーバータ アウヌバヨ？　＝　どこから 来ましたか？", "l": "N2"}, {"n": "nl_ne_9a1da3a1565c", "f": "भेटेर खुसी लाग्यो", "s": "ベテラ クシ ラギョ　＝　会えて うれしいです", "l": "N2"}, {"n": "nl_ne_f7272f39bac4", "f": "एक", "s": "エク　＝　1", "l": "N3"}, {"n": "nl_ne_a2b3714a94dc", "f": "दुई", "s": "ドゥイ　＝　2", "l": "N3"}, {"n": "nl_ne_d55e166ea4fb", "f": "तीन", "s": "ティン　＝　3", "l": "N3"}, {"n": "nl_ne_609422a32ce6", "f": "चार", "s": "チャール　＝　4", "l": "N3"}, {"n": "nl_ne_ee4ef11af11f", "f": "पाँच", "s": "パーンチ　＝　5", "l": "N3"}, {"n": "nl_ne_5a969fb2e5ad", "f": "छ", "s": "チャ　＝　6", "l": "N3"}, {"n": "nl_ne_a00060808204", "f": "सात", "s": "サート　＝　7", "l": "N3"}, {"n": "nl_ne_c0fef66ba7f2", "f": "आठ", "s": "アート　＝　8", "l": "N3"}, {"n": "nl_ne_1832c70fafef", "f": "नौ", "s": "ナウ　＝　9", "l": "N3"}, {"n": "nl_ne_10b4bda94e12", "f": "दस", "s": "ダス　＝　10", "l": "N3"}, {"n": "nl_ne_93dc95f9f5f2", "f": "सुन्नुहोस्", "s": "スンヌホス　＝　聞いてください", "l": "N4"}, {"n": "nl_ne_014afde64515", "f": "भन्नुहोस्", "s": "バンヌホス　＝　言ってください", "l": "N4"}, {"n": "nl_ne_8ba6e1de96d2", "f": "लेख्नुहोस्", "s": "レクヌホス　＝　書いてください", "l": "N4"}, {"n": "nl_ne_0d0bb381742d", "f": "फेरि एकपटक", "s": "フェリ エクパタク　＝　もう一度", "l": "N4"}, {"n": "nl_ne_b4d892058d40", "f": "बिस्तारै", "s": "ビスターライ　＝　ゆっくり", "l": "N4"}, {"n": "nl_ne_0389c91d468c", "f": "बुझ्नुभयो?", "s": "ブジュヌバヨ？　＝　わかりましたか？", "l": "N4"}, {"n": "nl_ne_c9cf0d278161", "f": "राम्रो", "s": "ラームロ　＝　いいですね", "l": "N4"}, {"n": "nl_ne_4ddffcdd7293", "f": "प्रश्न छ?", "s": "プラシュナ チャ？　＝　質問は ありますか？", "l": "N4"}, {"n": "nl_ne_18d54a08e366", "f": "खतरा!", "s": "カタラ！　＝　危ない！", "l": "N5"}, {"n": "nl_ne_57914ebea93f", "f": "रोक्नुहोस्!", "s": "ロクヌホス！　＝　止まって！・止めて！", "l": "N5"}, {"n": "nl_ne_be01603acf2d", "f": "बिरामी हुनुहुन्छ?", "s": "ビラーミ フヌフンチャ？　＝　具合が 悪いですか？", "l": "N5"}, {"n": "nl_ne_9f7d7fa49243", "f": "कहाँ दुख्छ?", "s": "カハー ドゥクチャ？　＝　どこが 痛いですか？", "l": "N5"}, {"n": "nl_ne_70f6338cc472", "f": "आराम गर्नुहोस्", "s": "アーラーム ガルヌホス　＝　休んでください", "l": "N5"}, {"n": "nl_ne_ca9fa41e88b4", "f": "पानी", "s": "パーニ　＝　水", "l": "N5"}, {"n": "nl_ne_ea1ceaf35686", "f": "सहयोग चाहियो?", "s": "サハヨグ チャーヒヨ？　＝　手伝いが 要りますか？", "l": "N5"}, {"n": "nl_ne_b1e8eee3b6af", "f": "मेनु दिनुहोस्", "s": "メヌ ディヌホス　＝　メニューを ください", "l": "N7"}, {"n": "nl_ne_b6e459b67a1b", "f": "पानी दिनुहोस्", "s": "", "l": "N7"}, {"n": "nl_ne_2a10d3e31ece", "f": "चिया दिनुहोस्", "s": "", "l": "N7"}, {"n": "nl_ne_d9e2060dd08d", "f": "भात दिनुहोस्", "s": "", "l": "N7"}, {"n": "nl_ne_892e7df57748", "f": "यो दिनुहोस्", "s": "ヨ ディヌホス　＝　これを ください（指をさして）", "l": "N7"}, {"n": "nl_ne_18ec2cd71254", "f": "एक प्लेट दाल भात", "s": "エク プレート ダール バート　＝　ダルバートを 1皿", "l": "N7"}, {"n": "nl_ne_563ee795dd0c", "f": "चिया", "s": "チヤ　＝　チヤ（ミルクティー）", "l": "N7"}, {"n": "nl_ne_c0ab7b0c9bd3", "f": "पिरो नहाल्नुहोस्", "s": "ピロ ナハールヌホス　＝　辛く しないでください", "l": "N7"}, {"n": "nl_ne_7f8577fbcc90", "f": "चिनी नहाल्नुहोस्", "s": "", "l": "N7"}, {"n": "nl_ne_ef2436ffdbaf", "f": "दूध नहाल्नुहोस्", "s": "", "l": "N7"}, {"n": "nl_ne_c227ad9a13fc", "f": "नुन हाल्नुहोस्", "s": "", "l": "N7"}, {"n": "nl_ne_dd431505d1a0", "f": "मीठो छ", "s": "ミト チャ　＝　おいしいです", "l": "N7"}, {"n": "nl_ne_4c643713ed70", "f": "बिल ल्याउनुहोस्", "s": "ビル リャウヌホス　＝　お会計を お願いします", "l": "N7"}, {"n": "nl_ne_476414c8a431", "f": "पानी ल्याउनुहोस्", "s": "", "l": "N7"}, {"n": "nl_ne_49c3791da66b", "f": "मेनु ल्याउनुहोस्", "s": "", "l": "N7"}, {"n": "nl_ne_844297535542", "f": "कति भयो?", "s": "カティ バヨ？　＝　いくらですか？（お会計）", "l": "N7"}, {"n": "nl_ne_569c9d50d71e", "f": "यो कति हो?", "s": "", "l": "N7"}, {"n": "nl_ne_60c4d2d5b65a", "f": "कति बज्यो?", "s": "", "l": "N7"}, {"n": "nl_ne_9127c98bf149", "f": "म जापानबाट आएँ", "s": "マ ジャパーンバータ アーエン　＝　わたしは 日本から 来ました", "l": "N8"}, {"n": "nl_ne_4d4404f0f0d9", "f": "म ओसाकाबाट आएँ", "s": "", "l": "N8"}, {"n": "nl_ne_65c3eb055a38", "f": "म नेपालबाट आएँ", "s": "", "l": "N8"}, {"n": "nl_ne_32054bafded1", "f": "म काठमाडौंमा बस्छु", "s": "マ カトマンドゥマ バスチュ　＝　わたしは カトマンズに 住んでいます", "l": "N8"}, {"n": "nl_ne_e07730c39a27", "f": "म पोखरामा बस्छु", "s": "", "l": "N8"}, {"n": "nl_ne_0937da667b61", "f": "म टोकियोमा बस्छु", "s": "", "l": "N8"}, {"n": "nl_ne_14873a576e1c", "f": "म विद्यार्थी हुँ", "s": "マ ビッディャルティ フン　＝　わたしは 学生です", "l": "N8"}, {"n": "nl_ne_9cc6294bad79", "f": "म नेपाली सिक्दैछु", "s": "マ ネパーリ シクダイチュ　＝　わたしは ネパール語を 勉強しています", "l": "N8"}, {"n": "nl_ne_73c6d567c968", "f": "मलाई नेपाल मन पर्छ", "s": "マライ ネパール マン パルチャ　＝　わたしは ネパールが 好きです", "l": "N8"}, {"n": "nl_ne_263c690b31ac", "f": "हो र?", "s": "ホ ラ？　＝　本当？・そうなの？", "l": "N9"}, {"n": "nl_ne_dab11ef7fd38", "f": "हो नि", "s": "ホ ニ　＝　そうだよね", "l": "N9"}, {"n": "nl_ne_5ca4244917ff", "f": "अनि?", "s": "アニ？　＝　それで？", "l": "N9"}, {"n": "nl_ne_3f6a94bdbb1c", "f": "ठिकै छ", "s": "ティカイ チャ　＝　まあまあです", "l": "N9"}, {"n": "nl_ne_508f8344b389", "f": "सन्चै हुनुहुन्छ?", "s": "サンチャイ フヌフンチャ？　＝　お元気ですか？", "l": "N9"}, {"n": "nl_ne_6bead67b4801", "f": "सन्चै छ", "s": "サンチャイ チャ　＝　元気です", "l": "N9"}, {"n": "nl_ne_25e6e267cb19", "f": "खाना खानुभयो?", "s": "カナ カヌバヨ？　＝　ご飯 食べましたか？（あいさつ代わり）", "l": "N10"}, {"n": "nl_ne_98f7a11b837c", "f": "परिवारमा को को हुनुहुन्छ?", "s": "パリワールマ コ コ フヌフンチャ？　＝　ご家族は どなたが いますか？", "l": "N10"}, {"n": "nl_ne_443faeb0dc6a", "f": "आज गर्मी छ", "s": "アージャ ガルミ チャ　＝　今日は 暑いですね", "l": "N10"}, {"n": "nl_ne_89fc913ca31e", "f": "तपाईंलाई के मन पर्छ?", "s": "タパイライ ケ マン パルチャ？　＝　何が 好きですか？", "l": "N10"}, {"n": "nl_ne_2b8996af27a8", "f": "श्रीमान", "s": "シュリーマーン　＝　夫（ていねいな 言い方）", "l": "N10"}, {"n": "nl_ne_752b67380989", "f": "बुढा", "s": "ブダ　＝　夫（くだけた 言い方）", "l": "N10"}, {"n": "nl_ne_4534613a2550", "f": "अ", "s": "ア　＝　読み方：ア", "l": "M1"}, {"n": "nl_ne_a8183bb4e981", "f": "आ", "s": "アー　＝　読み方：アー", "l": "M1"}, {"n": "nl_ne_295e40189259", "f": "इ", "s": "イ　＝　読み方：イ", "l": "M1"}, {"n": "nl_ne_6a2ca1aa3b3e", "f": "ई", "s": "イー　＝　読み方：イー", "l": "M1"}, {"n": "nl_ne_03d6fb214e0b", "f": "उ", "s": "ウ　＝　読み方：ウ", "l": "M1"}, {"n": "nl_ne_7cf33a26d4f1", "f": "ऊ", "s": "ウー　＝　読み方：ウー", "l": "M1"}, {"n": "nl_ne_7ad5948532fe", "f": "ए", "s": "エ　＝　読み方：エ", "l": "M1"}, {"n": "nl_ne_9ffaa2f8d452", "f": "ओ", "s": "オ　＝　読み方：オ", "l": "M1"}, {"n": "nl_ne_c43391842422", "f": "न", "s": "ナ　＝　読み方：ナ", "l": "M2"}, {"n": "nl_ne_80d97acc12d0", "f": "म", "s": "マ　＝　読み方：マ", "l": "M2"}, {"n": "nl_ne_2029a61adfe3", "f": "स", "s": "サ　＝　読み方：サ", "l": "M2"}, {"n": "nl_ne_3fe1d0ff957c", "f": "त", "s": "タ　＝　読み方：タ", "l": "M2"}, {"n": "nl_ne_cd6d3a0d9cae", "f": "क", "s": "カ　＝　読み方：カ", "l": "M2"}, {"n": "nl_ne_720014ba58fd", "f": "र", "s": "ラ　＝　読み方：ラ", "l": "M2"}, {"n": "nl_ne_0331d5425529", "f": "प", "s": "パ　＝　読み方：パ", "l": "M2"}, {"n": "nl_ne_1218f1c81a33", "f": "ब", "s": "バ　＝　読み方：バ", "l": "M2"}, {"n": "nl_ne_a2922d31f160", "f": "ह", "s": "ハ　＝　読み方：ハ", "l": "M2"}, {"n": "nl_ne_9c5fd521cfdd", "f": "का", "s": "カー　＝　読み方：カー", "l": "M3"}, {"n": "nl_ne_e2ed4a37b59f", "f": "कि", "s": "キ　＝　読み方：キ", "l": "M3"}, {"n": "nl_ne_6b3032695be5", "f": "की", "s": "キー　＝　読み方：キー", "l": "M3"}, {"n": "nl_ne_c8e22e306e4c", "f": "कु", "s": "ク　＝　読み方：ク", "l": "M3"}, {"n": "nl_ne_29cd858e2b00", "f": "के", "s": "ケ　＝　読み方：ケ", "l": "M3"}, {"n": "nl_ne_54b185edd565", "f": "को", "s": "コ　＝　読み方：コ", "l": "M3"}], $=function(i){return document.getElementById(i)}, i=0, rec=false, stream, ctx, src, proc, buf, rate, VO={}, db=null, SR=16000;
+function ruby(f){return f.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/([^{}\s「」（）・、。！？]+?)\{([^}]+)\}/g,function(_,k,y){
+ var m=k.match(/[一-鿿々〆]+$/);if(!m)return k;var pre=k.slice(0,k.length-m[0].length);return pre+"<ruby>"+m[0]+"<rt>"+y+"</rt></ruby>"})}
+function openDB(){return new Promise(function(ok){try{var r=indexedDB.open("ouka_voice_shanti_ne",1);r.onupgradeneeded=function(){r.result.createObjectStore("v")};
+ r.onsuccess=function(){db=r.result;ok()};r.onerror=function(){ok()}}catch(e){ok()}})}
+function put(n,b){try{if(db)db.transaction("v","readwrite").objectStore("v").put(b,n)}catch(e){}}
+function loadAll(){return new Promise(function(ok){try{if(!db)return ok();var s=db.transaction("v").objectStore("v"),r=s.openCursor();
+ r.onsuccess=function(){var c=r.result;if(c){VO[c.key]=c.value;c.continue()}else ok()};r.onerror=function(){ok()}}catch(e){ok()}})}
+function show(){var x=IT[i];$("les").textContent=x.l+"　"+(i+1)+" / "+IT.length;$("t").innerHTML=ruby(x.f);$("sub").textContent=x.s||"";
+ var d=IT.filter(function(y){return VO[y.n]}).length;$("prog").textContent=T.prog+" "+d+" / "+IT.length;$("play").disabled=!VO[x.n];$("model").hidden=!x.a;
+ $("list").innerHTML=IT.map(function(y,k){return '<div data-k="'+k+'" class="'+(k==i?"cur":"")+'"><span class="'+(VO[y.n]?"d":"")+'">'+(VO[y.n]?"✓":"・")+'</span><span>'+y.l+'</span><span>'+y.f.replace(/\{[^}]*\}/g,"").replace(/</g,"&lt;")+'</span></div>'}).join("");
+ var c=$("list").querySelector(".cur"),L=$("list");if(c)L.scrollTop=c.offsetTop-L.offsetTop-L.clientHeight/2   /* 一覧の中だけ 動かす（ページは 動かさない） */}
+$("list").onclick=function(e){var d=e.target.closest("[data-k]");if(d){i=+d.dataset.k;show()}};
+$("prev").onclick=function(){if(i>0){i--;show()}};$("next").onclick=function(){if(i<IT.length-1){i++;show()}};
+$("play").onclick=function(){var b=VO[IT[i].n];if(b)new Audio(URL.createObjectURL(b)).play()};
+$("model").onclick=function(){if(IT[i].a)new Audio(IT[i].a).play()};   /* お手本（機械の声）。まねして 録る */
+$("rec").onclick=function(){rec?stop():start()};
+function start(){navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:true,autoGainControl:true}}).then(function(s){
+ stream=s;ctx=new (window.AudioContext||window.webkitAudioContext)();rate=ctx.sampleRate;src=ctx.createMediaStreamSource(s);proc=ctx.createScriptProcessor(4096,1,1);buf=[];
+ proc.onaudioprocess=function(e){var d=e.inputBuffer.getChannelData(0);buf.push(new Float32Array(d));var s2=0;for(var k=0;k<d.length;k++)s2+=d[k]*d[k];$("m").style.width=Math.min(100,Math.sqrt(s2/d.length)*600)+"%"};
+ src.connect(proc);proc.connect(ctx.destination);rec=true;$("rec").classList.add("on");$("rec").textContent=T.stop;$("msg").textContent=""
+ }).catch(function(){$("msg").textContent=T.mic})}
+function stop(){rec=false;$("rec").classList.remove("on");$("rec").textContent=T.rec;$("m").style.width="0";
+ proc.disconnect();src.disconnect();stream.getTracks().forEach(function(t){t.stop()});ctx.close();
+ var n=buf.reduce(function(a,b){return a+b.length},0),pcm=new Float32Array(n),o=0;buf.forEach(function(b){pcm.set(b,o);o+=b.length});
+ var peak=0;for(var k=0;k<n;k++)peak=Math.max(peak,Math.abs(pcm[k]));
+ if(n<rate*0.3||peak<0.05){$("msg").textContent=T.quiet;return}
+ var b=wav(down(pcm,rate));VO[IT[i].n]=b;put(IT[i].n,b);new Audio(URL.createObjectURL(b)).play();$("links").innerHTML="";if(i<IT.length-1)i++;show()}
+function down(p,sr){if(sr<=SR)return p;var r=sr/SR,n=Math.floor(p.length/r),o=new Float32Array(n);
+ for(var k=0;k<n;k++){var a=Math.floor(k*r),b=Math.min(p.length,Math.floor((k+1)*r)),s=0;for(var j=a;j<b;j++)s+=p[j];o[k]=s/Math.max(1,b-a)}return o}
+function wav(p){var b=new ArrayBuffer(44+p.length*2),v=new DataView(b),w=function(o,s){for(var k=0;k<s.length;k++)v.setUint8(o+k,s.charCodeAt(k))};
+ w(0,"RIFF");v.setUint32(4,36+p.length*2,true);w(8,"WAVE");w(12,"fmt ");v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
+ v.setUint32(24,SR,true);v.setUint32(28,SR*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,"data");v.setUint32(40,p.length*2,true);
+ for(var k=0;k<p.length;k++)v.setInt16(44+k*2,Math.max(-1,Math.min(1,p[k]))*0x7fff,true);return new Blob([b],{type:"audio/wav"})}
+/* zip（無圧縮）を 自前で作る＝外の ライブラリを 使わない */
+var CRC=(function(){var t=new Uint32Array(256);for(var n=0;n<256;n++){var c=n;for(var k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+function crc(u){var c=0xFFFFFFFF;for(var k=0;k<u.length;k++)c=CRC[(c^u[k])&255]^(c>>>8);return(c^0xFFFFFFFF)>>>0}
+function zip(files){var parts=[],cen=[],off=0,enc=new TextEncoder();files.forEach(function(f){var nm=enc.encode(f.name),d=f.data,c=crc(d),h=new DataView(new ArrayBuffer(30));
+ h.setUint32(0,0x04034b50,true);h.setUint16(4,20,true);h.setUint16(6,0x0800,true);h.setUint32(14,c,true);h.setUint32(18,d.length,true);h.setUint32(22,d.length,true);h.setUint16(26,nm.length,true);
+ parts.push(h.buffer,nm,d);var g=new DataView(new ArrayBuffer(46));g.setUint32(0,0x02014b50,true);g.setUint16(4,20,true);g.setUint16(6,20,true);g.setUint16(8,0x0800,true);
+ g.setUint32(16,c,true);g.setUint32(20,d.length,true);g.setUint32(24,d.length,true);g.setUint16(28,nm.length,true);g.setUint32(42,off,true);cen.push(g.buffer,nm);off+=30+nm.length+d.length});
+ var cs=cen.reduce(function(a,b){return a+b.byteLength},0),e=new DataView(new ArrayBuffer(22));e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);
+ e.setUint32(12,cs,true);e.setUint32(16,off,true);return new Blob(parts.concat(cen,[e.buffer]),{type:"application/zip"})}
+$("mk").onclick=function(){var have=IT.filter(function(y){return VO[y.n]});if(!have.length){$("msg").textContent=T.none;return}
+ $("mk").disabled=true;Promise.all(have.map(function(y){return VO[y.n].arrayBuffer().then(function(a){return{name:y.n+".wav",data:new Uint8Array(a)}})})).then(function(fs){
+  var groups=[[]],sz=0,LIM=18*1024*1024;fs.forEach(function(f){if(sz+f.data.length>LIM&&groups[groups.length-1].length){groups.push([]);sz=0}groups[groups.length-1].push(f);sz+=f.data.length});
+  var day=new Date().toISOString().slice(0,10).replace(/-/g,""),enc=new TextEncoder();$("links").innerHTML="";
+  groups.forEach(function(g,k){var man=enc.encode(JSON.stringify({from:"shanti_ne",made:new Date().toISOString(),count:g.length,files:g.map(function(f){return f.name})}));
+   var z=zip(g.concat([{name:"manifest.json",data:man}])),nm="ouka_voice_shanti_ne_"+day+(groups.length>1?"_"+(k+1)+"of"+groups.length:"")+".zip",a=document.createElement("a");
+   a.href=URL.createObjectURL(z);a.download=nm;a.textContent="⬇ "+nm+"（"+Math.round(z.size/1024/1024*10)/10+" MB）";$("links").appendChild(a);a.click()});
+  $("msg").textContent=T.done;$("mk").disabled=false})};
+["prev","rec","play","next","mk","foot","model"].forEach(function(k){$(k).textContent=T[k]||""});function first(){var k=IT.findIndex(function(y){return!VO[y.n]});i=k<0?0:k;show()}first();openDB().then(loadAll).then(first);   /* ★2026-10-12 名前が start と ぶつかり 🎙 で 録音が 始まらなかった */   /* 保存領域を 待たずに すぐ 出す（返ってこない 環境が ある） */
+</script></body></html>
