@@ -1913,11 +1913,54 @@
   }
   /* 先生用の書き込み（（先生）や〇〇）を外す＝読み上げ・ならべかえ用 */
   function hwClean(s) { return String(s).replace(/（[^）]*）/g, "").replace(/…/g, "、").trim(); }
+  /* 宿題の声（2026-10-13）＝Mac で 先に 作った 録音（ai_lesson/hw/）を 流す。
+   * スマホの 読み上げは 日本語の声が 無い Android で 無音になる（S002「きこえない」）。ファイルが 無い時だけ 読み上げに たよる。
+   * 名前＝"ja_" + sha1("hw|"+言葉) の先頭12字（正本＝_tools/宿題の声.py の name と 同じ。片方だけ 変えない）。
+   * sha1 を 同期で 計算する＝押した その時に play() する（iPhone は 待つと 鳴らさない）。 */
+  function hwSha1(str) {
+    var b = unescape(encodeURIComponent(str)), n = b.length, w = [], i;
+    for (i = 0; i < n; i++) w[i >> 2] |= b.charCodeAt(i) << (24 - (i % 4) * 8);
+    w[n >> 2] |= 0x80 << (24 - (n % 4) * 8);
+    w[(((n + 8) >> 6) << 4) + 15] = n * 8;
+    var h0 = 0x67452301, h1 = 0xEFCDAB89, h2 = 0x98BADCFE, h3 = 0x10325476, h4 = 0xC3D2E1F0, x = [];
+    var rol = function (v, s) { return (v << s) | (v >>> (32 - s)); };
+    for (var o = 0; o < w.length; o += 16) {
+      var a = h0, bb = h1, c = h2, d = h3, e = h4;
+      for (var t = 0; t < 80; t++) {
+        x[t] = t < 16 ? (w[o + t] | 0) : rol(x[t - 3] ^ x[t - 8] ^ x[t - 14] ^ x[t - 16], 1);
+        var f = t < 20 ? ((bb & c) | (~bb & d)) + 0x5A827999 : t < 40 ? (bb ^ c ^ d) + 0x6ED9EBA1
+          : t < 60 ? ((bb & c) | (bb & d) | (c & d)) + 0x8F1BBCDC : (bb ^ c ^ d) + 0xCA62C1D6;
+        var tmp = (rol(a, 5) + f + e + x[t]) | 0;
+        e = d; d = c; c = rol(bb, 30); bb = a; a = tmp;
+      }
+      h0 = (h0 + a) | 0; h1 = (h1 + bb) | 0; h2 = (h2 + c) | 0; h3 = (h3 + d) | 0; h4 = (h4 + e) | 0;
+    }
+    return [h0, h1, h2, h3, h4].map(function (v) { return ("00000000" + (v >>> 0).toString(16)).slice(-8); }).join("");
+  }
+  function hwAudioName(t) { return "ja_" + hwSha1("hw|" + t).slice(0, 12) + ".m4a"; }
+  var HW_AUDIO = null, HW_NOFILE = {};
   function hwSpeak(text) {
+    var t = hwClean(text).replace(/〇〇|△△/g, "なになに");
+    if (!t) return;
+    if (!HW_NOFILE[t] && window.Audio) {
+      try {
+        if (window.speechSynthesis) speechSynthesis.cancel();
+        if (!HW_AUDIO) HW_AUDIO = new Audio();
+        var a = HW_AUDIO, my = (a._my = (a._my || 0) + 1);
+        var fall = function () { if (a._my !== my) return; HW_NOFILE[t] = 1; hwTts(t); };
+        a.pause(); a.onerror = fall;
+        a.src = "ai_lesson/hw/" + hwAudioName(t);
+        var p = a.play(); if (p && p.catch) p.catch(function (e) { if (e && (e.name === "AbortError" || e.name === "NotAllowedError")) return; fall(); });   /* 自動で 鳴らせない時は 何もしない＝「きく」を 押せば 鳴る */
+        return;
+      } catch (e) { /* 下の 読み上げへ */ }
+    }
+    hwTts(t);
+  }
+  function hwTts(t) {
     try {
       if (!window.speechSynthesis) return;
       speechSynthesis.cancel();
-      var u = new SpeechSynthesisUtterance(hwClean(text).replace(/〇〇|△△/g, "なになに"));
+      var u = new SpeechSynthesisUtterance(t);
       u.lang = "ja-JP"; u.rate = 0.85;
       var v = speechSynthesis.getVoices().filter(function (x) { return /^ja/i.test(x.lang); })[0];
       if (v) u.voice = v;
