@@ -3385,11 +3385,12 @@
     var sc = AIC.scenes[AIS.si], b = aiBeat(), tot = AIC.scenes.length;
     var head = '<div class="ai-top"><span class="ai-step">' + esc(sc.icon) + " " + esc(sc.step) + '</span>' +
       (AI_MODE === "ne" && studentName() ? '<button class="btn btn-sm nq-btn" data-act="nq-open">❓ 質問</button>' : "") +
-      (AI_MODE === "ne" ? '<button class="btn btn-sm ai-skipall" data-act="ai-skipall">とばす ⏭</button>' : "") +
       '<span class="hw-cnt">' + (AIS.si + 1) + " / " + tot + "</span></div>" +
       '<div class="hw-bar"><i style="width:' + Math.round(AIS.si / tot * 100) + '%"></i></div>';
     var wait = AIS.speaking ? ' disabled data-wait="1"' : "";
     var next = function (ok, label) {
+      /* 2026-10-14 代表「普通に 次の ボタンが あればいい」＝ネパール語は 話している 途中でも 書く前でも 押せる（言えた・書けた には 数えない） */
+      if (AI_MODE === "ne") return '<button class="btn btn-primary btn-xl hw-wide" data-act="' + (ok ? "ai-next" : "ai-skipall") + '">' + (label || aiT("next")) + "</button>";
       return '<button class="btn btn-primary btn-xl hw-wide" data-act="ai-next"' + (ok ? wait : " disabled") + ">" + (label || aiT("next")) + "</button>";
     };
     var again = '<button class="btn hw-wide" data-act="ai-replay">' + aiT("again") + "</button>";
@@ -3465,7 +3466,6 @@
         }).join("") + "</div>" + (AIS.picked != null ? next(true) : "");
     }
     view.innerHTML = '<section class="lesson hw2 ai">' + head + '<div class="hw-card3">' + body + "</div>" +
-      (AI_MODE === "ne" ? '<button class="btn btn-xl hw-wide ai-skipall ai-skipbig" data-act="ai-skipall">とばす ⏭（つぎの ページへ）</button>' : "") +
       '<button class="btn ai-pause" data-act="ai-pause">' + (AIS.paused ? aiT("play") : aiT("pause")) + "</button>" +
       '<button class="btn ai-quit" data-act="ai-quit">' + esc(aiT("quit")) + "</button></section>";
     if (b.t === "trace") aiCanvas(b);
