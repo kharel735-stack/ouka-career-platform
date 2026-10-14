@@ -575,6 +575,17 @@
     });
   }
   /* 待たずに 開いた後の 確かめ（裏で 1回）。役割が 外された・止められた＝すぐ ログイン画面へ。回線の失敗では 何もしない。 */
+  /* 2026-10-14 新しい教材を 裏で 受け取ったら その場で 知らせる（前は 次に 開くまで 古い授業のまま＝代表「書き順が 入ってない」）。
+   * 勝手に 読み直さない（授業の 途中を 消さない）＝押した時だけ 読み直す */
+  function freshBar() {
+    if (document.getElementById("freshBar")) return;
+    var d = document.createElement("div");
+    d.id = "freshBar";
+    d.style.cssText = "position:fixed;left:12px;right:12px;bottom:16px;z-index:9999;background:#12294B;color:#fff;border-radius:12px;padding:12px 14px;display:flex;gap:10px;align-items:center;justify-content:space-between;box-shadow:0 4px 16px rgba(0,0,0,.25);font-size:15px";
+    d.innerHTML = '<span>新しい 授業が 届きました</span><button style="background:#fff;color:#12294B;border:0;border-radius:8px;padding:8px 12px;font-weight:700;font-size:15px">読みこむ</button>';
+    d.querySelector("button").onclick = function () { location.reload(); };
+    document.body.appendChild(d);
+  }
   function recheck(sub, w, cc) {
     api("boot", {}).then(function (s) {
       if (!s) return;
@@ -591,7 +602,7 @@
       if (same && JSON.stringify(s.features || {}) !== JSON.stringify(w.features || {})) { who.features = s.features || {}; saveWho(sub, s, w.ver); }
       if (!same) { saveWho(sub, s, ""); location.reload(); return; }
       if (s.content_ver && s.content_ver !== cc.content_ver) {
-        loadParts(s).then(function () { saveWho(sub, s, s.content_ver); }, function () { /* 次の起動で 取る */ });
+        loadParts(s).then(function () { saveWho(sub, s, s.content_ver); freshBar(); }, function () { /* 次の起動で 取る */ });
       }
     }, function () { /* 圏外＝前回の教材で そのまま 使える */ });
   }
