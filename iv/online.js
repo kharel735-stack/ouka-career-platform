@@ -21,7 +21,9 @@
   var $ = function (id) { return document.getElementById(id); };
 
   var SETTINGS_KEY = "ouka_interview_settings_v1";   /* app.js と同じ */
-  var CONTENT_KEY = "ouka_iv_content_v1";            /* 教材の控え（細い回線のため） */
+  /* 2026-10-14 /iv/ と /nepali/ は 同じ サイト＝保存場所が 共通。ネパール語アプリ（一部だけ 取る）は 別の 名前に 置く
+   * （同じ 名前だと /iv/ が 日本語の教材の 無い 控えを 使い、生徒・先生の 入口が 全部「準備中」に なった） */
+  var CONTENT_KEY = "ouka_iv_content_v1" + (CFG.onlyParts ? "_" + CFG.onlyParts.join(".") : "");            /* 教材の控え（細い回線のため） */
   var SENT_KEY = "ouka_iv_sent_v1";                  /* 送った記録の指紋 */
   var WATCH = { ouka_drill_v1: 1, ouka_homework_v1: 1, ouka_teacher_study_v1: 1, ouka_grade_v1: 1, ouka_report_v1: 1, ouka_ai_nepali_v1: 1, ouka_feedback_v1: 1, ouka_assign_v1: 1, ouka_nepali_q_v1: 1 };
   var INTERVIEW_ROUTES = { candidates: 1, upload: 1, "new": 1, start: 1, q: 1, result: 1, results: 1 };
@@ -552,7 +554,8 @@
   }
   function start() {
     var sub = clerkSub(), w = readWho(), cc = readContent();
-    if (sub && w && w.sub === sub && w.ver && cc && cc.content_ver === w.ver && (w.can.student || w.can.teacher || w.can.nepali)) {
+    var whole = !cc || CFG.onlyParts || !(w && (w.can.student || w.can.teacher)) || cc.lessons;   /* 生徒・先生なのに 日本語の教材が 無い 控えは 使わない */
+    if (sub && w && w.sub === sub && w.ver && cc && whole && cc.content_ver === w.ver && (w.can.student || w.can.teacher || w.can.nepali)) {
       who = { id: sub, role: w.role, name: w.name, can: w.can, students: w.students || [], features: w.features || {} };
       showApp(cc);
       recheck(sub, w, cc);

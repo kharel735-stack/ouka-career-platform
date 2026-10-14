@@ -5,5 +5,5 @@ window.OUKA_ONLINE_CONFIG = {
   ivLayerUrl: "https://zolhsqgmgrdjbkeywrnx.supabase.co/functions/v1/iv"
 };
 window.OUKA_ONLINE_CONFIG.appVersion = "46ec312c5b";
-window.OUKA_ONLINE_CONFIG.build = "53ada8b891";
+window.OUKA_ONLINE_CONFIG.build = "40a99f4701";
 window.OUKA_ONLINE_CONFIG.onlyParts = ["nepali"];
