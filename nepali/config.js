@@ -4,6 +4,6 @@ window.OUKA_ONLINE_CONFIG = {
   clerkPublishableKey: "pk_live_Y2xlcmsuYWJhcy1nbG9iYWxncm91cC5jb20k",
   ivLayerUrl: "https://zolhsqgmgrdjbkeywrnx.supabase.co/functions/v1/iv"
 };
-window.OUKA_ONLINE_CONFIG.appVersion = "0a8bd1acf1";
-window.OUKA_ONLINE_CONFIG.build = "3f19c840af";
+window.OUKA_ONLINE_CONFIG.appVersion = "46ec312c5b";
+window.OUKA_ONLINE_CONFIG.build = "53ada8b891";
 window.OUKA_ONLINE_CONFIG.onlyParts = ["nepali"];

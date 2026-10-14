@@ -1017,7 +1017,7 @@
   HUBS.teacher.items = HUBS.teacher.items.filter(function (it) { return (it.key !== "nepali" || window.OUKA_AI_NEPALI) && (it.key !== "nepali_answer" || ONLINE); });
   /* ネパール語を学ぶ人（日本人）＝画面は日本語だけ（2026-10-04 代表「ネパール語を勉強したい人は ネパール語の生徒画面」） */
   HUBS.nepali = { title: "ネパール語の勉強", icon: "▶", items: [
-    { key: "learn", label: "さくら先生の ネパール語", note: "N1 あいさつ から。聞いて・まねして・言う。1回 10分くらい" },
+    { key: "home", label: "さくら先生の ネパール語", note: "授業・ことばカード・クイズ・書き順・なぞる・質問" },
     { key: "qa", label: "❓ 質問と答え", note: "わからない所を 送ると、先生が 答えます" }
   ] };
   if (!(window.OUKA_AI_NEPALI) || !ONLINE) delete HUBS.nepali;   /* 学校のMac版は 先生メニューの「ネパール語」から入る（入口の区画を増やさない） */
@@ -1053,13 +1053,14 @@
       "</div></div>") +
       Object.keys(HUBS).filter(function (k) { return !ONLINE || ONLINE.can[k]; }).map(function (k) {
         var h = HUBS[k];
-        var liveN = h.items.filter(function (it) { return LIVE[k + "/" + it.key] && LESSONS; }).length;
+        var hasData = k === "nepali" ? !!window.OUKA_AI_NEPALI : LESSONS;   /* 2026-10-14 ネパール語の 枠は ネパール語の 授業データで 決める（日本語の 教材で 決めて「準備中」に なっていた） */
+        var liveN = h.items.filter(function (it) { return LIVE[k + "/" + it.key] && hasData; }).length;
         return '<div class="pf-card' + (liveN ? " pf-live" : "") + '"><h2>' + esc(h.title) + "</h2>" +
           (liveN ? '<p class="pf-stat">' + (currentField().code ? esc(currentField().label) + "コース" : "コース未選択") + "　／　教材 Day1〜" + dayCount() + "　／　今日＝Day " + currentDay() + "</p>"
             : '<p class="pf-stat pf-empty">入口だけ（中身はこれから）</p>') +
           '<div class="pf-links pf-small">' +
           h.items.map(function (it) {
-            var live = LIVE[k + "/" + it.key] && LESSONS;
+            var live = LIVE[k + "/" + it.key] && hasData;
             return '<a class="btn' + (live ? "" : " btn-soon") + '" href="#/' + k + "/" + it.key + '">' + esc(it.label) + (live ? "" : "<small>準備中</small>") + "</a>";
           }).join("") +
           "</div></div>";
@@ -1075,7 +1076,7 @@
     view.innerHTML = '<section class="home"><div class="home-head"><h1>' + esc(h.title) + '</h1>' +
       '<div class="tools"><a class="btn btn-primary" href="#/">OUKA PLATFORM へ</a></div></div>' +
       '<div class="cand-grid">' + h.items.map(function (it) {
-        var live = LIVE[key + "/" + it.key] && LESSONS;
+        var live = LIVE[key + "/" + it.key] && (key === "nepali" ? !!window.OUKA_AI_NEPALI : LESSONS);
         return '<a class="cand" href="#/' + key + "/" + it.key + '" data-item="' + it.key + '"><span class="cand-name">' + esc(it.label) + "</span>" +
           (live ? '<span class="chip st-完了">使える</span>' : '<span class="chip st-未実施">準備中</span>') + "</a>";
       }).join("") + "</div></section>";
