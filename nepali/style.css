@@ -852,9 +852,9 @@ button.beg-card { font: inherit; font-size: 30px; cursor: pointer; width: 100%; 
 .nh-g path.fill { fill: none; stroke: rgba(200, 54, 43, .32); stroke-width: 18; stroke-linecap: round; stroke-linejoin: round; }
 .nh-g path.anim { stroke-dasharray: 1; stroke-dashoffset: 1; animation: nhdraw .9s ease-out forwards; }
 @keyframes nhdraw { to { stroke-dashoffset: 0; } }
-.nh-g text { fill: #9AA3B2; font-size: 9px; font-weight: 700; }
-.nh-g text.on { fill: var(--shu); }
 .nh-nums { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 8px 0; }
 .nh-nums .btn { min-width: 48px; font-size: 18px; }
-.nh-g .nh-ar { stroke: var(--shu); stroke-width: 1.6; stroke-linecap: round; }
 .nh-g .nh-ah { fill: var(--shu); }
+.nh-g .nh-ar { stroke: var(--shu); stroke-width: 1.1; stroke-linecap: round; }
+.nh-g .nh-badge { fill: #fff; stroke: var(--shu); stroke-width: .8; }
+.nh-g .nh-bn { fill: var(--shu); font-size: 5.4px; font-weight: 700; text-anchor: middle; }

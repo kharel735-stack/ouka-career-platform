@@ -3278,32 +3278,28 @@
   /* なぞるの 見本（2026-10-14 代表「後ろの 汚い線は 何？」「1を押したら その画の所まで 枠の中が 赤く うっすら なっていく」）
    * ＝きれいな字（うすい灰色）＋番号だけ。番号を押すと その画が 字の形の中だけ 赤く うっすら 塗られていく（clipPath）＋声で 数える */
   function nhGuideSvg(b, upto, anim) {
-    var id = "nhc" + (NH.cid = (NH.cid || 0) + 1), used = [];
-    var nums = b.nums.map(function (n) {   /* 番号が 重ならないように（例 ア の 3 と 4） */
-      var x = n[0], y = n[1];
-      used.forEach(function (u) { if (Math.abs(u[0] - x) < 9 && Math.abs(u[1] - y) < 9) y += 11; });
-      used.push([x, y]);
-      return '<text x="' + x + '" y="' + y + '" class="' + (n[2] <= upto ? "on" : "") + '">' + n[2] + "</text>";
-    }).join("");
+    /* 2026-10-14 代表「数字と矢印が ぐちゃっと なる。もっと 優しく」＝番号と 矢印は 今の1画の 分だけ（最初は 1）。小さい丸の 番号を 書き始めの 手前に */
+    var id = "nhc" + (NH.cid = (NH.cid || 0) + 1), cur = Math.max(1, upto) - 1;
     return '<svg class="ai-kana nh-g" viewBox="0 0 109 109">' +
       (b.glyph ? '<defs><clipPath id="' + id + '"><path d="' + b.glyph + '"/></clipPath></defs><path class="glyph" d="' + b.glyph + '"/>' : "") +
       b.paths.slice(0, upto).map(function (d, k) {
         return '<path d="' + d + '" pathLength="1" class="fill' + (k === anim ? " anim" : "") + '"' + (b.glyph ? ' clip-path="url(#' + id + ')"' : "") + "/>";
-      }).join("") + nhArrows(b, id) + nums + "</svg>";
+      }).join("") + nhMark(b, cur, id) + "</svg>";
   }
-  /* 書き始めの 小さい矢印＝どっちへ 書くか（2026-10-14 代表「5と4が同じ所なら これは下・これは上と 矢印で」） */
-  function nhArrows(b, id) {
-    var out = '<defs><marker id="' + id + 'a" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="4" markerHeight="4" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="nh-ah"/></marker></defs>';
-    b.paths.forEach(function (d) {
-      var pts = (d.match(/-?[\d.]+,-?[\d.]+/g) || []).map(function (q) { return q.split(",").map(Number); });
-      if (pts.length < 2) return;
-      var p0 = pts[0], p1 = null, len = 0;
-      for (var i = 1; i < pts.length; i++) { len += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); if (len >= 9) { p1 = pts[i]; break; } }
-      p1 = p1 || pts[pts.length - 1];
-      var dx = p1[0] - p0[0], dy = p1[1] - p0[1], L = Math.hypot(dx, dy) || 1;
-      out += '<line class="nh-ar" x1="' + p0[0] + '" y1="' + p0[1] + '" x2="' + (p0[0] + dx / L * 9).toFixed(1) + '" y2="' + (p0[1] + dy / L * 9).toFixed(1) + '" marker-end="url(#' + id + 'a)"/>';
-    });
-    return out;
+  /* 1画分の しるし＝書き始めの 小さい矢印（書く向き）＋ その手前の 小さい丸の 番号 */
+  function nhMark(b, k, id) {
+    var d = b.paths[k]; if (!d) return "";
+    var pts = (d.match(/-?[\d.]+,-?[\d.]+/g) || []).map(function (q) { return q.split(",").map(Number); });
+    if (pts.length < 2) return "";
+    var p0 = pts[0], p1 = null, len = 0;
+    for (var i = 1; i < pts.length; i++) { len += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); if (len >= 8) { p1 = pts[i]; break; } }
+    p1 = p1 || pts[pts.length - 1];
+    var dx = p1[0] - p0[0], dy = p1[1] - p0[1], L = Math.hypot(dx, dy) || 1; dx /= L; dy /= L;
+    var cx = Math.min(102, Math.max(7, p0[0] - dx * 9)), cy = Math.min(102, Math.max(7, p0[1] - dy * 9));
+    return '<defs><marker id="' + id + 'a" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="3.2" markerHeight="3.2" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="nh-ah"/></marker></defs>' +
+      '<line class="nh-ar" x1="' + p0[0] + '" y1="' + p0[1] + '" x2="' + (p0[0] + dx * 7).toFixed(1) + '" y2="' + (p0[1] + dy * 7).toFixed(1) + '" marker-end="url(#' + id + 'a)"/>' +
+      '<circle class="nh-badge" cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="4.2"/>' +
+      '<text class="nh-bn" x="' + cx.toFixed(1) + '" y="' + cy.toFixed(1) + '" dominant-baseline="central">' + (k + 1) + "</text>";
   }
   var NH_NE_NUM = ["एक", "दुई", "तीन", "चार", "पाँच", "छ", "सात", "आठ", "नौ", "दस", "एघार", "बाह्र", "तेह्र", "चौध", "पन्ध्र"];
   function nhCount(k) {   /* 2026-10-14 代表「書き順は ネパール語で 1、2、3」＝एक・दुई…（N3 かず の 声）。無ければ「1」の声 */
