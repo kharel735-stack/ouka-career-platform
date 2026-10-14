@@ -3259,22 +3259,6 @@
   function nhCharPicker(list, cur, act) {
     return '<div class="nh-chars">' + list.map(function (x, k) { return '<button class="btn nh-chr' + (k === cur ? " btn-primary" : "") + '" data-' + act + '="' + k + '">' + esc(x.b.char) + "</button>"; }).join("") + "</div>";
   }
-  function renderNepaliKaki() {
-    aiUse("ne"); headName.textContent = "書き順";
-    var all = nhAll("stroke"); if (!all.length) { view.innerHTML = nhTop("書き順") + '<p class="muted">まだ ありません。</p>'; return; }
-    var b = all[NH.k].b;
-    view.innerHTML = '<section class="lesson hw2 ai nh">' + nhTop("✏️ 書き順") + nhCharPicker(all, NH.k, "k") +
-      aiKanaSvg(b, NH.at, "ai-anim") + '<p class="muted">' + NH.at + " / " + b.paths.length + " 画</p>" +
-      '<div class="ai-ctl"><button class="btn" data-nh="step">1画 すすむ</button><button class="btn btn-primary" data-nh="play">▶ 1画ずつ 見る</button></div>' +
-      '<a class="btn hw-wide" href="#/nepali/nazoru">👆 この字を なぞる</a></section>';
-    nhBind("[data-k]", function (el) { NH.k = +el.getAttribute("data-k"); NH.z = NH.k; NH.at = 0; renderNepaliKaki(); });
-    nhBind('[data-nh="step"]', function () { NH.at = NH.at >= b.paths.length ? 0 : NH.at + 1; renderNepaliKaki(); });
-    nhBind('[data-nh="play"]', function () {
-      NH.at = 0; var my = (NH.play = (NH.play || 0) + 1);
-      var tick = function () { if (NH.play !== my || route().item !== "kaki") return; NH.at++; renderNepaliKaki(); if (NH.at < b.paths.length) setTimeout(tick, 900); };
-      tick();
-    });
-  }
   /* なぞるの 見本（2026-10-14 代表「後ろの 汚い線は 何？」「1を押したら その画の所まで 枠の中が 赤く うっすら なっていく」）
    * ＝きれいな字（うすい灰色）＋番号だけ。番号を押すと その画が 字の形の中だけ 赤く うっすら 塗られていく（clipPath）＋声で 数える */
   function nhGuideSvg(b, upto, anim) {
@@ -3306,6 +3290,27 @@
     var f = AIL && (AIL.audio["ne|" + NH_NE_NUM[k - 1]] || AIL.audio["ja|" + k]);
     if (!f || aiMute()) return;
     var a = aiAudioEl(); a.onended = a.onerror = null; a.src = AIL.audio_base + f; var p = a.play(); if (p && p.catch) p.catch(function () {});
+  }
+  function renderNepaliKaki() {
+    /* 2026-10-14 代表「なぞるの 見せ方を 書き順として」＝同じ 見本（字の中が 赤く うっすら・今の1画の 番号と 矢印・ネパール語で 数える） */
+    aiUse("ne"); headName.textContent = "書き順";
+    var all = nhAll("stroke"); if (!all.length) { view.innerHTML = nhTop("書き順") + '<p class="muted">まだ ありません。</p>'; return; }
+    NH.k = Math.min(NH.k, all.length - 1);
+    var b = all[NH.k].b;
+    view.innerHTML = '<section class="lesson hw2 ai nh">' + nhTop("✏️ 書き順") + nhCharPicker(all, NH.k, "k") +
+      '<div class="ai-trace-wrap nh-kaki">' + nhGuideSvg(b, 0, -1) + "</div>" +
+      '<div class="nh-nums">' + b.paths.map(function (_, k) { return '<button class="btn" data-kn="' + (k + 1) + '">' + (k + 1) + "</button>"; }).join("") +
+      '<button class="btn btn-primary" data-nh="order">▶ ぜんぶ</button></div>' +
+      '<p class="muted">番号を 押すと、その画が 赤く うっすら 出ます（' + b.paths.length + ' 画）</p>' +
+      '<a class="btn hw-wide" href="#/nepali/nazoru">👆 この字を なぞる</a></section>';
+    nhBind("[data-k]", function (el) { NH.k = +el.getAttribute("data-k"); NH.z = NH.k; renderNepaliKaki(); });
+    var show = function (k) { var old = view.querySelector(".nh-g"); if (!old) return; old.outerHTML = nhGuideSvg(b, k, k - 1); nhCount(k); };
+    nhBind("[data-kn]", function (el) { NH.play = (NH.play || 0) + 1; show(+el.getAttribute("data-kn")); });
+    nhBind('[data-nh="order"]', function () {
+      var at = 1, my = (NH.play = (NH.play || 0) + 1);
+      var tick = function () { if (NH.play !== my || route().item !== "kaki") return; show(at); if (at++ < b.paths.length) setTimeout(tick, 1200); };
+      tick();
+    });
   }
   function renderNepaliNazoru() {
     aiUse("ne"); headName.textContent = "指で なぞる";
@@ -3380,6 +3385,7 @@
     var sc = AIC.scenes[AIS.si], b = aiBeat(), tot = AIC.scenes.length;
     var head = '<div class="ai-top"><span class="ai-step">' + esc(sc.icon) + " " + esc(sc.step) + '</span>' +
       (AI_MODE === "ne" && studentName() ? '<button class="btn btn-sm nq-btn" data-act="nq-open">❓ 質問</button>' : "") +
+      (AI_MODE === "ne" ? '<button class="btn btn-sm ai-skipall" data-act="ai-skipall">とばす ⏭</button>' : "") +
       '<span class="hw-cnt">' + (AIS.si + 1) + " / " + tot + "</span></div>" +
       '<div class="hw-bar"><i style="width:' + Math.round(AIS.si / tot * 100) + '%"></i></div>';
     var wait = AIS.speaking ? ' disabled data-wait="1"' : "";
@@ -3621,6 +3627,8 @@
       aiEnterBeat(); return true;
     }
     if (act === "ai-mute") { writeJSON("ouka_ai_mute", !aiMute()); render(); return true; }   /* 一覧の画面で 押す（授業の前） */
+    /* 2026-10-14 代表「授業を いつでも 飛ばせるように。話している時も 書く所も。めんどくさい時 飛ばしたい」＝止めて 次へ（言えた・書けた には 数えない） */
+    if (act === "ai-skipall") { if (!AIS || AIS.finished) return true; aiStop(); AIS.recording = false; aiForward(); return true; }
     if (act === "ai-reset") {   /* 2026-10-09 代表「リセットはできない？」＝この端末の 進み具合だけ 消す（送った 記録は 消えない） */
       if (window.confirm("この端末の 進み具合（つづき・✓）を ぜんぶ 消して、最初からに しますか？\n（先生・代表に 送った 記録は 消えません）")) {
         var pre = (studentName() || "（なまえなし）") + "|", all = readJSON(AI_KEY, {});   /* この人の 分だけ（共用の端末でも ほかの人の 進み具合は 消さない） */
