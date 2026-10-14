@@ -982,6 +982,7 @@
       title: "生徒・学習", icon: "▶",
       items: [
         { key: "start", label: "はじめての人の入口（試作）／ सुरु", note: "日本語を習ったことがない人のための入口。習った分だけ日本語が増える・漢字は必ずふりがな" },
+        { key: "kana", label: "あいうえお（声で・試作）／ अ इ उ ए ओ", note: "いちばん最初。お手本を聞いて言う → このMacが聞いて「い が え に聞こえた」と教える。終わったらオリエンテーションへ" },
         { key: "ai", label: "AIの授業（試作）／ AI शिक्षक", note: "AIの せんせいが ネパール語・English・日本語で、さいしょ（O1 あ行・か行）から 教える。書き順・なぞる・言う" },
         { key: "homework", label: "宿題 ／ गृहकार्य", note: "今日の しゅくだい（たんご・じゅぎょうの ふくしゅう・ノートの しゃしん）。ここから 出す" },
         { key: "today", label: "今日の教材", note: "その日に使う教材（プリント・スライド）がここに並ぶ" },
@@ -1021,7 +1022,7 @@
   ] };
   if (!(window.OUKA_AI_NEPALI) || !ONLINE) delete HUBS.nepali;   /* 学校のMac版は 先生メニューの「ネパール語」から入る（入口の区画を増やさない） */
   /* はじめての人の入口（試作・承認前）は 学校のMac版だけ（オンラインの生徒には まだ出さない） */
-  if (ONLINE) HUBS.student.items = HUBS.student.items.filter(function (it) { return it.key !== "start"; });
+  if (ONLINE) HUBS.student.items = HUBS.student.items.filter(function (it) { return it.key !== "start" && it.key !== "kana"; });
   HUBS.student.items = HUBS.student.items.filter(function (it) {
     return it.key !== "ai" || window.OUKA_AI_LESSON || (window.OUKA_LESSONS && window.OUKA_LESSONS.ai_lesson);
   });
@@ -1153,7 +1154,7 @@
       '<span class="media-title">' + esc(m.title) + "</span>" +
       '<span class="media-meta">' + esc(m.org) + "　／　" + esc(m.lang) + "</span></a>";
   }
-  var LIVE = { "teacher/guide": 1, "teacher/assign": 1, "nepali/learn": 1, "student/start": 1, "student/ai": 1, "teacher/report": 1, "teacher/today": 1, "teacher/materials": 1, "student/today": 1, "student/drill": 1, "student/homework": 1,
+  var LIVE = { "student/kana": 1, "student/kaki": 1, "teacher/guide": 1, "teacher/assign": 1, "nepali/learn": 1, "nepali/home": 1, "nepali/words": 1, "nepali/quiz": 1, "nepali/kaki": 1, "nepali/nazoru": 1, "student/start": 1, "student/ai": 1, "teacher/report": 1, "teacher/today": 1, "teacher/materials": 1, "student/today": 1, "student/drill": 1, "student/homework": 1,
     "student/media": 1, "student/emergency": 1, "student/submit": 1, "student/speak": 1, "teacher/inbox": 1,
     "teacher/study": 1, "student/history": 1, "teacher/grade": 1, "teacher/photos": 1, "teacher/voices": 1, "teacher/nepali": 1, "nepali/qa": 1, "teacher/nepali_qa": 1, "teacher/nepali_answer": 1 };
   var MAT_BASE = "materials/";
@@ -1913,11 +1914,54 @@
   }
   /* 先生用の書き込み（（先生）や〇〇）を外す＝読み上げ・ならべかえ用 */
   function hwClean(s) { return String(s).replace(/（[^）]*）/g, "").replace(/…/g, "、").trim(); }
+  /* 宿題の声（2026-10-13）＝Mac で 先に 作った 録音（ai_lesson/hw/）を 流す。
+   * スマホの 読み上げは 日本語の声が 無い Android で 無音になる（S002「きこえない」）。ファイルが 無い時だけ 読み上げに たよる。
+   * 名前＝"ja_" + sha1("hw|"+言葉) の先頭12字（正本＝_tools/宿題の声.py の name と 同じ。片方だけ 変えない）。
+   * sha1 を 同期で 計算する＝押した その時に play() する（iPhone は 待つと 鳴らさない）。 */
+  function hwSha1(str) {
+    var b = unescape(encodeURIComponent(str)), n = b.length, w = [], i;
+    for (i = 0; i < n; i++) w[i >> 2] |= b.charCodeAt(i) << (24 - (i % 4) * 8);
+    w[n >> 2] |= 0x80 << (24 - (n % 4) * 8);
+    w[(((n + 8) >> 6) << 4) + 15] = n * 8;
+    var h0 = 0x67452301, h1 = 0xEFCDAB89, h2 = 0x98BADCFE, h3 = 0x10325476, h4 = 0xC3D2E1F0, x = [];
+    var rol = function (v, s) { return (v << s) | (v >>> (32 - s)); };
+    for (var o = 0; o < w.length; o += 16) {
+      var a = h0, bb = h1, c = h2, d = h3, e = h4;
+      for (var t = 0; t < 80; t++) {
+        x[t] = t < 16 ? (w[o + t] | 0) : rol(x[t - 3] ^ x[t - 8] ^ x[t - 14] ^ x[t - 16], 1);
+        var f = t < 20 ? ((bb & c) | (~bb & d)) + 0x5A827999 : t < 40 ? (bb ^ c ^ d) + 0x6ED9EBA1
+          : t < 60 ? ((bb & c) | (bb & d) | (c & d)) + 0x8F1BBCDC : (bb ^ c ^ d) + 0xCA62C1D6;
+        var tmp = (rol(a, 5) + f + e + x[t]) | 0;
+        e = d; d = c; c = rol(bb, 30); bb = a; a = tmp;
+      }
+      h0 = (h0 + a) | 0; h1 = (h1 + bb) | 0; h2 = (h2 + c) | 0; h3 = (h3 + d) | 0; h4 = (h4 + e) | 0;
+    }
+    return [h0, h1, h2, h3, h4].map(function (v) { return ("00000000" + (v >>> 0).toString(16)).slice(-8); }).join("");
+  }
+  function hwAudioName(t) { return "ja_" + hwSha1("hw|" + t).slice(0, 12) + ".m4a"; }
+  var HW_AUDIO = null, HW_NOFILE = {};
   function hwSpeak(text) {
+    var t = hwClean(text).replace(/〇〇|△△/g, "なになに");
+    if (!t) return;
+    if (!HW_NOFILE[t] && window.Audio) {
+      try {
+        if (window.speechSynthesis) speechSynthesis.cancel();
+        if (!HW_AUDIO) HW_AUDIO = new Audio();
+        var a = HW_AUDIO, my = (a._my = (a._my || 0) + 1);
+        var fall = function () { if (a._my !== my) return; HW_NOFILE[t] = 1; hwTts(t); };
+        a.pause(); a.onerror = fall;
+        a.src = "ai_lesson/hw/" + hwAudioName(t);
+        var p = a.play(); if (p && p.catch) p.catch(function (e) { if (e && (e.name === "AbortError" || e.name === "NotAllowedError")) return; fall(); });   /* 自動で 鳴らせない時は 何もしない＝「きく」を 押せば 鳴る */
+        return;
+      } catch (e) { /* 下の 読み上げへ */ }
+    }
+    hwTts(t);
+  }
+  function hwTts(t) {
     try {
       if (!window.speechSynthesis) return;
       speechSynthesis.cancel();
-      var u = new SpeechSynthesisUtterance(hwClean(text).replace(/〇〇|△△/g, "なになに"));
+      var u = new SpeechSynthesisUtterance(t);
       u.lang = "ja-JP"; u.rate = 0.85;
       var v = speechSynthesis.getVoices().filter(function (x) { return /^ja/i.test(x.lang); })[0];
       if (v) u.voice = v;
@@ -3008,7 +3052,7 @@
     next_lesson: "अर्को पाठ ", list: "पाठको सूची ／ All lessons", norec: "यो फोनमा रेकर्ड हुँदैन ／ Recording is not available on this device",
     mic: "माइक अनुमति दिनुहोस् ／ Please allow the microphone", back: "#/student", homework: true };
   function aiT(k) {
-    if (k === "back" && AI_MODE === "ne" && route().hub === "nepali") return "#/nepali/learn";   /* ネパール語を学ぶ人は 先生の画面へ 戻さない */
+    if (k === "back" && AI_MODE === "ne" && route().hub === "nepali") return "#/nepali/home";   /* ネパール語を学ぶ人は 先生の画面へ 戻さない */
     var u = AIL && AIL.ui; return u && u[k] != null ? u[k] : AI_UI[k];
   }
   function aiUse(mode) {
@@ -3028,7 +3072,8 @@
         (st === "mid" ? '<button class="btn btn-primary" data-act="ai-resume" data-l="' + esc(l.id) + '">' + esc(u.resume) + "</button>" : "") +
         '<button class="btn' + (st ? "" : " btn-primary") + '" data-act="ai-start" data-l="' + esc(l.id) + '">' + esc(st === "done" ? u.again_done : st === "mid" ? "↺ 最初から" : u.start) + "</button></div>";
     }).join("");
-    view.innerHTML = '<section class="lesson hw2 ai"><div class="ai-start"><div class="ai-em">🧑‍🏫</div>' +
+    view.innerHTML = '<section class="lesson hw2 ai">' + (route().hub === "nepali" ? '<div class="nh-top"><a class="btn btn-sm" href="#/nepali/home">← ホーム</a></div>' : "") +
+      '<div class="ai-start"><div class="ai-em">🧑‍🏫</div>' +
       "<h1>" + esc(AIL.teacher.name) + "</h1>" + '<p class="ai-goal"><b>' + esc(u.title) + "</b><br>" + u.goal + "</p>" +
       '<button class="btn hw-wide ai-mute-sw' + (aiMute() ? " is-on" : "") + '" data-act="ai-mute">' + (aiMute() ? "🔇 音なしモード：オン（押すと 音あり）" : "🔈 音なしモードに する（電車の中など）") + "</button>" +
       (next ? '<button class="btn btn-primary btn-xl hw-wide" data-act="ai-start" data-l="' + esc(next.id) + '">' + esc(next.id) + esc(u.start_next) + "</button>" : "") +
@@ -3099,6 +3144,152 @@
         return '<path d="' + d + '" class="' + (k < upto ? "on" : "off") + (k === upto - 1 ? " now" : "") + '" data-k="' + k + '"/>';
       }).join("") +
       b.nums.map(function (n) { return '<text x="' + n[0] + '" y="' + n[1] + '" class="' + (n[2] <= upto ? "on" : "") + '">' + n[2] + "</text>"; }).join("") + "</svg>";
+  }
+
+  /* ---------- ネパール語を学ぶ人の ホーム（2026-10-14 代表「ホームから 授業・クイズ・書き順・なぞる・じぶんで・質問・意見を えらべる形に。
+   *   勉強するやつは勉強、クイズを楽しみたいやつはクイズ」）
+   * ★中身は 作らない＝AIの授業データ（data/ai_nepali.js の 各回の nword／pick／stroke／trace）を 取り出して 並べるだけ。
+   * ★AIの授業（話しながら）は 今までどおり #/nepali/learn。ここは 自分のペースで・とばせる 練習。 */
+  var NH = { quiz: null, w: 0, k: 0, at: 0, z: 0 };
+  function nhAll(t) {
+    var out = [], seen = {};
+    if (!AIL) return out;
+    AIL.lessons.forEach(function (l) {
+      (l.scenes || []).forEach(function (s) {
+        (s.beats || []).forEach(function (b) {
+          if (b.t !== t) return;
+          var key = t === "pick" ? b.play[0][1] + "|" + b.answer : (b.ne || b.char);
+          if (seen[key]) return; seen[key] = 1;
+          out.push({ b: b, l: l.id });
+        });
+      });
+    });
+    return out;
+  }
+  function nhSay(ne) {
+    var f = AIL && AIL.audio["ne|" + ne];
+    if (!f || aiMute()) return;
+    var a = aiAudioEl(); a.onended = a.onerror = null; a.src = AIL.audio_base + f; var p = a.play(); if (p && p.catch) p.catch(function () {});
+  }
+  function nhTop(title) {
+    return '<div class="nh-top"><a class="btn btn-sm" href="#/nepali/home">← ホーム</a><b>' + title + "</b></div>";
+  }
+  function nhBind(sel, fn) { Array.prototype.forEach.call(view.querySelectorAll(sel), function (el) { el.addEventListener("click", function () { fn(el); }); }); }
+  function renderNepaliHome() {
+    aiUse("ne");
+    headName.textContent = "さくら先生の ネパール語";
+    if (!AIL) { view.innerHTML = '<section class="start"><div class="soon"><p>授業の データを 読みこみ中です…</p></div></section>'; return; }
+    var done = AIL.lessons.filter(function (l) { var s = aiSaved(l.id); return s && s.done; }).length;
+    var card = function (icon, title, sub, href, act) {
+      return (act ? '<button class="beg-card nh-card" data-act="' + act + '">' : '<a class="beg-card nh-card" href="' + href + '">') +
+        '<span class="beg-ic">' + icon + '</span><span class="beg-w"><span class="bw-main">' + title + '</span><span class="bw-sub">' + sub + "</span></span>" + (act ? "</button>" : "</a>");
+    };
+    view.innerHTML = '<section class="lesson hw2 beg nh">' +
+      '<div class="beg-hello">🙏 ナマステ' + (studentName() ? '<span class="beg-name">' + esc(studentName()) + "</span>" : "") + "</div>" +
+      '<p class="muted">すきな ものから どうぞ。授業は さくら先生が 話しながら 教えます。ほかは 自分の ペースで、とばしても OK。</p>' +
+      '<div class="beg-level"><span>授業</span><b>' + done + " / " + AIL.lessons.length + " 回 おわり</b></div>" +
+      '<div class="beg-grid">' +
+        card("🧑‍🏫", "さくら先生の 授業", "話しながら 教える", "#/nepali/learn") +
+        card("🃏", "ことばカード", "自分で・とばせる", "#/nepali/words") +
+        card("❓", "クイズ", "聞いて えらぶ", "#/nepali/quiz") +
+        card("✏️", "書き順", "1画ずつ 見る", "#/nepali/kaki") +
+        card("👆", "指で なぞる", "書いて おぼえる", "#/nepali/nazoru") +
+        card("💬", "先生に 質問", "わからない所を きく", "#/nepali/qa") +
+        card("🙋", "意見を 送る", "わかった・わかりにくい", "", "fb-open") +
+      "</div>" +
+      '<button class="btn hw-wide ai-mute-sw' + (aiMute() ? " is-on" : "") + '" data-act="ai-mute">' + (aiMute() ? "🔇 音なしモード：オン（押すと 音あり）" : "🔈 音なしモードに する（電車の中など）") + "</button>" +
+      "</section>";
+  }
+  function renderNepaliWords() {
+    aiUse("ne"); headName.textContent = "ことばカード";
+    var all = nhAll("nword"); if (!all.length) { view.innerHTML = nhTop("ことばカード") + '<p class="muted">まだ ありません。</p>'; return; }
+    NH.w = (NH.w + all.length) % all.length;
+    var b = all[NH.w].b;
+    view.innerHTML = '<section class="lesson hw2 ai nh">' + nhTop("🃏 ことばカード") +
+      '<div class="hw-cnt">' + (NH.w + 1) + " / " + all.length + " ・ " + esc(all[NH.w].l) + "</div>" +
+      '<div class="ai-big ai-dev">' + esc(b.ne) + '</div><div class="ai-kana-read">' + esc(b.kana) + " <small>" + esc(b.roma || "") + "</small></div>" +
+      '<button class="btn hw-wide" data-nh="mean">👀 いみを 見る</button><div class="nh-mean" hidden>' + esc(b.ja) + "</div>" +
+      '<button class="btn hw-wide" data-nh="say">🔊 きく</button>' +
+      '<div class="ai-ctl"><button class="btn" data-nh="prev">‹ まえ</button><button class="btn btn-primary" data-nh="next">つぎ ›</button></div>' +
+      '<button class="btn hw-wide" data-nh="rand">🔀 ランダムに とぶ</button></section>';
+    nhBind('[data-nh="mean"]', function () { view.querySelector(".nh-mean").hidden = false; });
+    nhBind('[data-nh="say"]', function () { nhSay(b.ne); });
+    nhBind('[data-nh="prev"]', function () { NH.w--; renderNepaliWords(); });
+    nhBind('[data-nh="next"]', function () { NH.w++; renderNepaliWords(); });
+    nhBind('[data-nh="rand"]', function () { NH.w = Math.floor(Math.random() * all.length); renderNepaliWords(); });
+    nhSay(b.ne);
+  }
+  function renderNepaliQuiz() {
+    aiUse("ne"); headName.textContent = "クイズ";
+    var all = nhAll("pick");
+    if (!NH.quiz) {
+      var pool = all.slice().sort(function () { return Math.random() - 0.5; }).slice(0, 10);
+      NH.quiz = { qs: pool, i: 0, ok: 0, picked: null };
+    }
+    var Q = NH.quiz;
+    if (Q.i >= Q.qs.length) {
+      view.innerHTML = '<section class="lesson hw2 ai nh">' + nhTop("❓ クイズ") + '<div class="ai-big">' + Q.ok + " / " + Q.qs.length + "</div>" +
+        '<p class="ai-goal">' + (Q.ok === Q.qs.length ? "ぜんぶ 正解！" : "おつかれさま！") + "</p>" +
+        '<button class="btn btn-primary btn-xl hw-wide" data-nh="again">もう 1回（10問）</button></section>';
+      nhBind('[data-nh="again"]', function () { NH.quiz = null; renderNepaliQuiz(); });
+      return;
+    }
+    var q = Q.qs[Q.i].b, ne = q.play[0][1];
+    view.innerHTML = '<section class="lesson hw2 ai nh">' + nhTop("❓ クイズ") +
+      '<div class="hw-cnt">' + (Q.i + 1) + " / " + Q.qs.length + " ・ 正解 " + Q.ok + "</div>" +
+      '<div class="ai-big ai-dev">' + esc(ne) + '</div><div class="ai-kana-read">' + esc(q.kana || "") + "</div>" +
+      '<button class="btn hw-wide" data-nh="say">🔊 もう一度 きく</button>' +
+      '<div class="nh-choices">' + q.choices.map(function (c) {
+        var cls = Q.picked == null ? "" : c === q.answer ? " is-ok" : c === Q.picked ? " is-ng" : "";
+        return '<button class="btn btn-xl hw-wide nh-ch' + cls + '" data-c="' + esc(c) + '"' + (Q.picked != null ? " disabled" : "") + ">" + esc(c) + "</button>";
+      }).join("") + "</div>" +
+      (Q.picked != null ? '<p class="ai-goal">' + (Q.picked === q.answer ? "⭕ 正解！" : "❌ 正解は「" + esc(q.answer) + "」") + "</p>" +
+        '<button class="btn btn-primary btn-xl hw-wide" data-nh="next">つぎ ▶</button>' : '<button class="btn hw-wide" data-nh="skip">とばす ▶</button>') +
+      "</section>";
+    nhBind(".nh-ch", function (el) { Q.picked = el.getAttribute("data-c"); if (Q.picked === q.answer) Q.ok++; renderNepaliQuiz(); });
+    nhBind('[data-nh="say"]', function () { nhSay(ne); });
+    nhBind('[data-nh="next"],[data-nh="skip"]', function () { Q.i++; Q.picked = null; renderNepaliQuiz(); });
+    if (Q.picked == null) nhSay(ne);
+  }
+  function nhCharPicker(list, cur, act) {
+    return '<div class="nh-chars">' + list.map(function (x, k) { return '<button class="btn nh-chr' + (k === cur ? " btn-primary" : "") + '" data-' + act + '="' + k + '">' + esc(x.b.char) + "</button>"; }).join("") + "</div>";
+  }
+  function renderNepaliKaki() {
+    aiUse("ne"); headName.textContent = "書き順";
+    var all = nhAll("stroke"); if (!all.length) { view.innerHTML = nhTop("書き順") + '<p class="muted">まだ ありません。</p>'; return; }
+    var b = all[NH.k].b;
+    view.innerHTML = '<section class="lesson hw2 ai nh">' + nhTop("✏️ 書き順") + nhCharPicker(all, NH.k, "k") +
+      aiKanaSvg(b, NH.at, "ai-anim") + '<p class="muted">' + NH.at + " / " + b.paths.length + " 画</p>" +
+      '<div class="ai-ctl"><button class="btn" data-nh="step">1画 すすむ</button><button class="btn btn-primary" data-nh="play">▶ 1画ずつ 見る</button></div>' +
+      '<a class="btn hw-wide" href="#/nepali/nazoru">👆 この字を なぞる</a></section>';
+    nhBind("[data-k]", function (el) { NH.k = +el.getAttribute("data-k"); NH.z = NH.k; NH.at = 0; renderNepaliKaki(); });
+    nhBind('[data-nh="step"]', function () { NH.at = NH.at >= b.paths.length ? 0 : NH.at + 1; renderNepaliKaki(); });
+    nhBind('[data-nh="play"]', function () {
+      NH.at = 0; var my = (NH.play = (NH.play || 0) + 1);
+      var tick = function () { if (NH.play !== my || route().item !== "kaki") return; NH.at++; renderNepaliKaki(); if (NH.at < b.paths.length) setTimeout(tick, 900); };
+      tick();
+    });
+  }
+  function renderNepaliNazoru() {
+    aiUse("ne"); headName.textContent = "指で なぞる";
+    var all = nhAll("trace"); if (!all.length) { view.innerHTML = nhTop("なぞる") + '<p class="muted">まだ ありません。</p>'; return; }
+    NH.z = Math.min(NH.z, all.length - 1);
+    var b = all[NH.z].b;
+    view.innerHTML = '<section class="lesson hw2 ai nh">' + nhTop("👆 指で なぞる") + nhCharPicker(all, NH.z, "z") +
+      '<div class="ai-trace-wrap">' + aiKanaSvg(b, 0, "ai-ghost2") + '<canvas id="nhCv" width="300" height="300"></canvas></div>' +
+      '<div class="ai-ctl"><button class="btn" data-nh="clear">消す</button><button class="btn btn-primary" data-nh="next">つぎの 字 ›</button></div>' +
+      '<a class="btn hw-wide" href="#/nepali/kaki">✏️ 書き順を 見る</a></section>';
+    nhBind("[data-z]", function (el) { NH.z = +el.getAttribute("data-z"); NH.k = NH.z; renderNepaliNazoru(); });
+    nhBind('[data-nh="next"]', function () { NH.z = (NH.z + 1) % all.length; NH.k = NH.z; renderNepaliNazoru(); });
+    var cv = document.getElementById("nhCv"), ctx = cv.getContext("2d"), down = false;
+    ctx.lineWidth = 16; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = "#12294B";
+    var pos = function (e) { var r = cv.getBoundingClientRect(), p = e.touches ? e.touches[0] : e; return [(p.clientX - r.left) * cv.width / r.width, (p.clientY - r.top) * cv.height / r.height]; };
+    var st = function (e) { e.preventDefault(); down = true; var p = pos(e); ctx.beginPath(); ctx.moveTo(p[0], p[1]); };
+    var mv = function (e) { if (!down) return; e.preventDefault(); var p = pos(e); ctx.lineTo(p[0], p[1]); ctx.stroke(); };
+    var en = function () { down = false; };
+    cv.addEventListener("mousedown", st); cv.addEventListener("mousemove", mv); cv.addEventListener("mouseup", en); cv.addEventListener("mouseleave", en);
+    cv.addEventListener("touchstart", st, { passive: false }); cv.addEventListener("touchmove", mv, { passive: false }); cv.addEventListener("touchend", en);
+    nhBind('[data-nh="clear"]', function () { ctx.clearRect(0, 0, cv.width, cv.height); });
   }
 
   function renderAiLesson() {
@@ -3464,6 +3655,7 @@
     if (sim != null && sim !== "") return parseInt(sim, 10);
     var all = readJSON("ouka_ai_lesson_v1", {}), name = studentName() || "（なまえなし）", n = 0;
     for (var i = 1; i <= 10; i++) { var r = all[name + "|O" + i]; if (r && r.done) n = i; else break; }
+    if (routeOf() === "skip" && all[name + "|O10"] && all[name + "|O10"].done) n = 10;   /* 近道＝O10 修了テストが おわったら 本科へ */
     return n;
   }
   function W(id, p) {
@@ -3475,6 +3667,175 @@
     if (p < u.lesson + 2) return '<span class="bw-main">' + ja + '</span><span class="bw-sub ne">' + esc(u.ne) + "</span>";
     return '<span class="bw-main">' + ja + "</span>";
   }
+  /* ---------- あいうえお（声で）・2026-10-13 試作 ----------
+   * 代表「いちばん最初に あいうえお を教える欄 → オリエンテーション → 本科。オリエンを飛ばす道も」
+   *       「音を読み取って ち を さ にしてないか（ちがいます／さがします）」
+   * 中身＝data/kana_start.js（正本＝_tools/あいうえお.py）。聞き取り＝このMacの中の音声認識（_tools/発音チェック.py・/asr）。
+   * ★1字（あ・い…）は 機械が 聞き取れない＝判定しない。お手本 → 自分の声 を 続けて流して 本人が 聞き比べる。
+   * ★判定は 2拍以上の ことばだけ。「い が え に 聞こえました」と 字で 返す。まちがえる事も ある＝点数・Level には 使わない。
+   * ★声は このMacの中で 聞いたら すぐ消す（外にも AIの会社にも 出さない）。Macの外（オンライン版）では 判定しない＝動くふりをしない。 */
+  var KD = window.OUKA_KANA_START || null;
+  var KANA_KEY = "ouka_kana_v1", ROUTE_KEY = "ouka_route_v1";
+  var KS = null, KANA_ASR = null, PENDING_AI = null;
+  function kanaSaved() { var a = readJSON(KANA_KEY, {}); return a[studentName() || "（なまえなし）"] || { kana: {}, words: {} }; }
+  function kanaSave(v) { var a = readJSON(KANA_KEY, {}); a[studentName() || "（なまえなし）"] = v; writeJSON(KANA_KEY, a); }
+  function kanaDone() { return !!kanaSaved().done; }
+  function routeOf() { var a = readJSON(ROUTE_KEY, {}); return a[studentName() || "（なまえなし）"] || "full"; }
+  function routeSet(v) { var a = readJSON(ROUTE_KEY, {}); a[studentName() || "（なまえなし）"] = v; writeJSON(ROUTE_KEY, a); }
+  function kanaAsrPing() {
+    if (KANA_ASR !== null || location.protocol === "file:" || ONLINE) { if (KANA_ASR === null) KANA_ASR = false; return; }
+    KANA_ASR = "wait";
+    fetch("asr-ping", { cache: "no-store" }).then(function (r) { return r.json(); })
+      .then(function (j) { KANA_ASR = !!(j && j.ok); if (route().item === "kana") render(); })
+      .catch(function () { KANA_ASR = false; if (route().item === "kana") render(); });
+  }
+  function kanaPlay(src, then) {
+    var a = new Audio(src);
+    a.onended = a.onerror = function () { if (then) then(); };
+    a.play().catch(function () { if (then) then(); });
+  }
+  function kanaItem(kind, i) {
+    if (kind === "k") return { want: KD.kana[i].k, audio: KD.kana[i].audio, judge: false };
+    if (kind === "w") return { want: KD.words[i].w, audio: KD.words[i].audio, judge: true };
+    var p = KD.pairs[Math.floor(i / 2)][i % 2 ? "b" : "a"];
+    return { want: p.w, audio: p.audio, judge: true };
+  }
+  function kanaResultHtml(r) {
+    if (!r) return "";
+    if (r.wait) return '<div class="kn-res wait">🎧 聞いています…<small>（このMacの中で 聞いています）</small></div>';
+    if (r.nojudge) return '<div class="kn-res">🔊 お手本 → 🎙️ あなたの声。同じに 聞こえますか？<small>Same sound?</small></div>';
+    if (!r.ok_server) return '<div class="kn-res">機械が 聞けませんでした。お手本と 聞き比べてください。</div>';
+    if (r.ok) return '<div class="kn-res ok">✓ 「' + esc(r.heard_kana) + '」と 聞こえました<small>Heard correctly</small></div>';
+    if (!r.heard_kana) return '<div class="kn-res ng">声が 聞き取れませんでした。もう少し 大きく、ゆっくり。<small>Say it louder and slower</small></div>';
+    var d = (r.diffs || []).map(function (x) {
+      if (x.kind === "replace") return "「<b>" + esc(x.want) + "</b>」が「<b>" + esc(x.got) + "</b>」に 聞こえました";
+      if (x.kind === "delete") return "「<b>" + esc(x.want) + "</b>」が 聞こえませんでした";
+      return "「<b>" + esc(x.got) + "</b>」が 多く 聞こえました";
+    }).join("<br>");
+    return '<div class="kn-res ng">聞こえた：「' + esc(r.heard_kana) + "」<br>" + d + '<small>もう一度 お手本を 聞いて 言ってみよう</small></div>';
+  }
+  function kanaRow(kind, i, big, sub) {
+    var key = kind + i, it = kanaItem(kind, i), tk = (KS.takes[key] || []), res = KS.res[key], rec = KS.rec === key;
+    return '<div class="kn-row' + (res && res.ok ? " is-ok" : "") + '"><div class="kn-big">' + esc(big) + "</div>" +
+      '<div class="kn-sub">' + sub + "</div>" +
+      '<div class="kn-btns"><button class="btn" data-act="kn-model" data-k="' + key + '">🔊 お手本</button>' +
+      '<button class="btn ' + (rec ? "is-rec" : "btn-primary") + '" data-act="kn-rec" data-k="' + key + '"' + (KS.rec && !rec ? " disabled" : "") + ">" + (rec ? "■ とめる" : "🎙️ 言う") + "</button>" +
+      (tk.length ? '<button class="btn" data-act="kn-mine" data-k="' + key + '">▶ 自分の声</button>' : "") + "</div>" +
+      (rec ? '<div class="ai-meter"><i id="knMeter"></i></div>' : "") + kanaResultHtml(res) + "</div>";
+  }
+  function renderKanaStart() {
+    headName.textContent = "あいうえお（声で）・しさく";
+    if (!KD) {
+      view.innerHTML = '<section class="start"><div class="soon"><p><b>あいうえお の データが 入っていません。</b></p>' +
+        "<p class='muted'>パソコンで <code>python3 OUKA_INTERVIEW_APP/_tools/あいうえお.py</code> を 実行すると 入ります。</p></div></section>";
+      return;
+    }
+    if (!KS) { var sv = kanaSaved(); KS = { takes: {}, res: {}, rec: "", sv: sv }; }
+    kanaAsrPing();
+    var okN = KD.words.filter(function (w, i) { var r = KS.res["w" + i]; return (r && r.ok) || (KS.sv.words || {})[w.w]; }).length;
+    var triedAll = KD.words.every(function (w, i) { return (KS.takes["w" + i] || []).length || (KS.sv.words || {})[w.w] !== undefined; });
+    var canDone = KANA_ASR === true ? okN >= KD.pass_words : triedAll;
+    var asrNote = KANA_ASR === true ? '<div class="kn-asr on">🎧 このMacが 聞いて「どの字が ちがったか」を 教えます（声は 外に 出しません）</div>'
+      : KANA_ASR === "wait" ? '<div class="kn-asr">🎧 しらべています…</div>'
+      : '<div class="kn-asr off">🎧 いまは 機械の 聞き取りが ありません（学校のMacで 開いた時だけ）。お手本と 聞き比べて 進めます。</div>';
+    view.innerHTML = '<section class="lesson hw2 kn">' +
+      '<a class="btn btn-sm" href="#/student/start">← もどる</a>' +
+      '<h1 class="kn-h">あいうえお <small>まず 声で</small></h1>' + asrNote +
+      '<h2 class="kn-h2">① 字 <small>お手本 → 言う → 聞き比べ（1字は 機械が 聞き分けられないので 自分の耳で）</small></h2>' +
+      KD.kana.map(function (x, i) { return kanaRow("k", i, x.k, esc(x.roma) + ' <span class="ne">' + esc(x.ne) + "</span><br><small>" + esc(x.tip) + " / " + esc(x.tip_en) + "</small>"); }).join("") +
+      '<h2 class="kn-h2">② ことば <small>言うと 機械が 聞きます（' + KD.pass_words + "つ ✓ で つぎへ）</small></h2>" +
+      KD.words.map(function (x, i) { return kanaRow("w", i, x.w, (x.ne ? '<span class="ne">' + esc(x.ne) + "</span> · " : "") + esc(x.en)); }).join("") +
+      '<h2 class="kn-h2">③ まちがえやすい音 <small>（しさく）</small></h2>' +
+      KD.pairs.map(function (p, j) {
+        return '<div class="kn-pair-note">' + esc(p.note) + " / " + esc(p.note_en) + "</div>" +
+          kanaRow("p", j * 2, p.a.w, esc(p.a.en)) + kanaRow("p", j * 2 + 1, p.b.w, esc(p.b.en));
+      }).join("") +
+      '<div class="kn-done">' + (KS.sv.done ? "✓ おわりました。" : "✓ " + okN + " / " + KD.words.length) +
+        '<button class="btn btn-primary btn-xl hw-wide" data-act="kn-finish"' + (canDone || KS.sv.done ? "" : " disabled") + ">つぎへ ▶ オリエンテーション</button></div>" +
+      '<p class="muted small">' + esc(KD.note) + "</p></section>";
+  }
+  function kanaRecToggle(key) {
+    if (KS.rec) { if (KS.mr && KS.mr.state === "recording") KS.mr.stop(); return; }
+    if (!canRecord()) { toast("この端末では録音できません"); return; }
+    var it = kanaItem(key.charAt(0), parseInt(key.slice(1), 10));
+    var actx = null;
+    try { actx = new (window.AudioContext || window.webkitAudioContext)(); if (actx.resume) actx.resume(); } catch (e) { actx = null; }
+    /* マイクの無い端末で 声が 小さい・こもる 対策＝ブラウザの 雑音カット・自動音量を 必ず つける */
+    navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }).then(function (stream) {
+      var chunks = [], mr = new MediaRecorder(stream), an = null, buf = null, raf = 0;
+      try { an = actx.createAnalyser(); an.fftSize = 1024; buf = new Float32Array(an.fftSize); actx.createMediaStreamSource(stream).connect(an); } catch (e) { an = null; }
+      var meter = function () {
+        if (!an) return; an.getFloatTimeDomainData(buf);
+        var s = 0; for (var i = 0; i < buf.length; i++) s += buf[i] * buf[i];
+        var m = document.getElementById("knMeter"); if (m) m.style.width = Math.min(100, Math.round(Math.sqrt(s / buf.length) * 600)) + "%";
+        raf = requestAnimationFrame(meter);
+      };
+      KS.mr = mr; KS.rec = key;
+      mr.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
+      mr.onstop = function () {
+        cancelAnimationFrame(raf); stream.getTracks().forEach(function (t) { t.stop(); }); if (actx) actx.close();
+        if (!KS) return;
+        KS.rec = "";
+        if (!chunks.length) { render(); return; }
+        var blob = new Blob(chunks, { type: mr.mimeType || "audio/webm" }), url = URL.createObjectURL(blob);
+        (KS.takes[key] = KS.takes[key] || []).push(url);
+        if (!it.judge || KANA_ASR !== true) {
+          KS.res[key] = { nojudge: true };
+          if (key.charAt(0) === "k") { KS.sv.kana = KS.sv.kana || {}; KS.sv.kana[it.want] = 1; }
+          if (key.charAt(0) === "w") { KS.sv.words = KS.sv.words || {}; if (KS.sv.words[it.want] === undefined) KS.sv.words[it.want] = false; }
+          kanaSave(KS.sv); render();
+          kanaPlay(it.audio, function () { kanaPlay(url); });   /* お手本 → 自分の声 */
+          return;
+        }
+        KS.res[key] = { wait: true }; render();
+        fetch("asr", { method: "POST", body: blob, headers: { "Content-Type": blob.type, "X-Want": encodeURIComponent(it.want) } })
+          .then(function (r) { return r.json(); })
+          .then(function (j) {
+            if (!KS) return; KS.res[key] = j;
+            if (key.charAt(0) === "w") { KS.sv.words = KS.sv.words || {}; KS.sv.words[it.want] = !!j.ok || !!KS.sv.words[it.want]; kanaSave(KS.sv); }
+            render(); if (j.ok) aiChime();
+          })
+          .catch(function () { if (!KS) return; KS.res[key] = { ok_server: false }; render(); });
+      };
+      mr.start(); render(); meter();
+      setTimeout(function () { if (mr.state === "recording") mr.stop(); }, 5000);   /* 5秒で とまる */
+    }).catch(function () { if (actx) actx.close(); toast("マイクを 許可してください"); });
+  }
+  function kanaAct(act, el) {
+    var key = el && el.getAttribute("data-k");
+    if (act === "kn-model") { var it = kanaItem(key.charAt(0), parseInt(key.slice(1), 10)); kanaPlay(it.audio); return true; }
+    if (act === "kn-mine") { var tk = KS.takes[key] || []; if (tk.length) kanaPlay(tk[tk.length - 1]); return true; }
+    if (act === "kn-rec") { kanaRecToggle(key); return true; }
+    if (act === "kn-finish") { KS.sv.done = true; kanaSave(KS.sv); KS = null; go("#/student/start"); return true; }
+    if (act === "kn-route") { routeSet(el.getAttribute("data-r")); render(); return true; }
+    if (act === "kn-go") { PENDING_AI = el.getAttribute("data-l"); go("#/student/ai"); return true; }
+    return false;
+  }
+  /* 道のり：①あいうえお → ②オリエンテーション O1〜O10（近道＝O10 修了テストだけ）→ ③本科 Day1 */
+  function routeMapHtml(p) {
+    var r = routeOf(), kd = kanaDone(), oriDone = p >= 10;
+    var step = function (n, t, sub, st) { return '<div class="rt-step is-' + st + '"><b>' + n + "</b><span>" + t + "</span><small>" + sub + "</small></div>"; };
+    var cur = !kd ? 1 : !oriDone ? 2 : 3;
+    return '<div class="rt"><div class="rt-steps">' +
+      step("①", "あいうえお", "声で", kd ? "done" : cur === 1 ? "now" : "") + '<i class="rt-arr">▶</i>' +
+      step("②", r === "skip" ? "O10 テスト" : "オリエン", r === "skip" ? "近道" : "O1〜O10", oriDone ? "done" : cur === 2 ? "now" : "") + '<i class="rt-arr">▶</i>' +
+      step("③", "本科", "Day1〜", cur === 3 ? "now" : "") + "</div>" +
+      '<div class="rt-pick"><button class="btn btn-sm' + (r === "full" ? " btn-primary" : "") + '" data-act="kn-route" data-r="full">ふつう：O1から</button>' +
+      '<button class="btn btn-sm' + (r === "skip" ? " btn-primary" : "") + '" data-act="kn-route" data-r="skip">近道：ひらがなが もう 読める人</button></div>' +
+      (r === "skip" ? '<p class="rt-note small">近道＝オリエンテーション（O1〜O9）を とばして、<b>O10 修了テスト</b>だけ。合格したら 本科へ。だめなら O1から。</p>' : "") +
+      "</div>";
+  }
+
+  /* かきじゅん＝ひらがな・てんてん・カタカナの 書き順シート（配布用PDF/S_文字の練習。KanjiVG CC BY-SA）を 開くだけ（2026-10-13） */
+  function renderStudentKaki() {
+    var p = begProgress();
+    view.innerHTML = '<section class="lesson hw2 beg"><div class="beg-hello">✏️ ' + W("stroke", p) + "</div>" +
+      '<p class="muted">1日 7字ずつ。1字を 大きく 見て → なぞる 3回 → じぶんで 3回。</p>' +
+      '<div class="start-btns">' + matLink("S1_かきじゅん_ひらがな.pdf", "btn-xl") + matLink("S2_かきじゅん_てんてん_小さい字.pdf", "btn-xl") +
+      matLink("S3_かきじゅん_カタカナ.pdf", "btn-xl") + "</div>" +
+      '<p><a class="btn" href="#/student/start">← もどる</a></p></section>';
+  }
+
   function renderBeginnerHome() {
     RB_MISS = 0;
     var p = begProgress(), name = studentName();
@@ -3501,9 +3862,19 @@
       '<div class="beg-hello">' + W("hello", p) + (name ? '<span class="beg-name">' + esc(name) + "</span>" : "") + "</div>" +
       (name ? "" : '<div class="hw-name"><label>' + W("name", p) + '<input id="begName" placeholder="SITA RAI" autocomplete="off"></label></div>') +
       '<div class="beg-level"><span>' + W("study", p) + '</span><div class="beg-dots">' + dots + "</div></div>" +
+      (KD ? routeMapHtml(p) : "") +
       '<div class="beg-grid">' +
-        card("lesson", "🧑‍🏫", "#/student/ai", nextO && p < 11 ? "O" + nextO : "") +
+        (KD && !kanaDone() ? card("lesson", "🔤", "#/student/kana", "あいうえお") :
+         routeOf() === "skip" && p < 10 ? '<button class="beg-card" data-act="kn-go" data-l="O10"><span class="beg-ic">🧑‍🏫</span><span class="beg-w">' + W("lesson", p) + '</span><span class="beg-sub">O10 テスト</span></button>' :
+         card("lesson", "🧑‍🏫", "#/student/ai", nextO && p < 11 ? "O" + nextO : "")) +
+        /* 2026-10-13 代表「生徒が10人入る。枠を10個ぐらいに。押したら 書き順は書き順、クイズはクイズ」＝今ある画面を 枠に並べるだけ（中身は作らない） */
+        (KD && kanaDone() ? card("kana", "🔤", "#/student/kana", "") : "") +
+        card("stroke", "✏️", "#/student/kaki", "") +
+        card("quiz", "❓", "#/student/drill", "") +
         card("homework", "✍️", hwHref, "") +
+        card("video", "🎬", "#/student/media", "") +
+        card("speak", "🎙️", "#/student/speak", "") +
+        card("photo", "📷", "#/student/submit", "") +
         card("record", "📈", "#/student/history", "") +
         card("help", "🆘", "#/student/emergency", "") +
       "</div>" +
@@ -3712,7 +4083,7 @@
       if (!have[q["質問ID"]] && String(q["学ぶ人"]) === name) mine.push({ id: q["質問ID"], where: q["どこ"], word: q["ことば"], text: q["質問"], saved_at: q["書いた日時"], sent_at: q["最終送信"], no: 0 });
     });
     mine.sort(function (a, b) { return String(b.saved_at) < String(a.saved_at) ? -1 : 1; });
-    var back = route().hub === "nepali" ? "#/nepali/learn" : "#/teacher/nepali";
+    var back = route().hub === "nepali" ? "#/nepali/home" : "#/teacher/nepali";
     view.innerHTML = '<section class="lesson hw2 rp">' +
       '<div class="lesson-head"><h1>❓ 質問と答え</h1></div>' +
       '<p class="muted">授業の 画面の <b>「❓ 質問」</b> から 送れます。ここからも 送れます。先生が 読んで 答えます。</p>' +
@@ -4081,11 +4452,22 @@
     if (k === "teacher/report") return renderTeacherReport();
     if (k === "teacher/guide") return renderTeacherGuide(n);
     if (k === "teacher/assign") return renderTeacherAssign(n);
-    if (k === "student/ai") { aiUse("ja"); return renderAiLesson(); }
+    if (k === "student/ai") {
+      aiUse("ja");
+      if (PENDING_AI) { var pl = PENDING_AI; PENDING_AI = null; aiAct("ai-start", { getAttribute: function () { return pl; } }); return; }   /* 近道＝O10 から すぐ始める */
+      return renderAiLesson();
+    }
+    if (k === "nepali/home") return renderNepaliHome();
+    if (k === "nepali/words") return renderNepaliWords();
+    if (k === "nepali/quiz") return renderNepaliQuiz();
+    if (k === "nepali/kaki") return renderNepaliKaki();
+    if (k === "nepali/nazoru") return renderNepaliNazoru();
     if (k === "teacher/nepali" || k === "nepali/learn") { aiUse("ne"); return renderAiLesson(); }
     if (k === "nepali/qa" || k === "teacher/nepali_qa") return renderNepaliQa();
     if (k === "teacher/nepali_answer") return renderNepaliAnswer();
     if (k === "student/start") return renderBeginnerHome();
+    if (k === "student/kana") return renderKanaStart();
+    if (k === "student/kaki") return renderStudentKaki();
     if (k === "teacher/voices") return renderTeacherVoices();
   }
 
@@ -4818,6 +5200,7 @@
     if (r.cid && !c) { toast("候補者が見つかりません"); r = { name: "home" }; }
     document.body.setAttribute("data-screen", r.name);
     if (!(r.name === "soon" && r.item === "report")) RP_REMOTE = null;
+    if (!(r.name === "soon" && r.item === "kana") && KS) { if (KS.mr && KS.mr.state === "recording") KS.mr.stop(); KS = null; }   /* あいうえお から出たら 録音を止める */
     if (!(r.name === "soon" && (r.item === "qa" || r.item === "nepali_qa" || r.item === "nepali_answer"))) NQ_REMOTE = null;   /* 質問と答えの画面に 入るたびに 読み直す */
     if (!(r.name === "soon" && (r.item === "ai" || r.item === "nepali" || (r.hub === "nepali" && r.item === "learn"))) && AIS) { aiStop(); AIS = null; }   /* 2026-10-05 翔太の入口（#/nepali/learn）を 数え忘れていて「N1を はじめる」が 押せなかった */   /* AIの授業から出たら声と録音を止める（続きは保存してある） */   /* 報告の画面に入るたびに返事を読み直す */
     if (r.name === "setfield") {
@@ -4888,6 +5271,7 @@
     else if (act === "drill-again" && quiz) { quiz = null; render(); }
     else if (/^hw-/.test(act) && hwAct(act, el)) { /* 宿題の中の操作 */ }
     else if (/^ai-/.test(act) && aiAct(act, el)) { /* AIの授業の中の操作 */ }
+    else if (/^kn-/.test(act) && kanaAct(act, el)) { /* あいうえお（声で）の操作 */ }
     else if (act === "fb-open") fbOpen();
     else if (act === "as-group") { AS_PICK.group = el.getAttribute("data-g"); render(); }
     else if (act === "as-send") asSend();

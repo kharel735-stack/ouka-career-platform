@@ -809,3 +809,41 @@ rt { font-size: .5em; color: #2E4A7A; font-weight: 700; line-height: 1; }
 .qs-bubble { flex: 1; }
 .ai-video { display: block; width: 100%; max-height: 60vh; margin: 10px 0; border-radius: 12px; background: #000; }
 .ai-video-none { margin: 10px 0; padding: 8px 12px; border: 1px dashed var(--line); border-radius: 10px; color: var(--muted); font-size: 14px; text-align: center; }
+
+/* ---------- あいうえお（声で）・道のり（2026-10-13 試作） ---------- */
+button.beg-card { font: inherit; font-size: 30px; cursor: pointer; width: 100%; }
+.rt { background: var(--card); border: 2px solid var(--line); border-radius: 16px; padding: 10px; margin-top: 12px; }
+.rt-steps { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+.rt-step { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 8px 4px; border-radius: 12px; background: #F3F4F7; color: #6B7280; text-align: center; min-width: 0; }
+.rt-step b { font-size: 20px; } .rt-step span { font-size: 17px; font-weight: 700; } .rt-step small { font-size: 12px; }
+.rt-step.is-now { background: #12294B; color: #fff; }
+.rt-step.is-done { background: #E7F6EC; color: #1E7B3C; }
+.rt-step.is-done span::after { content: " ✓"; }
+.rt-arr { font-style: normal; color: #9CA3AF; font-size: 12px; }
+.rt-pick { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.rt-pick .btn { flex: 1; }
+.rt-note { margin: 8px 2px 0; color: #374151; }
+.kn-h { font-size: 34px; margin: 10px 0 4px; } .kn-h small { font-size: 16px; color: #6B7280; }
+.kn-h2 { font-size: 22px; margin: 20px 0 6px; } .kn-h2 small { display: block; font-size: 13px; color: #6B7280; font-weight: 400; }
+.kn-asr { font-size: 14px; padding: 8px 10px; border-radius: 10px; background: #F3F4F7; }
+.kn-asr.on { background: #E8EEF8; color: #12294B; } .kn-asr.off { background: #FFF6E5; color: #7A4B00; }
+.kn-row { background: var(--card); border: 2px solid var(--line); border-radius: 16px; padding: 10px 12px; margin: 8px 0; }
+.kn-row.is-ok { border-color: #34A853; }
+.kn-big { font-size: 56px; font-weight: 700; line-height: 1.1; }
+.kn-sub { font-size: 15px; color: #374151; margin: 2px 0 8px; } .kn-sub .ne { font-size: 15px; }
+.kn-btns { display: flex; gap: 6px; flex-wrap: wrap; } .kn-btns .btn { flex: 1; min-height: 48px; font-size: 17px; }
+.kn-btns .btn.is-rec { background: #C8362B; color: #fff; border-color: #C8362B; }
+.kn-res { margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: #F3F4F7; font-size: 17px; line-height: 1.5; }
+.kn-res small { display: block; font-size: 12px; color: #6B7280; }
+.kn-res.ok { background: #E7F6EC; color: #1E7B3C; } .kn-res.ng { background: #FDECEA; color: #8A1F17; } .kn-res.wait { background: #E8EEF8; }
+.kn-pair-note { font-size: 15px; margin: 4px 2px; color: #8A1F17; }
+.kn-done { margin: 20px 0 8px; font-size: 18px; text-align: center; }
+
+/* ネパール語を学ぶ人の ホームと 練習（2026-10-14） */
+.nh-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.nh-chars { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
+.nh-chr { min-width: 44px; font-size: 20px; }
+.nh-mean { font-size: 22px; font-weight: 700; text-align: center; padding: 10px; background: #fff; border-radius: 12px; margin: 6px 0; }
+.nh-ch.is-ok { background: #E3F4E8; border-color: #2E8B57; color: #1E5E3A; opacity: 1; }
+.nh-ch.is-ng { background: #FBE6E4; border-color: #C8362B; color: #8E241C; opacity: 1; }
+.nh-card .bw-sub { display: block; font-size: 13px; color: #5A6372; margin-top: 2px; }

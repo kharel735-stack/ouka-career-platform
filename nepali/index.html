@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ネパール語">
 <meta name="robots" content="noindex, nofollow">
-<link rel="stylesheet" href="style.css?v=ea24b9768d">
+<link rel="stylesheet" href="style.css?v=69bdc340a5">
 <link rel="stylesheet" href="online.css?v=397da3987f">
 </head>
 <body data-screen="home">
@@ -41,12 +41,12 @@
 
 <div id="appShell" hidden>
   <header class="topbar">
-    <a class="brand" href="#/nepali/learn">🧑‍🏫 さくら先生の <b>ネパール語</b></a>
+    <a class="brand" href="#/nepali/home">🧑‍🏫 さくら先生の <b>ネパール語</b></a>
     <span class="head-name" id="headName"></span>
     <nav class="bar-nav">
       <span class="sync-badge" id="syncBadge" hidden></span>
       <span class="who" id="who"></span>
-      <a class="btn btn-sm" id="homeBtn" href="#/nepali/learn">授業</a><a class="btn btn-sm" href="#/nepali/qa">❓ 質問</a>
+      <a class="btn btn-sm" id="homeBtn" href="#/nepali/home">ホーム</a><a class="btn btn-sm" href="#/nepali/learn">授業</a><a class="btn btn-sm" href="#/nepali/qa">❓ 質問</a>
       <button class="btn btn-sm" id="logoutBtn" type="button">ログアウト</button>
     </nav>
   </header>
@@ -66,11 +66,11 @@
   /* ネパール語学習の入口（2026-10-10）＝この ページでは ネパール語学習と 質問に答える画面だけ */
   (function () {
     function ok(h) { return /^#\/nepali(\/|$)/.test(h) || h.indexOf("#/teacher/nepali_answer") === 0; }
-    if (!ok(location.hash || "")) location.replace("#/nepali/learn");
-    window.addEventListener("hashchange", function () { if (!ok(location.hash || "")) location.replace("#/nepali/learn"); });
+    if (!ok(location.hash || "")) location.replace("#/nepali/home");
+    window.addEventListener("hashchange", function () { if (!ok(location.hash || "")) location.replace("#/nepali/home"); });
   })();
 </script>
-<script src="config.js?v=44be2df872"></script>
+<script src="config.js?v=5857334ec7"></script>
 <script src="auth.js?v=68b5adfa8e"></script>
 <script src="online.js?v=10de389db2"></script>
 </body>
