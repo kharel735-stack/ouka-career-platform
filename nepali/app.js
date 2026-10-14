@@ -3387,6 +3387,7 @@
     var sc = AIC.scenes[AIS.si], b = aiBeat(), tot = AIC.scenes.length;
     var head = '<div class="ai-top"><span class="ai-step">' + esc(sc.icon) + " " + esc(sc.step) + '</span>' +
       (AI_MODE === "ne" && studentName() ? '<button class="btn btn-sm nq-btn" data-act="nq-open">❓ 質問</button>' : "") +
+      (AI_MODE === "ne" ? '<button class="btn btn-sm ai-skipall" data-act="ai-skipall">とばす ▶</button>' : "") +
       '<span class="hw-cnt">' + (AIS.si + 1) + " / " + tot + "</span></div>" +
       '<div class="hw-bar"><i style="width:' + Math.round(AIS.si / tot * 100) + '%"></i></div>';
     var wait = AIS.speaking ? ' disabled data-wait="1"' : "";
@@ -3520,7 +3521,7 @@
     var b = aiBeat();
     AIS.picked = null; AIS.ink = 0; AIS.noVoice = false;
     if (b.t === "stroke") return aiStrokeRun();
-    var seg = b.t === "say" ? b.seg : b.t === "word" ? [["ja", b.ja], ["ne", b.ne], ["ja", b.ja]] : b.t === "nword" ? [["ne", b.ne], ["ja", b.ja], ["ne", b.ne]] : b.t === "pick" ? b.play : b.seg;
+    var seg = b.t === "say" ? b.seg : b.t === "word" ? [["ja", b.ja], ["ne", b.ne], ["ja", b.ja]] : b.t === "nword" ? (AI_MODE === "ne" && /^M/.test(AIC.id) ? [["ne", b.ne], ["ne", b.ne]] : [["ne", b.ne], ["ja", b.ja], ["ne", b.ne]]) :   /* 2026-10-14 代表「文字は シャンティ先生の अ だけで いい。日本語の 読みは いらない」 */ b.t === "pick" ? b.play : b.seg;
     aiPlay(seg, b.t === "say" || b.t === "word" || b.t === "nword" ? function () { aiAuto(700); } :
       b.t === "trace" && AI_MODE === "ne" ? function () { aiStrokeRunTrace(b); } : null);   /* 2026-10-14 なぞる前に 自動で 書き順を 見せる（数えながら） */   /* 分解（parts）は 自分で 読んで 押してから 次へ＝自動で 進めない */
     render();
