@@ -3398,11 +3398,11 @@
       body += aiSegHtml(b.seg, b.en) + "</div>" + (b.big ? '<div class="ai-big">' + esc(b.big).replace(/\n/g, "<br>") + "</div>" : "") + again + next(true);
     } else if (b.t === "stroke") {
       body += aiSegHtml(b.intro.concat(AIS.strokeAt > 0 ? b.count[AIS.strokeAt - 1] : []), b.en) + "</div>" +
-        aiKanaSvg(b, AIS.strokeAt, "ai-anim") +
+        (AI_MODE === "ne" ? '<div class="ai-trace-wrap nh-kaki">' + nhGuideSvg(b, AIS.strokeAt, AIS.strokeAt - 1) + "</div>" : aiKanaSvg(b, AIS.strokeAt, "ai-anim")) +   /* 2026-10-14 ネパール語は 書き順画面と 同じ 見せ方 */
         '<button class="btn hw-wide" data-act="ai-replay">' + (AI_MODE === "ne" ? "🔁 もう一度 見る" : "🔁 फेरि हेर ／ Watch again") + "</button>" + next(AIS.strokeAt >= b.paths.length);
     } else if (b.t === "trace") {
       body += aiSegHtml(b.seg, b.en) + "</div>" +
-        '<div class="ai-trace-wrap">' + aiKanaSvg(b, 0, "ai-ghost2") + '<canvas id="aiCv" width="300" height="300"></canvas></div>' +
+        '<div class="ai-trace-wrap">' + (AI_MODE === "ne" ? nhGuideSvg(b, 0, -1) : aiKanaSvg(b, 0, "ai-ghost2")) + '<canvas id="aiCv" width="300" height="300"></canvas></div>' +
         '<div class="ai-ctl"><button class="btn" data-act="ai-clear">' + (AI_MODE === "ne" ? "消す" : "मेटाऊ ／ Clear") + '</button><button class="btn" data-act="ai-showorder">' + (AI_MODE === "ne" ? "書き順" : "लेख्ने क्रम ／ Order") + "</button></div>" +
         next(AIS.ink > 40, AI_MODE === "ne" ? "書けた ▶" : "लेखें ▶ Done");
     } else if (b.t === "record" && aiMute()) {
@@ -3465,6 +3465,7 @@
         }).join("") + "</div>" + (AIS.picked != null ? next(true) : "");
     }
     view.innerHTML = '<section class="lesson hw2 ai">' + head + '<div class="hw-card3">' + body + "</div>" +
+      (AI_MODE === "ne" ? '<button class="btn btn-xl hw-wide ai-skipall ai-skipbig" data-act="ai-skipall">とばす ⏭（つぎの ページへ）</button>' : "") +
       '<button class="btn ai-pause" data-act="ai-pause">' + (AIS.paused ? aiT("play") : aiT("pause")) + "</button>" +
       '<button class="btn ai-quit" data-act="ai-quit">' + esc(aiT("quit")) + "</button></section>";
     if (b.t === "trace") aiCanvas(b);
@@ -3498,7 +3499,8 @@
         AIS.strokeAt++; render();
         var el = document.querySelector('.ai-anim path[data-k="' + (AIS.strokeAt - 1) + '"]');
         if (el && el.getTotalLength) { var L = el.getTotalLength(); el.style.strokeDasharray = L; el.style.strokeDashoffset = L; el.getBoundingClientRect(); el.style.transition = "stroke-dashoffset 1.1s ease"; el.style.strokeDashoffset = "0"; }
-        aiPlay(b.count[AIS.strokeAt - 1], function () { setTimeout(go1, 350); });
+        var nn = NH_NE_NUM[AIS.strokeAt - 1];
+        aiPlay(AI_MODE === "ne" && AIL.audio["ne|" + nn] ? [["ne", nn]] : b.count[AIS.strokeAt - 1], function () { setTimeout(go1, 350); });   /* ネパール語は एक・दुई… で 数える */
       };
       go1();
     });
@@ -3668,6 +3670,16 @@
   }
   /* なぞる画面で「書く順番」を もう一度 見る（書いた線は 消さない） */
   function aiStrokeRunTrace(b) {
+    if (AI_MODE === "ne") {   /* 2026-10-14 なぞる画面と 同じ：字の中を 1画ずつ 赤く うっすら＋ネパール語で 数える（書いた線は 消さない） */
+      var at = 1, my = (NH.play = (NH.play || 0) + 1);
+      var tick = function () {
+        if (NH.play !== my || !AIS || aiBeat() !== b) return;
+        var old = view.querySelector(".nh-g"); if (!old) return;
+        old.outerHTML = nhGuideSvg(b, at, at - 1); nhCount(at);
+        if (at++ < b.paths.length) setTimeout(tick, 1200);
+      };
+      tick(); return;
+    }
     var svg = document.querySelector(".ai-ghost2");
     if (!svg) return;
     var ps = svg.querySelectorAll("path"), k = 0;

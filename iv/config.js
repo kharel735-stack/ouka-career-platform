@@ -4,5 +4,5 @@ window.OUKA_ONLINE_CONFIG = {
   clerkPublishableKey: "pk_live_Y2xlcmsuYWJhcy1nbG9iYWxncm91cC5jb20k",
   ivLayerUrl: "https://zolhsqgmgrdjbkeywrnx.supabase.co/functions/v1/iv"
 };
-window.OUKA_ONLINE_CONFIG.appVersion = "4ddfb897a4";
-window.OUKA_ONLINE_CONFIG.build = "bc40c7cebe";
+window.OUKA_ONLINE_CONFIG.appVersion = "75e9d5f7a1";
+window.OUKA_ONLINE_CONFIG.build = "78ce5baa7c";

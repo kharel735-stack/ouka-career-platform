@@ -858,3 +858,5 @@ button.beg-card { font: inherit; font-size: 30px; cursor: pointer; width: 100%; 
 .nh-g .nh-ar { stroke: var(--shu); stroke-width: 1.1; stroke-linecap: round; }
 .nh-g .nh-badge { fill: #fff; stroke: var(--shu); stroke-width: .8; }
 .nh-g .nh-bn { fill: var(--shu); font-size: 5.4px; font-weight: 700; text-anchor: middle; }
+.ai-skipall { font-weight: 700; border-color: var(--shu); color: var(--shu); background: #FFF4F2; }
+.ai-skipbig { margin-top: 10px; }
