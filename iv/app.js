@@ -3063,6 +3063,19 @@
     if (mode === "ne" && AIL && AIL.lessons && !AIL._mFirst) {
       AIL.lessons = AIL.lessons.filter(function (l) { return /^M/.test(l.id); }).concat(AIL.lessons.filter(function (l) { return !/^M/.test(l.id); }));
       AIL._mFirst = true;
+      /* 2026-10-14 代表「言う（シャンティ先生の声 1回）→ 書く → 書き順 → また 言う → 書く」＝文字の回の 1字ごとの 並び（中身は 同じ・並びだけ） */
+      AIL.lessons.forEach(function (l) {
+        if (!/^M/.test(l.id)) return;
+        l.scenes.forEach(function (sc) {
+          var out = [], bs = sc.beats;
+          for (var i = 0; i < bs.length; i++) {
+            var w = bs[i], st = bs[i + 1], tr = bs[i + 2];
+            if (w.t === "nword" && st && st.t === "stroke" && tr && tr.t === "trace") { out.push(w, tr, st, w, tr); i += 2; }
+            else out.push(w);
+          }
+          sc.beats = out;
+        });
+      });
     }
     AI_KEY = mode === "ne" ? "ouka_ai_nepali_v1" : "ouka_ai_lesson_v1";
   }
@@ -3521,7 +3534,7 @@
     var b = aiBeat();
     AIS.picked = null; AIS.ink = 0; AIS.noVoice = false;
     if (b.t === "stroke") return aiStrokeRun();
-    var seg = b.t === "say" ? b.seg : b.t === "word" ? [["ja", b.ja], ["ne", b.ne], ["ja", b.ja]] : b.t === "nword" ? (AI_MODE === "ne" && /^M/.test(AIC.id) ? [["ne", b.ne], ["ne", b.ne]] : [["ne", b.ne], ["ja", b.ja], ["ne", b.ne]]) :   /* 2026-10-14 代表「文字は シャンティ先生の अ だけで いい。日本語の 読みは いらない」 */ b.t === "pick" ? b.play : b.seg;
+    var seg = b.t === "say" ? b.seg : b.t === "word" ? [["ja", b.ja], ["ne", b.ne], ["ja", b.ja]] : b.t === "nword" ? (AI_MODE === "ne" && /^M/.test(AIC.id) ? [["ne", b.ne]] : [["ne", b.ne], ["ja", b.ja], ["ne", b.ne]]) :   /* 2026-10-14 代表「文字は シャンティ先生の अ だけで いい。日本語の 読みは いらない」 */ b.t === "pick" ? b.play : b.seg;
     aiPlay(seg, b.t === "say" || b.t === "word" || b.t === "nword" ? function () { aiAuto(700); } :
       b.t === "trace" && AI_MODE === "ne" ? function () { aiStrokeRunTrace(b); } : null);   /* 2026-10-14 なぞる前に 自動で 書き順を 見せる（数えながら） */   /* 分解（parts）は 自分で 読んで 押してから 次へ＝自動で 進めない */
     render();
