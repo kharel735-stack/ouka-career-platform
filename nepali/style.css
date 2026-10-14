@@ -847,3 +847,7 @@ button.beg-card { font: inherit; font-size: 30px; cursor: pointer; width: 100%; 
 .nh-ch.is-ok { background: #E3F4E8; border-color: #2E8B57; color: #1E5E3A; opacity: 1; }
 .nh-ch.is-ng { background: #FBE6E4; border-color: #C8362B; color: #8E241C; opacity: 1; }
 .nh-card .bw-sub { display: block; font-size: 13px; color: #5A6372; margin-top: 2px; }
+.nh-guide path.on { stroke: #B9C6DC; }
+.nh-guide.nh-play path.on { stroke: #7F93B5; }
+.nh-guide path.now { stroke: var(--shu); }
+.nh-guide text { fill: var(--shu); }

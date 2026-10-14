@@ -3059,6 +3059,11 @@
     if (AI_MODE !== mode) { aiStop(); AIS = null; AIC = null; }
     AI_MODE = mode;
     AIL = mode === "ne" ? window.OUKA_AI_NEPALI || null : AIL_JA;
+    /* 2026-10-14 代表「授業も 書き順から 始めて」＝ネパール語は 文字の回（M1〜）を 先に 並べる（中身は 変えない・並びだけ） */
+    if (mode === "ne" && AIL && AIL.lessons && !AIL._mFirst) {
+      AIL.lessons = AIL.lessons.filter(function (l) { return /^M/.test(l.id); }).concat(AIL.lessons.filter(function (l) { return !/^M/.test(l.id); }));
+      AIL._mFirst = true;
+    }
     AI_KEY = mode === "ne" ? "ouka_ai_nepali_v1" : "ouka_ai_lesson_v1";
   }
   /* ネパール語版の 回をえらぶ画面（日本語の授業の一覧とは 別に持つ＝あちらの文言を 変えない） */
@@ -3276,7 +3281,9 @@
     NH.z = Math.min(NH.z, all.length - 1);
     var b = all[NH.z].b;
     view.innerHTML = '<section class="lesson hw2 ai nh">' + nhTop("👆 指で なぞる") + nhCharPicker(all, NH.z, "z") +
-      '<div class="ai-trace-wrap">' + aiKanaSvg(b, 0, "ai-ghost2") + '<canvas id="nhCv" width="300" height="300"></canvas></div>' +
+      '<div class="ai-trace-wrap">' + aiKanaSvg(b, b.paths.length, "ai-ghost2 nh-guide") + '<canvas id="nhCv" width="300" height="300"></canvas></div>' +
+      '<p class="muted">うすい線と 番号の 順に なぞります（' + b.paths.length + ' 画）</p>' +
+      '<button class="btn hw-wide" data-nh="order">▶ 書き順を 見る（1画ずつ）</button>' +
       '<div class="ai-ctl"><button class="btn" data-nh="clear">消す</button><button class="btn btn-primary" data-nh="next">つぎの 字 ›</button></div>' +
       '<a class="btn hw-wide" href="#/nepali/kaki">✏️ 書き順を 見る</a></section>';
     nhBind("[data-z]", function (el) { NH.z = +el.getAttribute("data-z"); NH.k = NH.z; renderNepaliNazoru(); });
@@ -3290,6 +3297,17 @@
     cv.addEventListener("mousedown", st); cv.addEventListener("mousemove", mv); cv.addEventListener("mouseup", en); cv.addEventListener("mouseleave", en);
     cv.addEventListener("touchstart", st, { passive: false }); cv.addEventListener("touchmove", mv, { passive: false }); cv.addEventListener("touchend", en);
     nhBind('[data-nh="clear"]', function () { ctx.clearRect(0, 0, cv.width, cv.height); });
+    /* 書き順を 1画ずつ（なぞった 線は 消さない＝絵だけ 描き直す） */
+    nhBind('[data-nh="order"]', function () {
+      var at = 0, my = (NH.play = (NH.play || 0) + 1);
+      var tick = function () {
+        if (NH.play !== my || route().item !== "nazoru") return;
+        var old = view.querySelector(".nh-guide"); if (!old) return;
+        old.outerHTML = aiKanaSvg(b, at, "ai-ghost2 nh-guide nh-play");
+        if (at++ < b.paths.length) setTimeout(tick, at === 1 ? 300 : 900);
+      };
+      tick();
+    });
   }
 
   function renderAiLesson() {
