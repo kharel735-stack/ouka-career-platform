@@ -3286,10 +3286,12 @@
       '<text class="nh-bn" x="' + cx.toFixed(1) + '" y="' + cy.toFixed(1) + '" dominant-baseline="central">' + (k + 1) + "</text>";
   }
   var NH_NE_NUM = ["एक", "दुई", "तीन", "चार", "पाँच", "छ", "सात", "आठ", "नौ", "दस", "एघार", "बाह्र", "तेह्र", "चौध", "पन्ध्र"];
-  function nhCount(k) {   /* 2026-10-14 代表「書き順は ネパール語で 1、2、3」＝एक・दुई…（N3 かず の 声）。無ければ「1」の声 */
-    var f = AIL && (AIL.audio["ne|" + NH_NE_NUM[k - 1]] || AIL.audio["ja|" + k]);
-    if (!f || aiMute()) return;
-    var a = aiAudioEl(); a.onended = a.onerror = null; a.src = AIL.audio_base + f; var p = a.play(); if (p && p.catch) p.catch(function () {});
+  /* 2026-10-14 代表「数えるのは シャンティ先生の 日本語の いち・に・さん（録音が ある）」＝ai_lesson/ne_learn/count/ja_N.m4a。11画から先は ネパール語の 数 */
+  function nhCount(k, then) {
+    var f = k <= 10 ? "count/ja_" + k + ".m4a" : AIL && AIL.audio["ne|" + NH_NE_NUM[k - 1]];
+    if (!f || aiMute() || !AIL) { if (then) setTimeout(then, 700); return; }
+    var a = aiAudioEl(), done = false, fin = function () { if (!done) { done = true; if (then) then(); } };
+    a.onended = fin; a.onerror = fin; a.src = AIL.audio_base + f; var p = a.play(); if (p && p.catch) p.catch(fin);
   }
   function renderNepaliKaki() {
     /* 2026-10-14 代表「なぞるの 見せ方を 書き順として」＝同じ 見本（字の中が 赤く うっすら・今の1画の 番号と 矢印・ネパール語で 数える） */
@@ -3499,8 +3501,8 @@
         AIS.strokeAt++; render();
         var el = document.querySelector('.ai-anim path[data-k="' + (AIS.strokeAt - 1) + '"]');
         if (el && el.getTotalLength) { var L = el.getTotalLength(); el.style.strokeDasharray = L; el.style.strokeDashoffset = L; el.getBoundingClientRect(); el.style.transition = "stroke-dashoffset 1.1s ease"; el.style.strokeDashoffset = "0"; }
-        var nn = NH_NE_NUM[AIS.strokeAt - 1];
-        aiPlay(AI_MODE === "ne" && AIL.audio["ne|" + nn] ? [["ne", nn]] : b.count[AIS.strokeAt - 1], function () { setTimeout(go1, 350); });   /* ネパール語は एक・दुई… で 数える */
+        if (AI_MODE === "ne") { var myp = AIS.playId; nhCount(AIS.strokeAt, function () { if (AIS && AIS.playId === myp) setTimeout(go1, 350); }); return; }   /* シャンティ先生の いち・に・さん */
+        aiPlay(b.count[AIS.strokeAt - 1], function () { setTimeout(go1, 350); });
       };
       go1();
     });
@@ -3519,7 +3521,8 @@
     AIS.picked = null; AIS.ink = 0; AIS.noVoice = false;
     if (b.t === "stroke") return aiStrokeRun();
     var seg = b.t === "say" ? b.seg : b.t === "word" ? [["ja", b.ja], ["ne", b.ne], ["ja", b.ja]] : b.t === "nword" ? [["ne", b.ne], ["ja", b.ja], ["ne", b.ne]] : b.t === "pick" ? b.play : b.seg;
-    aiPlay(seg, b.t === "say" || b.t === "word" || b.t === "nword" ? function () { aiAuto(700); } : null);   /* 分解（parts）は 自分で 読んで 押してから 次へ＝自動で 進めない */
+    aiPlay(seg, b.t === "say" || b.t === "word" || b.t === "nword" ? function () { aiAuto(700); } :
+      b.t === "trace" && AI_MODE === "ne" ? function () { aiStrokeRunTrace(b); } : null);   /* 2026-10-14 なぞる前に 自動で 書き順を 見せる（数えながら） */   /* 分解（parts）は 自分で 読んで 押してから 次へ＝自動で 進めない */
     render();
   }
   function aiForward() {
@@ -3675,8 +3678,8 @@
       var tick = function () {
         if (NH.play !== my || !AIS || aiBeat() !== b) return;
         var old = view.querySelector(".nh-g"); if (!old) return;
-        old.outerHTML = nhGuideSvg(b, at, at - 1); nhCount(at);
-        if (at++ < b.paths.length) setTimeout(tick, 1200);
+        old.outerHTML = nhGuideSvg(b, at, at - 1);
+        nhCount(at, function () { if (at++ < b.paths.length) setTimeout(tick, 350); });   /* 声が おわってから 次の画 */
       };
       tick(); return;
     }
