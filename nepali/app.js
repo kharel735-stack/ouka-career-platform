@@ -3275,15 +3275,52 @@
       tick();
     });
   }
+  /* なぞるの 見本（2026-10-14 代表「後ろの 汚い線は 何？」「1を押したら その画の所まで 枠の中が 赤く うっすら なっていく」）
+   * ＝きれいな字（うすい灰色）＋番号だけ。番号を押すと その画が 字の形の中だけ 赤く うっすら 塗られていく（clipPath）＋声で 数える */
+  function nhGuideSvg(b, upto, anim) {
+    var id = "nhc" + (NH.cid = (NH.cid || 0) + 1), used = [];
+    var nums = b.nums.map(function (n) {   /* 番号が 重ならないように（例 ア の 3 と 4） */
+      var x = n[0], y = n[1];
+      used.forEach(function (u) { if (Math.abs(u[0] - x) < 9 && Math.abs(u[1] - y) < 9) y += 11; });
+      used.push([x, y]);
+      return '<text x="' + x + '" y="' + y + '" class="' + (n[2] <= upto ? "on" : "") + '">' + n[2] + "</text>";
+    }).join("");
+    return '<svg class="ai-kana nh-g" viewBox="0 0 109 109">' +
+      (b.glyph ? '<defs><clipPath id="' + id + '"><path d="' + b.glyph + '"/></clipPath></defs><path class="glyph" d="' + b.glyph + '"/>' : "") +
+      b.paths.slice(0, upto).map(function (d, k) {
+        return '<path d="' + d + '" pathLength="1" class="fill' + (k === anim ? " anim" : "") + '"' + (b.glyph ? ' clip-path="url(#' + id + ')"' : "") + "/>";
+      }).join("") + nhArrows(b, id) + nums + "</svg>";
+  }
+  /* 書き始めの 小さい矢印＝どっちへ 書くか（2026-10-14 代表「5と4が同じ所なら これは下・これは上と 矢印で」） */
+  function nhArrows(b, id) {
+    var out = '<defs><marker id="' + id + 'a" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="4" markerHeight="4" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="nh-ah"/></marker></defs>';
+    b.paths.forEach(function (d) {
+      var pts = (d.match(/-?[\d.]+,-?[\d.]+/g) || []).map(function (q) { return q.split(",").map(Number); });
+      if (pts.length < 2) return;
+      var p0 = pts[0], p1 = null, len = 0;
+      for (var i = 1; i < pts.length; i++) { len += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); if (len >= 9) { p1 = pts[i]; break; } }
+      p1 = p1 || pts[pts.length - 1];
+      var dx = p1[0] - p0[0], dy = p1[1] - p0[1], L = Math.hypot(dx, dy) || 1;
+      out += '<line class="nh-ar" x1="' + p0[0] + '" y1="' + p0[1] + '" x2="' + (p0[0] + dx / L * 9).toFixed(1) + '" y2="' + (p0[1] + dy / L * 9).toFixed(1) + '" marker-end="url(#' + id + 'a)"/>';
+    });
+    return out;
+  }
+  var NH_NE_NUM = ["एक", "दुई", "तीन", "चार", "पाँच", "छ", "सात", "आठ", "नौ", "दस", "एघार", "बाह्र", "तेह्र", "चौध", "पन्ध्र"];
+  function nhCount(k) {   /* 2026-10-14 代表「書き順は ネパール語で 1、2、3」＝एक・दुई…（N3 かず の 声）。無ければ「1」の声 */
+    var f = AIL && (AIL.audio["ne|" + NH_NE_NUM[k - 1]] || AIL.audio["ja|" + k]);
+    if (!f || aiMute()) return;
+    var a = aiAudioEl(); a.onended = a.onerror = null; a.src = AIL.audio_base + f; var p = a.play(); if (p && p.catch) p.catch(function () {});
+  }
   function renderNepaliNazoru() {
     aiUse("ne"); headName.textContent = "指で なぞる";
     var all = nhAll("trace"); if (!all.length) { view.innerHTML = nhTop("なぞる") + '<p class="muted">まだ ありません。</p>'; return; }
     NH.z = Math.min(NH.z, all.length - 1);
     var b = all[NH.z].b;
     view.innerHTML = '<section class="lesson hw2 ai nh">' + nhTop("👆 指で なぞる") + nhCharPicker(all, NH.z, "z") +
-      '<div class="ai-trace-wrap">' + aiKanaSvg(b, b.paths.length, "ai-ghost2 nh-guide") + '<canvas id="nhCv" width="300" height="300"></canvas></div>' +
-      '<p class="muted">うすい線と 番号の 順に なぞります（' + b.paths.length + ' 画）</p>' +
-      '<button class="btn hw-wide" data-nh="order">▶ 書き順を 見る（1画ずつ）</button>' +
+      '<div class="ai-trace-wrap">' + nhGuideSvg(b, 0, -1) + '<canvas id="nhCv" width="300" height="300"></canvas></div>' +
+      '<div class="nh-nums">' + b.paths.map(function (_, k) { return '<button class="btn" data-zn="' + (k + 1) + '">' + (k + 1) + "</button>"; }).join("") +
+      '<button class="btn btn-primary" data-nh="order">▶ ぜんぶ</button></div>' +
+      '<p class="muted">番号を 押すと、その画が 赤く うっすら 出ます。見たら 指で なぞってね（' + b.paths.length + ' 画）</p>' +
       '<div class="ai-ctl"><button class="btn" data-nh="clear">消す</button><button class="btn btn-primary" data-nh="next">つぎの 字 ›</button></div>' +
       '<a class="btn hw-wide" href="#/nepali/kaki">✏️ 書き順を 見る</a></section>';
     nhBind("[data-z]", function (el) { NH.z = +el.getAttribute("data-z"); NH.k = NH.z; renderNepaliNazoru(); });
@@ -3297,14 +3334,18 @@
     cv.addEventListener("mousedown", st); cv.addEventListener("mousemove", mv); cv.addEventListener("mouseup", en); cv.addEventListener("mouseleave", en);
     cv.addEventListener("touchstart", st, { passive: false }); cv.addEventListener("touchmove", mv, { passive: false }); cv.addEventListener("touchend", en);
     nhBind('[data-nh="clear"]', function () { ctx.clearRect(0, 0, cv.width, cv.height); });
-    /* 書き順を 1画ずつ（なぞった 線は 消さない＝絵だけ 描き直す） */
+    /* 見本だけ 描き直す（なぞった 線は 消さない） */
+    var show = function (k) {
+      var old = view.querySelector(".nh-g"); if (!old) return;
+      old.outerHTML = nhGuideSvg(b, k, k - 1); nhCount(k);
+    };
+    nhBind("[data-zn]", function (el) { NH.play = (NH.play || 0) + 1; show(+el.getAttribute("data-zn")); });
     nhBind('[data-nh="order"]', function () {
-      var at = 0, my = (NH.play = (NH.play || 0) + 1);
+      var at = 1, my = (NH.play = (NH.play || 0) + 1);
       var tick = function () {
         if (NH.play !== my || route().item !== "nazoru") return;
-        var old = view.querySelector(".nh-guide"); if (!old) return;
-        old.outerHTML = aiKanaSvg(b, at, "ai-ghost2 nh-guide nh-play");
-        if (at++ < b.paths.length) setTimeout(tick, at === 1 ? 300 : 900);
+        show(at);
+        if (at++ < b.paths.length) setTimeout(tick, 1200);
       };
       tick();
     });
