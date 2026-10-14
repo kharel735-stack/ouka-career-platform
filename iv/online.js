@@ -530,9 +530,12 @@
   }
   function loadParts(res) {
     if (!res || !res.parts || !res.parts.length || !canParts()) return Promise.reject(new Error("NO_PARTS"));
-    return Promise.all(res.parts.map(function (p) { return fetchPart(p); })).then(function (vals) {
+    /* 2026-10-14 ネパール語学習アプリ（/nepali/）には ネパール語の部分の ファイルしか 置いていない。
+     * 代表・先生（全部を 受け取れる 役割）が ここで開くと 日本語の部分が 404 → 黙って 古い教材のまま だった＝置いてある部分だけ 取る */
+    var ps = CFG.onlyParts ? res.parts.filter(function (p) { return CFG.onlyParts.indexOf(p.part) >= 0; }) : res.parts;
+    return Promise.all(ps.map(function (p) { return fetchPart(p); })).then(function (vals) {
       var c = { content_ver: res.content_ver, lessons: null, study: null, ne: null, nepali: null };
-      res.parts.forEach(function (p, i) { c[p.part] = vals[i]; });
+      ps.forEach(function (p, i) { c[p.part] = vals[i]; });
       try { localStorage.setItem(CONTENT_KEY, JSON.stringify(c)); } catch (x) { /* 入らなくても今は使える */ }
       return c;
     });
