@@ -3399,7 +3399,10 @@
       '<div class="nh-nums">' + b.paths.map(function (_, k) { return '<button class="btn" data-kn="' + (k + 1) + '">' + (k + 1) + "</button>"; }).join("") +
       '<button class="btn btn-primary" data-nh="order">▶ ぜんぶ</button></div>' +
       '<p class="muted">番号を 押すと、その画が 赤く うっすら 出ます（' + b.paths.length + ' 画）</p>' +
-      '<a class="btn hw-wide" href="#/nepali/nazoru">👆 この字を なぞる</a></section>';
+      '<a class="btn hw-wide" href="#/nepali/nazoru">👆 この字を なぞる</a>' +
+      /* 2026-10-23 テスター「公的な 書き順は 無いの？」＝ネパール政府の 1年生用 練習帳に 合わせた（出典を 必ず 出す・CC BY） */
+      '<p class="muted nh-src"><small>書き順は ネパール政府 カリキュラム開発センターの 小学1年生用 練習帳（अभ्यास पुस्तिका कक्षा १）に 合わせて 直しています（一部の 字は 確認中）。<br>' +
+      'Source: Nepal CDC, RTI International, Room to Read — Workbook Grade 1 (CC BY)</small></p></section>';
     nhBind("[data-k]", function (el) { NH.k = +el.getAttribute("data-k"); NH.z = NH.k; renderNepaliKaki(); });
     var show = function (k) { var old = view.querySelector(".nh-g"); if (!old) return; old.outerHTML = nhGuideSvg(b, k, k - 1); nhCount(k); };
     nhBind("[data-kn]", function (el) { NH.play = (NH.play || 0) + 1; show(+el.getAttribute("data-kn")); });
@@ -3527,6 +3530,12 @@
         /* 2026-10-12 代表「先生が 実際に やってみせる 動画が 見れる欄」＝撮った物だけ 出す。無い時は 無いと 書く（動くふりを しない） */
         (b.video ? '<video class="ai-video" src="' + esc(b.video) + '" controls playsinline preload="none"></video>'
                  : '<div class="ai-video-none">🎬 先生が やってみせる 動画：じゅんび中</div>') +
+        again + next(true);
+    } else if (b.t === "gesture") {   /* 2026-10-23 代表「章の 最後に 自然な 動作の 動画」＝しぐさ。撮った物だけ 流す・無い時は じゅんび中 */
+      body += aiSegHtml(b.seg, b.en) + "</div>" + '<div class="ai-big">' + esc(b.big || "") + "</div>" +
+        '<div class="ai-mean">' + esc(b.title) + "</div>" +
+        (b.video ? '<video class="ai-video" src="' + esc(b.video) + '" controls playsinline preload="none"></video>'
+                 : '<div class="ai-video-none">🎬 先生の お手本動画：じゅんび中</div>') +
         again + next(true);
     } else if (b.t === "parts") {   /* 2026-10-06 試作：ことばの 分解（部品ごとの 意味）＋ 同じ部品で 作れる ほかの文 */
       body += aiSegHtml([["ja", "ことばを 分けてみよう"]], b.en) + "</div>" +
