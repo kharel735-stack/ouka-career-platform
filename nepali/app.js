@@ -3401,7 +3401,7 @@
       '<p class="muted">番号を 押すと、その画が 赤く うっすら 出ます（' + b.paths.length + ' 画）</p>' +
       '<a class="btn hw-wide" href="#/nepali/nazoru">👆 この字を なぞる</a>' +
       /* 2026-10-23 テスター「公的な 書き順は 無いの？」＝ネパール政府の 1年生用 練習帳に 合わせた（出典を 必ず 出す・CC BY） */
-      '<p class="muted nh-src"><small>書き順は ネパール政府 カリキュラム開発センターの 小学1年生用 練習帳（अभ्यास पुस्तिका कक्षा १）に 合わせて 直しています（一部の 字は 確認中）。<br>' +
+      '<p class="muted nh-src"><small>書き順は ネパール政府 カリキュラム開発センターの 小学1年生用 練習帳（अभ्यास पुस्तिका कक्षा १）に 合わせています。<br>' +
       'Source: Nepal CDC, RTI International, Room to Read — Workbook Grade 1 (CC BY)</small></p></section>';
     nhBind("[data-k]", function (el) { NH.k = +el.getAttribute("data-k"); NH.z = NH.k; renderNepaliKaki(); });
     var show = function (k) { var old = view.querySelector(".nh-g"); if (!old) return; old.outerHTML = nhGuideSvg(b, k, k - 1); nhCount(k); };
