@@ -1100,6 +1100,9 @@
    * 文言は日次授業指示書PDFと一字一句同じ（_tools/教材データを取り込む.py が同じ関数から作る）。
    * ここで教育内容を書き足さない。 */
   var LESSONS = window.OUKA_LESSONS || null;
+  /* もっと問題（試作 2026-10-14）＝128日で使っていない問題。正本＝_tools/追加問題.py（ここで問題を書き足さない） */
+  var DREX = window.OUKA_DRILL_EXTRA || { groups: [], problems: {} };
+  if (LESSONS) Object.keys(DREX.problems).forEach(function (id) { if (!LESSONS.problems[id]) LESSONS.problems[id] = DREX.problems[id]; });
   var STUDY = window.OUKA_TEACHER_STUDY || null;
   var FIELDS = window.OUKA_FIELDS || { list: [], common_media: [], neutral_categories: [] };
   var VIDEOS = window.OUKA_VIDEOS || { life_nepali: { items: [] }, fields: {} };
@@ -1155,7 +1158,7 @@
       '<span class="media-title">' + esc(m.title) + "</span>" +
       '<span class="media-meta">' + esc(m.org) + "　／　" + esc(m.lang) + "</span></a>";
   }
-  var LIVE = { "student/kana": 1, "student/kaki": 1, "teacher/guide": 1, "teacher/assign": 1, "nepali/learn": 1, "nepali/home": 1, "nepali/words": 1, "nepali/quiz": 1, "nepali/kaki": 1, "nepali/nazoru": 1, "student/start": 1, "student/ai": 1, "teacher/report": 1, "teacher/today": 1, "teacher/materials": 1, "student/today": 1, "student/drill": 1, "student/homework": 1,
+  var LIVE = { "student/kana": 1, "student/kaki": 1, "teacher/guide": 1, "teacher/assign": 1, "nepali/learn": 1, "nepali/home": 1, "nepali/words": 1, "nepali/quiz": 1, "nepali/kaki": 1, "nepali/nazoru": 1, "student/start": 1, "student/ai": 1, "teacher/report": 1, "teacher/today": 1, "teacher/materials": 1, "student/today": 1, "student/drill": 1, "student/more": 1, "student/homework": 1,
     "student/media": 1, "student/emergency": 1, "student/submit": 1, "student/speak": 1, "teacher/inbox": 1,
     "teacher/study": 1, "student/history": 1, "teacher/grade": 1, "teacher/photos": 1, "teacher/voices": 1, "teacher/nepali": 1, "nepali/qa": 1, "teacher/nepali_qa": 1, "teacher/nepali_answer": 1 };
   var MAT_BASE = "materials/";
@@ -2832,7 +2835,8 @@
       view.innerHTML = '<section class="lesson">' + dayNav("student", "drill", n) +
         '<div class="big-card"><div class="big-k">Day ' + n + ' の問題　おわり</div><div class="big-v" id="drillScore">' + ok + " / " + ids.length + "</div></div>" +
         '<div class="start-btns"><button class="btn btn-primary btn-xl" data-act="drill-again">もう一度</button>' +
-        '<a class="btn btn-xl" href="#/student/today/' + n + '">今日の教材へ</a></div>' +
+        '<a class="btn btn-xl" href="#/student/today/' + n + '">今日の教材へ</a>' +
+        (DREX.groups.length ? '<a class="btn btn-xl" href="#/student/more">もっと問題</a>' : "") + '</div>' +
         (studentName()
           ? '<p class="muted small">この点数は <b>' + esc(studentName()) + '</b> の学習履歴に残りました。' +
             '<a href="#/student/history">学習履歴を見る</a></p>'
@@ -2847,6 +2851,7 @@
       return '<button class="' + cls + '" data-act="drill-pick" data-i="' + i + '"' + (picked != null ? " disabled" : "") + ">" + esc(c) + "</button>";
     }).join("");
     view.innerHTML = '<section class="q-screen drill">' + dayNav("student", "drill", n) +
+      (DREX.groups.length ? '<p class="small drill-more"><a href="#/student/more">もっと問題（試作）→</a></p>' : "") +
       (hidden ? '<p class="muted small drill-note">建設の問題 ' + hidden + "問は" + esc(currentField().label) + "コースでは出していません。</p>" : "") +
       '<div class="q-top"><span class="q-count" id="drillCount">' + (quiz.idx + 1) + " / " + ids.length + "</span>" +
       '<span class="q-cat">' + esc(srcOf[id] || p.bank + "／" + p.category) + "</span>" +
@@ -2859,6 +2864,65 @@
       '<button class="btn btn-primary btn-nav" id="drillNext" data-act="drill-next">' + (quiz.idx === ids.length - 1 ? "おわり" : "次へ →") + "</button></div>" +
       "</section>";
     bindDaySel();
+  }
+
+  /* 生徒：もっと問題（試作）＝グループを選ぶ → 問題の画面は「問題」と同じ形。記録はまだ残さない */
+  function moreGroups() {
+    var f = currentField().code;
+    return DREX.groups.map(function (g, i) {
+      var ok = g.field ? (!f || g.field === f) : (!f || f === "kensetsu" || neutralCat(g.cat));
+      return { i: i + 1, g: g, ok: ok };
+    });
+  }
+  function renderStudentMore(n) {
+    if (!LESSONS || !DREX.groups.length) return noLessons();
+    var all = moreGroups();
+    if (!n) {
+      headName.textContent = "生徒／もっと問題";
+      var show = all.filter(function (x) { return x.ok; }), hide = all.length - show.length;
+      var total = show.reduce(function (t, x) { return t + x.g.ids.length; }, 0);
+      view.innerHTML = '<section class="lesson">' + fieldPicker() +
+        '<div class="lesson-head"><h1>もっと問題</h1><span class="chip">試作・' + total + "問</span></div>" +
+        '<p class="muted">128日の授業で まだ使っていない問題です。やりたい グループを えらんでください。</p>' +
+        '<div class="warn small">試作なので、点数は まだ 学習履歴に残りません。問題は すべて「レビュー中」です。</div>' +
+        '<div class="media-grid">' + show.map(function (x) {
+          return '<a class="media-card" href="#/student/more/' + x.i + '"><span class="media-title">' + esc(x.g.title) +
+            '</span><span class="media-meta">' + x.g.ids.length + "問</span></a>";
+        }).join("") + "</div>" +
+        (hide ? '<p class="muted small">建設の内容（工具・施工など）や ほかの分野の グループ ' + hide + "こは、" + esc(currentField().label) + "コースでは 出していません。</p>" : "") +
+        '<div class="start-btns"><a class="btn btn-xl" href="#/student/drill">Day の問題へ</a></div></section>';
+      return;
+    }
+    var x = all[n - 1];
+    if (!x || !x.ok) { location.hash = "#/student/more"; return; }
+    var key = "more" + n;
+    if (!quiz || quiz.day !== key) quiz = { day: key, extra: true, ids: x.g.ids.slice(), idx: 0, picked: {} };
+    var ids = quiz.ids, back = '<div class="start-btns"><a class="btn" href="#/student/more">← グループを えらぶ</a></div>';
+    headName.textContent = "生徒／もっと問題／" + x.g.title;
+    if (quiz.idx >= ids.length) {
+      var ok = ids.filter(function (id) { return quiz.picked[id] === LESSONS.problems[id].answer; }).length;
+      view.innerHTML = '<section class="lesson"><div class="big-card"><div class="big-k">' + esc(x.g.title) + '　おわり</div><div class="big-v" id="drillScore">' + ok + " / " + ids.length + "</div></div>" +
+        '<div class="start-btns"><button class="btn btn-primary btn-xl" data-act="drill-again">もう一度</button>' +
+        '<a class="btn btn-xl" href="#/student/more">ほかの グループ</a></div></section>';
+      return;
+    }
+    var id = ids[quiz.idx], p = LESSONS.problems[id], picked = quiz.picked[id];
+    var choices = p.choices.map(function (c, i) {
+      var cls = "choice";
+      if (picked != null) cls += c === p.answer ? " ok" : (c === picked ? " ng" : " dim");
+      return '<button class="' + cls + '" data-act="drill-pick" data-i="' + i + '"' + (picked != null ? " disabled" : "") + ">" + esc(c) + "</button>";
+    }).join("");
+    view.innerHTML = '<section class="q-screen drill">' + back +
+      '<div class="q-top"><span class="q-count" id="drillCount">' + (quiz.idx + 1) + " / " + ids.length + "</span>" +
+      '<span class="q-cat">' + esc(x.g.title + "／" + p.category) + "</span>" +
+      (p.status && p.status !== "公開" ? '<span class="q-done">問題は作成中（' + esc(p.status) + "）</span>" : "") + "</div>" +
+      '<div class="q-text drill-q" id="drillQ">' + esc(p.q) + "</div>" +
+      (p.hint_ne ? '<p class="muted drill-hint">' + esc(p.hint_ne) + "</p>" : "") +
+      '<div class="choices">' + choices + "</div>" +
+      (picked != null ? '<div class="box drill-exp" id="drillExp"><b>' + (picked === p.answer ? "正解" : "正解は「" + esc(p.answer) + "」") + "</b>　" + esc(p.explain) + "</div>" : "") +
+      '<div class="q-nav"><button class="btn btn-nav" data-act="drill-prev"' + (quiz.idx === 0 ? " disabled" : "") + ">← 前へ</button><div class='q-mid'></div>" +
+      '<button class="btn btn-primary btn-nav" id="drillNext" data-act="drill-next">' + (quiz.idx === ids.length - 1 ? "おわり" : "次へ →") + "</button></div>" +
+      "</section>";
   }
 
   /* 生徒：緊急のとき（番号・言うこと・場面ごとの動き方） */
@@ -3135,7 +3199,15 @@
     var f = document.querySelector(".ai-face.is-talk"); if (f) f.classList.remove("is-talk");
     aiMark();
   }
+  function aiStopMine() {
+    if (AIS && AIS.mineA) { try { AIS.mineA.pause(); } catch (e) { /* もう止まっている */ } AIS.mineA = null; }
+    Array.prototype.forEach.call(document.querySelectorAll(".hw-take audio"), function (x) { try { x.pause(); } catch (e) { /* もう止まっている */ } });
+  }
+  document.addEventListener("play", function (e) {
+    if (e.target && e.target.closest && e.target.closest(".hw-take") && AIS && AIS.mineA) { try { AIS.mineA.pause(); } catch (x) { /* もう止まっている */ } }
+  }, true);
   function aiStop() {
+    aiStopMine();
     if (AIS) AIS.playId = (AIS.playId || 0) + 1;
     if (AI_AUDIO) { try { AI_AUDIO.pause(); } catch (e) { /* もう止まっている */ } }
     if (AIS && AIS.mr && AIS.mr.state === "recording") { try { AIS.mr.stop(); } catch (e) { /* もう止まっている */ } }
@@ -3278,10 +3350,19 @@
   function nhGuideSvg(b, upto, anim) {
     /* 2026-10-14 代表「数字と矢印が ぐちゃっと なる。もっと 優しく」＝番号と 矢印は 今の1画の 分だけ（最初は 1）。小さい丸の 番号を 書き始めの 手前に */
     var id = "nhc" + (NH.cid = (NH.cid || 0) + 1), cur = Math.max(1, upto) - 1;
+    /* 2026-10-23 テスター「アーの①で横線も書き、②でも横線を書くの？」＝太い筆（18）の丸い先が となりの画まで 塗っていた。
+     * 画ごとの mask＝自分の太い筆 − ほかの画の芯 ＋ 自分の芯 で、となりの画の所は 塗らない */
+    var masks = b.glyph ? b.paths.slice(0, upto).map(function (d, k) {
+      return '<mask id="' + id + "m" + k + '" maskUnits="userSpaceOnUse" x="0" y="0" width="109" height="109">' +
+        '<path d="' + d + '" fill="none" stroke="#fff" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>' +
+        b.paths.map(function (o, j) { return j === k ? "" : '<path d="' + o + '" fill="none" stroke="#000" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>'; }).join("") +
+        '<path d="' + d + '" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></mask>';
+    }).join("") : "";
     return '<svg class="ai-kana nh-g" viewBox="0 0 109 109">' +
-      (b.glyph ? '<defs><clipPath id="' + id + '"><path d="' + b.glyph + '"/></clipPath></defs><path class="glyph" d="' + b.glyph + '"/>' : "") +
+      (b.glyph ? '<defs><clipPath id="' + id + '"><path d="' + b.glyph + '"/></clipPath>' + masks + '</defs><path class="glyph" d="' + b.glyph + '"/>' : "") +
       b.paths.slice(0, upto).map(function (d, k) {
-        return '<path d="' + d + '" pathLength="1" class="fill' + (k === anim ? " anim" : "") + '"' + (b.glyph ? ' clip-path="url(#' + id + ')"' : "") + "/>";
+        var p = '<path d="' + d + '" pathLength="1" class="fill' + (k === anim ? " anim" : "") + '"' + (b.glyph ? ' mask="url(#' + id + "m" + k + ')"' : "") + "/>";
+        return b.glyph ? '<g clip-path="url(#' + id + ')">' + p + "</g>" : p;
       }).join("") + nhMark(b, cur, id) + "</svg>";
   }
   /* 1画分の しるし＝書き始めの 小さい矢印（書く向き）＋ その手前の 小さい丸の 番号 */
@@ -3607,7 +3688,9 @@
           if (AI_MODE === "ne" && bb && bb.ja) {
             AIS.compare = true;
             aiPlay([["ne", bb.ja]], function () {
-              var a = new Audio(tk[tk.length - 1]);
+              /* 2026-10-23 テスター「自分の声が 2回 重なって 流れる」＝前の 再生・下の 再生ボタンを 止めてから 流す */
+              aiStopMine();
+              var a = AIS.mineA = new Audio(tk[tk.length - 1]);
               a.onended = a.onerror = function () { if (enough) aiAuto(800); };
               a.play().catch(function () { if (enough) aiAuto(800); });
             });
@@ -3662,7 +3745,7 @@
     if (act === "ai-quit") { aiStop(); aiSave(); AIS = null; go(aiT("back")); return true; }
     if (act === "ai-replay") { if (b.t === "stroke") aiStrokeRun(); else aiEnterBeat(); return true; }
     if (act === "ai-showorder") { var keep = AIS.ink; AIS.strokeAt = 0; aiStrokeRunTrace(b, keep); return true; }
-    if (act === "ai-rec") { aiRecToggle(); return true; }
+    if (act === "ai-rec") { aiStopMine(); aiRecToggle(); return true; }
     if (act === "ai-sayne" && b.uses) { var u = b.uses[parseInt(el.getAttribute("data-k"), 10)]; if (u) { aiStop(); aiPlay([["ne", u.ne], ["ja", u.ja]], null); } return true; }
     if (act === "ai-pause") {
       AIS.paused = !AIS.paused;
@@ -4533,6 +4616,7 @@
     if (k === "teacher/study") return n ? renderTeacherStudyUnit(n) : renderTeacherStudy();
     if (k === "student/today") return renderStudentToday(n);
     if (k === "student/drill") return renderStudentDrill(n);
+    if (k === "student/more") return renderStudentMore(n);
     if (k === "student/homework") return renderStudentHomework(n);
     if (k === "student/media") return renderStudentMedia(n);
     if (k === "student/emergency") return renderEmergency();
@@ -5279,7 +5363,11 @@
       '<button class="btn btn-sm" data-act="backup">バックアップを保存</button></div>';
   }
 
+  var lastScrollKey = "";
   function render() {
+    /* 2026-10-23 テスター「書き順の ①② の たびに 画面が 上に 戻る（iPhone SE）」＝同じ画面・同じ場面の 描き直しでは 位置を 保つ */
+    var scrollKey = location.hash + "|" + (AIS ? AIS.si + "/" + AIS.bi : ""), keepY = scrollKey === lastScrollKey ? [view.scrollTop, window.scrollY] : null;
+    lastScrollKey = scrollKey;
     /* 入力中の欄を消しながら描き直すとブラウザがエラーを出すので、先に手を離す */
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
     clearTimeout(autoTimer);
@@ -5318,7 +5406,7 @@
     else if (r.name === "start") renderStart(c);
     else if (r.name === "q") renderQuestion(c, r.n);
     else if (r.name === "result") renderResult(c);
-    view.scrollTop = 0;
+    if (keepY) { view.scrollTop = keepY[0]; window.scrollTo(0, keepY[1]); } else view.scrollTop = 0;
     fbFab();
     tourMaybe(r);
     if (ONLINE && ONLINE.afterRender) ONLINE.afterRender(view);
@@ -5356,7 +5444,7 @@
     else if (act === "drill-pick" && quiz) {
       var pid = quiz.ids[quiz.idx];
       quiz.picked[pid] = LESSONS.problems[pid].choices[parseInt(el.getAttribute("data-i"), 10)];
-      drSave(quiz.day, quiz.ids, quiz.picked, currentField().code);
+      if (!quiz.extra) drSave(quiz.day, quiz.ids, quiz.picked, currentField().code);   /* もっと問題（試作）は まだ記録しない */
       render();
     }
     else if (act === "drill-next" && quiz) { quiz.idx++; render(); }

@@ -664,10 +664,10 @@ rt { font-size: .5em; color: #2E4A7A; font-weight: 700; line-height: 1; }
 .ai-en { font-size: 13px; color: var(--muted); padding-left: 4px; }
 .ai-pause { width: 100%; margin-top: 10px; }
 .ai-les-list { display: grid; gap: 8px; margin: 14px 0; text-align: left; }
-.ai-les { display: flex; align-items: center; gap: 8px; background: #fff; border: 1.5px solid var(--line); border-radius: 12px; padding: 8px 10px; }
+.ai-les { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; background: #fff; border: 1.5px solid var(--line); border-radius: 12px; padding: 8px 10px; }
 .ai-les.is-done { border-color: #3F8F5A; background: #F1F8F3; }
 .ai-les.is-mid { border-color: var(--ai); }
-.ai-les-t { flex: 1; display: flex; flex-direction: column; font-size: 16px; }
+.ai-les-t { flex: 1 1 220px; min-width: 0; display: flex; flex-direction: column; font-size: 16px; }
 .ai-les-t .ne { font-size: 13px; color: #44506A; }
 
 /* ---------- 初心者の入口（試作・2026-10-04） ---------- */
