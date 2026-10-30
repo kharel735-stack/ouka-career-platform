@@ -1070,7 +1070,186 @@
       "</section>";
   }
 
+  /* ---------- 辞書（2026-10-26 代表「押したら辞書で見れる」）＝生徒の画面の 日本語を 押すと 意味が 出る。
+   * 元＝JMdict・KANJIDIC2（© EDRDG・CC BY-SA 4.0）＝出典を 消さない。小さい辞書（data/jisho.js）を 初めて 押した時に 読む。 */
+  var JISHO = null, JISHO_LOADING = false;
+  function jishoLoad(cb) {
+    if (window.OUKA_JISHO) { JISHO = window.OUKA_JISHO; cb(); return; }
+    if (JISHO_LOADING) return;
+    JISHO_LOADING = true;
+    var el = document.createElement("script");
+    el.src = "data/jisho.js"; el.onload = function () { JISHO = window.OUKA_JISHO; JISHO_LOADING = false; cb(); };
+    el.onerror = function () { JISHO_LOADING = false; };
+    document.body.appendChild(el);
+  }
+  function jishoEn() { return window.OUKA_LANG === "en"; }
+  function jishoPoint(x, y) {
+    var r = null;
+    if (document.caretRangeFromPoint) r = document.caretRangeFromPoint(x, y);
+    else if (document.caretPositionFromPoint) { var p = document.caretPositionFromPoint(x, y); if (p) { r = document.createRange(); r.setStart(p.offsetNode, p.offset); } }
+    return r && r.startContainer && r.startContainer.nodeType === 3 ? { node: r.startContainer, off: r.startOffset } : null;
+  }
+  function jishoFind(text, off) {
+    var JP = /[\u3040-\u30ff\u3400-\u9fff々ー]/;
+    if (off >= text.length || !JP.test(text[off])) { if (off > 0 && JP.test(text[off - 1])) off--; else return null; }
+    var best = null, max = JISHO.max || 12;
+    for (var st = Math.max(0, off - max + 1); st <= off; st++) {
+      if (!JP.test(text[st])) continue;
+      for (var len = Math.min(max, text.length - st); len >= 1; len--) {
+        if (st + len <= off) break;
+        var w = text.substr(st, len);
+        if (!JP.test(w[w.length - 1]) && len > 1) continue;
+        if (JISHO.w[w] && (!best || len > best.w.length)) { best = { w: w, st: st }; break; }
+      }
+    }
+    if (best) return best;
+    var ch = text[off];
+    return JISHO.k[ch] ? { w: ch, st: off } : null;
+  }
+  function jishoShow(hit) {
+    var en = jishoEn(), d = JISHO.w[hit.w], pop = document.getElementById("jishoPop");
+    if (!pop) { pop = document.createElement("div"); pop.id = "jishoPop"; pop.className = "jisho-pop"; document.body.appendChild(pop); }
+    var kan = hit.w.split("").filter(function (c) { return JISHO.k[c]; }).map(function (c) {
+      var k = JISHO.k[c];
+      return '<div class="jp-k"><b class="jp-kc">' + esc(c) + "</b> " + esc(k[0]) + (k[1] || k[2] ? '<br><small>' + (k[1] ? "音 " + esc(k[1]) : "") + (k[1] && k[2] ? "　" : "") + (k[2] ? "訓 " + esc(k[2]) : "") + (k[3] ? "　" + k[3] + (en ? " strokes" : "画") : "") + "</small>" : "") + "</div>";
+    }).join("");
+    pop.innerHTML = '<button class="jp-x" type="button" aria-label="close">✕</button>' +
+      '<div class="jp-w">' + esc(hit.w) + (d && d[0] && d[0] !== hit.w ? ' <span class="jp-r">' + esc(d[0]) + "</span>" : "") + "</div>" +
+      (d ? (d[2] ? '<div class="jp-base">' + esc(d[2]) + "</div>" : "") + '<div class="jp-m">' + esc(d[1]) + "</div>" : "") +
+      (kan && hit.w.length > 0 ? '<div class="jp-kl">' + kan + "</div>" : "") +
+      '<div class="jp-c">' + esc(JISHO.credit) + "</div>";
+    pop.hidden = false;
+    pop.querySelector(".jp-x").onclick = function () { pop.hidden = true; };
+  }
+  function jishoClick(ev) {
+    if (!ONLINE || window.OUKA_JISHO_OFF) return;
+    var t = ev.target;
+    if (!t || !t.closest || t.closest("a,button,input,textarea,select,label,[data-act],[data-nh],.cand,.jisho-pop,.ai-ctl")) return;
+    var pt = jishoPoint(ev.clientX, ev.clientY);
+    if (!pt) return;
+    /* ふりがな（ruby）で文字が 分かれていても 語を 探せるように、まわりの文を ふりがな抜きで つなげて 探す */
+    var nd = pt.node, par = nd.parentNode;
+    if (par && par.closest && par.closest("rt")) return;
+    var blk = par && par.closest ? par.closest("p,li,td,th,h1,h2,h3,h4,div,section,button,span") : null;
+    var text = nd.nodeValue, off = pt.off;
+    if (blk) {
+      var tw = document.createTreeWalker(blk, NodeFilter.SHOW_TEXT, null), m, acc = "", at = -1;
+      while ((m = tw.nextNode())) {
+        if (m.parentNode.closest && m.parentNode.closest("rt")) continue;
+        if (m === nd) at = acc.length;
+        acc += m.nodeValue;
+      }
+      if (at >= 0) { text = acc; off = at + pt.off; }
+    }
+    jishoLoad(function () {
+      var hit = jishoFind(text, off);
+      if (hit) jishoShow(hit);
+    });
+  }
+  view.addEventListener("click", jishoClick);
+
+  /* 線のアイコン（絵文字は使わない＝有料の教材として見られる見た目に。2026-10-26 代表「AI感満載」） */
+  var SVG_ICONS = {
+    sprout: '<path d="M12 21v-8"/><path d="M12 13c0-4 3-6 7-6 0 4-3 6-7 6z"/><path d="M12 15c0-3-2-5-6-5 0 3 2 5 6 5z"/>',
+    book: '<path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H20v15H5.5A1.5 1.5 0 0 0 4 20.5z"/><path d="M4 20.5A1.5 1.5 0 0 1 5.5 19H20"/>',
+    mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/>',
+    chart: '<path d="M4 20V4"/><path d="M4 20h16"/><path d="M8 15l4-4 3 3 5-6"/>',
+    alert: '<path d="M12 3 2.5 20h19z"/><path d="M12 10v4.5"/><path d="M12 17.5v.1"/>',
+    heart: '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
+    chevron: '<path d="M9 5l7 7-7 7"/>'
+  };
+  function svgIcon(name) {
+    return '<svg class="ic" viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (SVG_ICONS[name] || "") + "</svg>";
+  }
+  /* マナーと日本の文化（2026-10-26）＝シリーズ（ゴミ出し・交通安全…）→ 項目を 1つずつ 読む。日本語だけ・漢字は押すと辞書 */
+  function renderMannersSeries(fi) {
+    var S = mannersData() || [];
+    headName.textContent = STUDENT_FOLDERS[fi].title;
+    view.innerHTML = '<section class="home"><div class="home-head"><h1>' + esc(STUDENT_FOLDERS[fi].title) + "</h1>" +
+      '<div class="tools"><a class="btn btn-sm" href="#/student">← 生徒・学習</a></div></div><div class="cand-grid">' +
+      S.map(function (x, k) { return studentRow("#/student/manners/" + k, "chevron", esc(x.title), x.items.length + (window.OUKA_LANG === "en" ? " lessons" : " 本")); }).join("") + "</div></section>";
+  }
+  function renderMannersList(k) {
+    var S = mannersData() || [], x = S[k];
+    if (!x) { location.replace("#/student"); return; }
+    headName.textContent = x.title;
+    var cur = "", rows = "";
+    x.items.forEach(function (it, j) {
+      if (it.set !== cur) { cur = it.set; rows += '<h2 class="sec-h">' + esc(cur) + "</h2>"; }
+      rows += studentRow("#/student/mannersitem/" + (k * 1000 + j), "chevron", esc(it.t), esc(it.id));
+    });
+    view.innerHTML = '<section class="home"><div class="home-head"><h1>' + esc(x.title) + "</h1>" +
+      '<div class="tools"><a class="btn btn-sm" href="#/student/folder/' + STUDENT_FOLDERS.findIndex(function (f) { return f.manners; }) + '">← back</a></div></div><div class="cand-grid">' + rows + "</div></section>";
+  }
+  function ytId(u) { var m = /(?:v=|youtu\.be\/|shorts\/|embed\/)([\w-]{11})/.exec(u || ""); return m ? m[1] : ""; }
+  var MN_LANG = "ja";
+  function mannersVideoBox(it, code) {
+    var v = it.v, en = window.OUKA_LANG === "en";
+    if (!v) return "";
+    var lg = MN_LANG === "ne" && v.ne ? "ne" : "ja", id = ytId(v[lg] || v.ja);
+    if (!id) return "";
+    return '<div class="mn-video"><h2 class="sec-h">' + (en ? "Our video" : "桜花の動画") + (v.title ? " · " + esc(v.title) : "") + "</h2>" +
+      (v.ne && v.ja ? '<div class="mn-vl"><button class="btn btn-sm' + (lg === "ja" ? " btn-primary" : "") + '" data-mn="ja">日本語</button> <button class="btn btn-sm' + (lg === "ne" ? " btn-primary" : "") + '" data-mn="ne">नेपाली</button></div>' : "") +
+      '<div class="mn-frame"><iframe src="https://www.youtube-nocookie.com/embed/' + id + '" title="video" loading="lazy" allow="accelerometer; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>' +
+      '<a class="btn btn-sm" target="_blank" rel="noopener" href="https://www.youtube.com/watch?v=' + id + '">' + (en ? "Open in YouTube" : "YouTubeで開く") + "</a></div>";
+  }
+  function renderMannersItem(code) {
+    var S = mannersData() || [], k = Math.floor(code / 1000), j = code % 1000, x = S[k], it = x && x.items[j];
+    if (!it) { location.replace("#/student"); return; }
+    headName.textContent = x.title;
+    var prev = j > 0 ? "#/student/mannersitem/" + (k * 1000 + j - 1) : "", next = j < x.items.length - 1 ? "#/student/mannersitem/" + (k * 1000 + j + 1) : "";
+    var en = window.OUKA_LANG === "en";
+    view.innerHTML = '<section class="lesson manners"><div class="nh-top"><a class="btn btn-sm" href="#/student/manners/' + k + '">' + (en ? "\u2190 List" : "\u2190 \u4e00\u89a7") + "</a><b>" + esc(x.title) + " \u00b7 " + esc(it.id) + "</b></div>" +
+      '<h1 class="mn-t">' + esc(it.t) + "</h1>" +
+      (it.scr ? '<p class="mn-scr muted small">' + (en ? "Picture: " : "\u753b\u9762\uff1a") + esc(it.scr) + "</p>" : "") +
+      '<div class="mn-ja">' + esc(it.ja).replace(/\n/g, "<br>") + "</div>" + mannersVideoBox(it, code) +
+      '<p class="muted small">' + (en ? "Tap any Japanese word to see its meaning." : "\u65e5\u672c\u8a9e\u3092\u62bc\u3059\u3068\u610f\u5473\u304c\u51fa\u307e\u3059\u3002") + "</p>" +
+      '<div class="ai-ctl">' + (prev ? '<a class="btn" href="' + prev + '">\u2039 ' + (en ? "Back" : "\u307e\u3048") + "</a>" : "<span></span>") +
+      (next ? '<a class="btn btn-primary" href="' + next + '">' + (en ? "Next" : "\u3064\u304e") + " \u203a</a>" : "") + "</div></section>";
+    nhBind("[data-mn]", function (el) { MN_LANG = el.getAttribute("data-mn"); renderMannersItem(code); });
+  }
+  /* 生徒ホームの「フォルダ」（2026-10-26 代表「日本語風と同じ感じに」）＝押すと中の項目が一覧で出る。
+   * 項目の鍵は HUBS.student.items の key。足す時は ここに 1行（中身が 無い フォルダは 出ない） */
+  var STUDENT_FOLDERS = [
+    { icon: "sprout", title: "はじめての人の 入口", sub: "あいうえお・AIの授業", keys: ["start", "kana", "ai"] },
+    { icon: "book", title: "今日の 勉強", sub: "宿題・教材・問題・動画", keys: ["homework", "today", "drill", "media", "study"] },
+    { icon: "mic", title: "出す", sub: "声・動画・提出", keys: ["speak", "submit"] },
+    { icon: "heart", title: "マナーと日本の文化", sub: "ゴミ・交通・近所・まち・職場", manners: true, keys: [] },
+    { icon: "chart", title: "記録", sub: "学習履歴・進捗", keys: ["history", "progress"] }
+  ];
+  function mannersData() { var m = (LESSONS && LESSONS.manners) || window.OUKA_MANNERS || null; return m && m.series && m.series.length ? m.series : null; }
+  function studentItems(f) {
+    if (f.manners) return mannersData() ? [1] : [];
+    return f.keys.map(function (k) { return k === "study" ? { key: "study", label: "N5 → N1 の勉強", note: "ことば・ぶんぽう・日本のはなし・漢字（第1巻 N5前半）" } : HUBS.student.items.filter(function (x) { return x.key === k; })[0]; })
+      .filter(function (x) { return x && LIVE["student/" + x.key] && LESSONS; });
+  }
+  function studentRow(href, icon, name, sub) {
+    return '<a class="cand nh-row" href="' + href + '"><span class="cand-name"><span class="nh-ic">' + svgIcon(icon) + "</span>" + name +
+      '<span class="nh-sub">' + sub + "</span></span></a>";
+  }
+  function renderStudentHome() {
+    headName.textContent = HUBS.student.title;
+    var rows = STUDENT_FOLDERS.map(function (f, i) {
+      var n = studentItems(f).length;
+      return n ? studentRow("#/student/folder/" + i, f.icon, esc(f.title), esc(f.sub)) : "";
+    }).join("") + studentRow("#/student/emergency", "alert", "緊急のとき", "119・110・#9910");
+    view.innerHTML = '<section class="home"><div class="home-head"><h1>' + esc(HUBS.student.title) + "</h1>" +
+      ((window.OUKA_ONLINE && !window.OUKA_ONLINE.can.teacher) ? "" : '<div class="tools"><a class="btn btn-primary" href="#/">OUKA PLATFORM へ</a></div>') +
+      '</div><div class="cand-grid">' + rows + "</div></section>";
+  }
+  function renderStudentFolder(i) {
+    var f = STUDENT_FOLDERS[i];
+    if (!f) { location.replace("#/student"); return; }
+    headName.textContent = f.title;
+    if (f.manners) { renderMannersSeries(i); return; }
+    view.innerHTML = '<section class="home"><div class="home-head"><h1>' + esc(f.title) + "</h1>" +
+      '<div class="tools"><a class="btn btn-sm" href="#/student">← 生徒・学習</a></div></div><div class="cand-grid">' +
+      studentItems(f).map(function (x) { return studentRow("#/student/" + x.key, "chevron", esc(x.label), (window.OUKA_LANG === "en" ? "" : esc(x.note || "").slice(0, 60))); }).join("") +
+      "</div></section>";
+  }
+
   function renderHub(key) {
+    if (key === "student" && window.OUKA_ONLINE) return renderStudentHome();   /* 生徒に配るオンライン版だけ。学校のMac版は 今までの一覧 */
     var h = HUBS[key];
     headName.textContent = h.title;
     view.innerHTML = '<section class="home"><div class="home-head"><h1>' + esc(h.title) + '</h1>' +
@@ -1160,7 +1339,7 @@
   }
   var LIVE = { "student/kana": 1, "student/kaki": 1, "teacher/guide": 1, "teacher/assign": 1, "nepali/learn": 1, "nepali/home": 1, "nepali/words": 1, "nepali/quiz": 1, "nepali/kaki": 1, "nepali/nazoru": 1, "student/start": 1, "student/ai": 1, "teacher/report": 1, "teacher/today": 1, "teacher/materials": 1, "student/today": 1, "student/drill": 1, "student/more": 1, "student/homework": 1,
     "student/media": 1, "student/emergency": 1, "student/submit": 1, "student/speak": 1, "teacher/inbox": 1,
-    "teacher/study": 1, "student/history": 1, "teacher/grade": 1, "teacher/photos": 1, "teacher/voices": 1, "teacher/nepali": 1, "nepali/qa": 1, "teacher/nepali_qa": 1, "teacher/nepali_answer": 1 };
+    "teacher/study": 1, "student/study": 1, "student/history": 1, "teacher/grade": 1, "teacher/photos": 1, "teacher/voices": 1, "teacher/nepali": 1, "nepali/qa": 1, "nepali/check": 1, "nepali/practice": 1, "student/folder": 1, "student/manners": 1, "student/mannersitem": 1, "nepali/folder": 1, "nepali/pack": 1, "nepali/ask": 1, "teacher/nepali_qa": 1, "teacher/nepali_answer": 1 };
   var MAT_BASE = "materials/";
 
   function dayCount() { return LESSONS ? LESSONS.days.length : 0; }
@@ -1785,6 +1964,91 @@
     tsPut(rec);
     toast("提出しました");
     render();
+  }
+
+  /* ---------- 生徒の勉強（N5→N1）・2026-10-30 代表「先生たちに作ったみたいに生徒たちも作って」----------
+   * 中身は 先生の勉強ノート（data/teacher_study.js）の「ことば・文法・雑学・漢字・宿題」だけ。
+   * ★先生用の「教え方メモ」「自分の確認」は 生徒に出さない（オンラインでは 作る時に 外して lessons.student_study に入れる）。
+   * ★いまあるのは 第1巻（N5前半）だけ。第2〜5巻は まだ書いていない＝「まだありません」と出す（動くふりをしない）。
+   * ★記録は この端末の中だけ（できた・宿題のチェック）。サーバーには 送らない。 */
+  var SS_KEY = "ouka_student_study_v1";
+  var STUDENT_ROAD = [
+    { t: "N5 前半", b: "第1巻", n: "ひらがな・かんたんな ぶん・漢字62字", ready: true },
+    { t: "N5 後半", b: "第2巻", n: "みんなの日本語 L1-25 の のこり", ready: false },
+    { t: "N4", b: "第3巻", n: "みんなの日本語 L26-50・ふつうの ことば", ready: false },
+    { t: "N3", b: "第4巻", n: "しごとの ぶんしょ・しんぶんの みだし", ready: false },
+    { t: "N2 → N1", b: "第5巻", n: "よむ・きく・ことば 1万", ready: false }
+  ];
+  function ssUnits() { var d = LESSONS && LESSONS.student_study; return (d && d.units) || (STUDY && STUDY.units) || []; }
+  function ssAll() { return readJSON(SS_KEY, {}); }
+  function ssGet(n) { var a = ssAll()[studentName() || "（なまえなし）"] || {}; return a[n] || {}; }
+  function ssPut(n, rec) {
+    var all = ssAll(), who = studentName() || "（なまえなし）";
+    all[who] = all[who] || {}; all[who][n] = rec; writeJSON(SS_KEY, all);
+  }
+  function renderStudentStudy() {
+    var en = window.OUKA_LANG === "en", us = ssUnits();
+    headName.textContent = en ? "Study N5 → N1" : "N5 → N1 の 勉強";
+    var road = STUDENT_ROAD.map(function (r) {
+      return r.ready
+        ? '<div class="box"><b>' + esc(r.t) + "（" + esc(r.b) + "）</b>　" + esc(r.n) + "</div>"
+        : '<div class="box muted"><b>' + esc(r.t) + "（" + esc(r.b) + "）</b>　" + esc(r.n) + "　<b>" + (en ? "Not ready yet" : "まだありません") + "</b></div>";
+    }).join("");
+    var list = us.length ? '<div class="mat-grid">' + us.map(function (u) {
+      var r = ssGet(u.no);
+      return '<a class="btn mat-btn" href="#/student/study/' + u.no + '">UNIT ' + u.no + "　" + esc(u.title) +
+        "<small>" + esc(u.sub) + (r.done ? "／" + (en ? "done" : "できた") : "") + "</small></a>";
+    }).join("") + "</div>" : '<div class="soon"><p>' + (en ? "Not ready yet." : "まだ中身がありません。") + "</p></div>";
+    view.innerHTML = '<section class="lesson"><div class="home-head"><h1>' + (en ? "Study N5 → N1" : "N5 → N1 の 勉強") + "</h1>" +
+      '<div class="tools"><a class="btn btn-sm" href="#/student">← ' + (en ? "Student" : "生徒・学習") + "</a></div></div>" +
+      '<p class="small">' + (en ? "Read one unit a day. Words, grammar, a short story about Japan, and kanji. Do the homework in your notebook." :
+        "1日に 1ユニット よみます。ことば・ぶんぽう・日本の はなし・漢字。宿題は ノートに 書きます。") + "</p>" +
+      '<h2 class="sec-h">' + (en ? "The road" : "道のり") + "</h2>" + road +
+      '<h2 class="sec-h">' + (en ? "Book 1 (N5 first half)" : "第1巻（N5 前半）") + "</h2>" + list +
+      '<p class="muted small">' + (en ? "Your progress is saved on this device only." : "進み具合は この たんまつの 中だけに 残ります。") + "</p></section>";
+  }
+  function renderStudentStudyUnit(n) {
+    var u = null, us = ssUnits(), en = window.OUKA_LANG === "en";
+    us.forEach(function (x) { if (x.no === n) u = x; });
+    if (!u) { go("#/student/study"); return; }
+    var rec = ssGet(n);
+    headName.textContent = (en ? "Study / UNIT " : "勉強 / UNIT ") + n;
+    var nav = '<div class="day-nav">' +
+      (n > 1 ? '<a class="btn btn-sm" href="#/student/study/' + (n - 1) + '">← ' + (en ? "Prev" : "前") + "</a>" : '<span class="btn btn-sm btn-soon">←</span>') +
+      '<a class="btn btn-sm" href="#/student/study">' + (en ? "List" : "一覧") + "</a>" +
+      (n < us.length ? '<a class="btn btn-sm" href="#/student/study/' + (n + 1) + '">' + (en ? "Next" : "次") + " →</a>" : '<span class="btn btn-sm btn-soon">→</span>') + "</div>";
+    var kot = (u.kotoba || []).map(function (k) { return "<b>" + esc(k.w) + "</b>" + (k.mean ? " (" + esc(k.mean) + ")" : ""); }).join("　");
+    var bun = (u.bunpou || []).map(function (b) { return "<li><b>" + esc(b.pattern) + '</b>　<span class="muted">' + esc(b.example) + "</span></li>"; }).join("");
+    var kj = (u.kanji || []).map(function (k) {
+      return '<tr><td class="kj">' + esc(k.c) + (k.write ? '<span class="wbadge">' + (en ? "write" : "書く") + "</span>" : "") +
+        '</td><td class="en3" data-l="' + (en ? "meaning" : "意味") + '">' + esc(k.en || "") + '</td><td data-l="' + (en ? "kun" : "くん") + '"><b>' + esc(k.kun) + "</b></td>" +
+        '<td class="num" data-l="' + (en ? "strokes" : "画") + '">' + esc(k.strokes || "") + '</td><td data-l="' + (en ? "words" : "語例") + '">' + esc(k.words) + "</td></tr>";
+    }).join("");
+    var hwT = u.shukudai_r || u.shukudai || [];
+    var hw = hwT.map(function (t, i) {
+      var on = rec.hw && rec.hw[i];
+      return '<label class="ts-chk ts-hw"><input type="checkbox" class="ss-h" data-i="' + i + '"' + (on ? " checked" : "") + '> <span class="ts-t">' + t + "</span></label>";
+    }).join("");
+    view.innerHTML = '<section class="lesson">' + nav +
+      '<div class="lesson-head"><h1>UNIT ' + u.no + "　" + (u.title_r || esc(u.title)) + "</h1>" +
+      (rec.done ? '<span class="chip st-完了">' + (en ? "Done" : "できた") + "</span>" : "") + "</div>" +
+      '<p class="muted small">' + esc(u.sub) + "</p>" +
+      '<div class="sec-box"><h2 class="sec-h">① ' + (en ? "Words" : "ことば") + '</h2><p class="small">' + kot + "</p></div>" +
+      '<div class="sec-box"><h2 class="sec-h">② ' + (en ? "Grammar" : "ぶんぽう") + '</h2><ul class="small">' + bun + "</ul></div>" +
+      '<div class="sec-box zat"><h2 class="sec-h">③ ' + (en ? "Story about Japan" : "日本の はなし") + " ― " + (u.zatsugaku && (u.zatsugaku.title_r || esc(u.zatsugaku.title)) || "") + "</h2>" +
+      '<div class="easy"><p>' + (u.easy_r || esc(u.easy || "")) + "</p>" + '<p class="en2">' + esc(u.en || "") + "</p></div></div>" +
+      '<div class="sec-box"><h2 class="sec-h">④ ' + (en ? "Kanji" : "漢字") + '</h2><p class="kj-rule">' +
+      (en ? "Learn the meaning and the kun reading. Read the others; write only the marked ones." :
+        "おぼえるのは <b>「くん」と「意味」</b>。<b>書く</b> の 字は 書けるように。ほかは 読めれば いい。") + "</p>" +
+      '<table class="rtable kjt"><thead><tr><th>' + (en ? "Kanji" : "字") + "</th><th>" + (en ? "Meaning" : "意味") + "</th><th>" + (en ? "kun" : "くん") + "</th><th>" + (en ? "Strokes" : "画") + "</th><th>" + (en ? "Words" : "語例") + "</th></tr></thead><tbody>" + kj + "</tbody></table></div>" +
+      (hw ? '<h2 class="sec-h">⑤ ' + (en ? "Homework (do it in your notebook)" : "宿題（ノートに 書く）") + '</h2><div class="ts-chks">' + hw + "</div>" : "") +
+      '<div class="start-btns"><button class="btn btn-primary btn-xl" id="ssDone">' + (rec.done ? (en ? "Not done" : "まだにする") : (en ? "I finished this unit" : "このユニットは できた")) + "</button></div></section>";
+    function collect() {
+      var h = []; Array.prototype.forEach.call(document.querySelectorAll(".ss-h"), function (el) { h[parseInt(el.getAttribute("data-i"), 10)] = el.checked; });
+      return { hw: h, done: !!ssGet(n).done };
+    }
+    Array.prototype.forEach.call(document.querySelectorAll(".ss-h"), function (el) { el.addEventListener("change", function () { ssPut(n, collect()); }); });
+    document.getElementById("ssDone").addEventListener("click", function () { var r = collect(); r.done = !r.done; ssPut(n, r); render(); });
   }
 
   function renderTeacherStudy() {
@@ -2751,6 +3015,14 @@
   }
 
   /* 生徒：動画（押したらすぐ見られるものを先に出す） */
+  /* 桜花の自作動画（マナーと日本の文化）＝動画一覧.csv に 入れた物だけ。公式の動画より 上に 出す */
+  function ownVideosSection() {
+    var S = mannersData() || [], en = window.OUKA_LANG === "en", rows = "";
+    S.forEach(function (x, k) { x.items.forEach(function (it, j) {
+      if (it.v && ytId(it.v.ja || it.v.ne)) rows += studentRow("#/student/mannersitem/" + (k * 1000 + j), "chevron", esc(it.t), esc(x.title + " · " + it.id));
+    }); });
+    return rows ? '<h2 class="sec-h">' + (en ? "Our videos (Ouka)" : "桜花の動画") + '</h2><div class="cand-grid">' + rows + "</div>" : "";
+  }
   function renderStudentMedia(n) {
     if (!LESSONS) return noLessons();
     n = n || currentDay();
@@ -2770,6 +3042,8 @@
       (dayVideo ? '<div class="box"><b>今日（Day ' + n + "）の動画</b>　" +
         '<a target="_blank" rel="noopener" href="' + esc(dayVideo.url) + '">' + esc(dayVideo.title) + "</a></div>" : "") +
       (ready.length ? '<h2 class="sec-h">押したらすぐ見られる（' + esc(f.label) + "）</h2><div class=\"video-grid\">" + ready.map(videoCard).join("") + "</div>" : "") +
+      ownVideosSection() +
+      '<h2 class="sec-h">' + (window.OUKA_LANG === "en" ? "Official videos (Immigration Services Agency, MEXT)" : "公式の動画（出入国在留管理庁・文部科学省）") + "</h2>" +
       '<h2 class="sec-h">日本の生活を知る（知りたいことから探す）</h2>' +
       '<p class="muted small">ネパール語＝出入国在留管理庁の動画／日本語＝文部科学省「つながる ひろがる にほんごでのくらし」。どちらも無料です。</p>' +
       '<div class="topic-grid">' + (VIDEOS.life_topics || []).map(function (t) {
@@ -2928,32 +3202,36 @@
   /* 生徒：緊急のとき（番号・言うこと・場面ごとの動き方） */
   function renderEmergency() {
     if (!EMG) return noLessons();
-    headName.textContent = "緊急のとき";
+    var EN = window.OUKA_LANG === "en" ? (window.OUKA_EMERGENCY_EN || {}) : null;
+    var L = function (x) { return EN && EN[x] ? EN[x] : x; };
+    headName.textContent = L("緊急のとき");
     view.innerHTML = '<section class="lesson emg">' +
-      '<div class="lesson-head"><h1>緊急のとき</h1><span class="chip st-完了">全国共通・24時間・無料（110／119）</span></div>' +
-      '<div class="warn"><b>いのちが危ないときは、日本語が下手でも電話してよい。</b>「たすけてください」と言って、<b>場所</b>を言う。切らないで待つ。</div>' +
+      '<div class="lesson-head"><h1>' + esc(L("緊急のとき")) + '</h1><span class="chip st-完了">' + esc(L("全国共通・24時間・無料（110／119）")) + "</span></div>" +
+      (EN ? '<div class="warn"><p><b>' + esc(EN["いのちが危ないときは、日本語が下手でも電話してよい。"]) + "</b></p><p>Say \u300ctasukete kudasai\u300d (\u201cplease help\u201d), then give your location. Do not hang up \u2014 wait on the line.</p></div>"
+          : '<div class="warn"><b>いのちが危ないときは、日本語が下手でも電話してよい。</b>「たすけてください」と言って、<b>場所</b>を言う。切らないで待つ。</div>') +
       '<div class="emg-grid">' + EMG.numbers.map(function (n) {
         return '<div class="emg-card ' + esc(n.color) + '">' +
           '<div class="emg-no">' + esc(n.no) + "</div>" +
-          '<div class="emg-name">' + esc(n.name) + "</div>" +
-          '<div class="emg-k">こんな時</div><ul>' + n.when.map(function (w) { return "<li>" + esc(w) + "</li>"; }).join("") + "</ul>" +
-          '<div class="emg-k">電話で言うこと</div><ol>' + n.say.map(function (w) { return "<li>" + esc(w) + "</li>"; }).join("") + "</ol>" +
-          '<p class="emg-note">' + esc(n.note) + "</p>" +
-          '<a class="btn btn-sm" target="_blank" rel="noopener" href="' + esc(n.url) + '">出典：' + esc(n.src) + "</a></div>";
+          '<div class="emg-name">' + esc(L(n.name)) + "</div>" +
+          '<div class="emg-k">' + esc(L("こんな時")) + '</div><ul>' + n.when.map(function (w) { return "<li>" + esc(L(w)) + "</li>"; }).join("") + "</ul>" +
+          '<div class="emg-k">' + esc(L("電話で言うこと")) + '</div><ol>' + n.say.map(function (w) { return "<li>" + esc(L(w)) + "</li>"; }).join("") + "</ol>" +
+          '<p class="emg-note">' + esc(L(n.note)) + "</p>" +
+          '<a class="btn btn-sm" target="_blank" rel="noopener" href="' + esc(n.url) + '">' + esc(L("出典：")) + esc(L(n.src)) + "</a></div>";
       }).join("") + "</div>" +
-      '<h2 class="sec-h">こんな時どうする（順番）</h2>' +
-      '<table class="rtable emg-tab"><thead><tr><th>こんな時</th><th>すること（順番）</th><th>電話</th></tr></thead><tbody>' +
+      '<h2 class="sec-h">' + esc(L("こんな時どうする（順番）")) + "</h2>" +
+      '<table class="rtable emg-tab"><thead><tr><th>' + esc(L("こんな時")) + "</th><th>" + esc(L("すること（順番）")) + "</th><th>" + esc(L("電話")) + "</th></tr></thead><tbody>" +
       EMG.cases.map(function (c) {
-        return "<tr><td><b>" + esc(c.case) + "</b></td><td>" +
-          c.steps.map(function (x, i) { return (i + 1) + "．" + esc(x); }).join("<br>") + "</td><td class='num'>" + esc(c.call || "—") + "</td></tr>";
+        return "<tr><td><b>" + esc(L(c.case)) + "</b></td><td>" +
+          c.steps.map(function (x, i) { return (i + 1) + "．" + esc(L(x)); }).join("<br>") + "</td><td class='num'>" + esc(c.call || "—") + "</td></tr>";
       }).join("") + "</tbody></table>" +
-      '<h2 class="sec-h">電話の前に、書いておく</h2>' +
-      '<ol class="steps-ol">' + EMG.before.map(function (b) { return "<li>" + esc(b) + "</li>"; }).join("") + "</ol>" +
-      '<h2 class="sec-h">読む・見る</h2><div class="media-grid">' +
-      EMG.materials.map(function (m) { return mediaCard({ title: m.title, url: m.url, org: m.org, lang: m.lang, type: /youtube/.test(m.url) ? "動画" : "資料" }); }).join("") +
+      '<h2 class="sec-h">' + esc(L("電話の前に、書いておく")) + "</h2>" +
+      '<ol class="steps-ol">' + EMG.before.map(function (b) { return "<li>" + esc(L(b)) + "</li>"; }).join("") + "</ol>" +
+      '<h2 class="sec-h">' + esc(L("読む・見る")) + '</h2><div class="media-grid">' +
+      EMG.materials.map(function (m) { return mediaCard({ title: L(m.title), url: m.url, org: L(m.org), lang: L(m.lang), type: L(/youtube/.test(m.url) ? "動画" : "資料") }); }).join("") +
       "</div>" +
-      '<p class="muted small">番号は ' + esc(EMG.updated) + " に公式サイトで確認したものです。授業で使う前に先生がもう一度確かめてください。" +
-      "会社・学校・支援機関の電話番号は、この画面には入っていません。紙に書いて持たせてください。</p>" +
+      (EN ? '<p class="muted small">These numbers were checked on the official sites on ' + esc(EMG.updated) + ". Your teacher will check them again before class. Phone numbers of your company, school and support organisation are not on this page — write them on paper and keep it with you.</p>"
+          : '<p class="muted small">番号は ' + esc(EMG.updated) + " に公式サイトで確認したものです。授業で使う前に先生がもう一度確かめてください。" +
+          "会社・学校・支援機関の電話番号は、この画面には入っていません。紙に書いて持たせてください。</p>") +
       "</section>";
   }
 
@@ -3272,24 +3550,109 @@
     if (!AIL) { view.innerHTML = '<section class="start"><div class="soon"><p>授業の データを 読みこみ中です…</p></div></section>'; return; }
     var done = AIL.lessons.filter(function (l) { var s = aiSaved(l.id); return s && s.done; }).length;
     var card = function (icon, title, sub, href, act) {
-      return (act ? '<button class="beg-card nh-card" data-act="' + act + '">' : '<a class="beg-card nh-card" href="' + href + '">') +
-        '<span class="beg-ic">' + icon + '</span><span class="beg-w"><span class="bw-main">' + title + '</span><span class="bw-sub">' + sub + "</span></span>" + (act ? "</button>" : "</a>");
+      var inner = '<span class="cand-name"><span class="nh-ic">' + icon + '</span>' + title + '<span class="nh-sub">' + sub + "</span></span>";
+      return act ? '<button class="cand nh-row" data-act="' + act + '">' + inner + "</button>" : '<a class="cand nh-row" href="' + href + '">' + inner + "</a>";
     };
     view.innerHTML = '<section class="lesson hw2 beg nh">' +
       '<div class="beg-hello">🙏 ナマステ' + (studentName() ? '<span class="beg-name">' + esc(studentName()) + "</span>" : "") + "</div>" +
       '<p class="muted">すきな ものから どうぞ。授業は さくら先生が 話しながら 教えます。ほかは 自分の ペースで、とばしても OK。</p>' +
-      '<div class="beg-level"><span>授業</span><b>' + done + " / " + AIL.lessons.length + " 回 おわり</b></div>" +
-      '<div class="beg-grid">' +
-        card("🧑‍🏫", "さくら先生の 授業", "話しながら 教える", "#/nepali/learn") +
-        card("🃏", "ことばカード", "自分で・とばせる", "#/nepali/words") +
-        card("❓", "クイズ", "聞いて えらぶ", "#/nepali/quiz") +
-        card("✏️", "書き順", "1画ずつ 見る", "#/nepali/kaki") +
-        card("👆", "指で なぞる", "書いて おぼえる", "#/nepali/nazoru") +
-        card("💬", "先生に 質問", "わからない所を きく", "#/nepali/qa") +
-        card("🙋", "意見を 送る", "わかった・わかりにくい", "", "fb-open") +
+      '<div class="cand-grid">' +
+        card("🧑‍🏫", "さくら先生の 授業", "話しながら 教える（" + done + " / " + AIL.lessons.length + " 回 おわり）", "#/nepali/learn") +
+        card("📁", "練習", "ことばカード・クイズ・書き順・指でなぞる", "#/nepali/practice") +
+        nhFolders().map(function (f, i) { return card(f.icon, f.name, f.sub + (f.sub ? "・" : "") + f.n + "パック", "#/nepali/folder/" + i); }).join("") +
+        card("📁", "先生に 聞く・意見", "質問と答え・意見を送る", "#/nepali/ask") +
+        (ONLINE && ONLINE.can.check ? card("📁", "学ぶ人の 確認", "代表・校長だけ", "#/nepali/check") : "") +
       "</div>" +
       '<button class="btn hw-wide ai-mute-sw' + (aiMute() ? " is-on" : "") + '" data-act="ai-mute">' + (aiMute() ? "🔇 音なしモード：オン（押すと 音あり）" : "🔈 音なしモードに する（電車の中など）") + "</button>" +
       "</section>";
+  }
+  /* コンテンツ置き場（ネパール語学習/コンテンツ/）から 来た ことばの パック。中身が入った フォルダだけ ホームに出る */
+  function nhPacks() { return (AIL && AIL.packs) || []; }
+  function nhFolders() {
+    var by = [], ix = {};
+    nhPacks().forEach(function (p) {
+      if (!(p.folder in ix)) { ix[p.folder] = by.length; by.push({ name: p.folder, icon: p.icon || "📁", sub: p.sub || "", n: 0 }); }
+      by[ix[p.folder]].n++;
+    });
+    return by;
+  }
+  function renderNepaliPackFolder(i) {
+    aiUse("ne");
+    var f = nhFolders()[i];
+    if (!f) { location.replace("#/nepali/home"); return; }
+    headName.textContent = f.name;
+    var rows = nhPacks().map(function (p, k) { return p.folder === f.name ? '<a class="cand nh-row" href="#/nepali/pack/' + k + '"><span class="cand-name"><span class="nh-ic">🃏</span>' +
+      esc(p.title) + '<span class="nh-sub">' + p.words.length + " ことば</span></span></a>" : ""; }).join("");
+    view.innerHTML = '<section class="lesson nh">' + nhTop(esc(f.icon) + " " + esc(f.name)) + '<div class="cand-grid">' + rows + "</div></section>";
+  }
+  var NHP = { k: -1, w: 0 };
+  function renderNepaliPack(k) {
+    aiUse("ne");
+    var p = nhPacks()[k];
+    if (!p) { location.replace("#/nepali/home"); return; }
+    if (NHP.k !== k) { NHP.k = k; NHP.w = 0; }
+    NHP.w = (NHP.w + p.words.length) % p.words.length;
+    var b = p.words[NHP.w];
+    headName.textContent = p.title;
+    view.innerHTML = '<section class="lesson hw2 ai nh">' + nhTop("🃏 " + esc(p.title)) +
+      '<div class="hw-cnt">' + (NHP.w + 1) + " / " + p.words.length + " ・ " + esc(p.folder) + "</div>" +
+      '<div class="ai-big ai-dev">' + esc(b.ne) + '</div><div class="ai-kana-read">' + esc(b.kana) + " <small>" + esc(b.roma) + "</small></div>" +
+      '<button class="btn hw-wide" data-nh="mean">👀 いみを 見る</button><div class="nh-mean" hidden>' + esc(b.ja) + "</div>" +
+      '<div class="ai-ctl"><button class="btn" data-nh="prev">‹ まえ</button><button class="btn btn-primary" data-nh="next">つぎ ›</button></div>' +
+      '<button class="btn hw-wide" data-nh="rand">🔀 ランダムに とぶ</button>' +
+      '<p class="muted small">声は じゅんび中です（ことばは 草案・マドゥ先生の確認前）。</p></section>';
+    nhBind('[data-nh="mean"]', function () { view.querySelector(".nh-mean").hidden = false; });
+    nhBind('[data-nh="prev"]', function () { NHP.w--; renderNepaliPack(k); });
+    nhBind('[data-nh="next"]', function () { NHP.w++; renderNepaliPack(k); });
+    nhBind('[data-nh="rand"]', function () { NHP.w = Math.floor(Math.random() * p.words.length); renderNepaliPack(k); });
+    nhSay(b.ne);
+  }
+  /* ネパール語ホームの「フォルダ」＝押すと 中の項目が 一覧で出る（日本語の「生徒・学習」と同じ形） */
+  function renderNepaliFolder(which) {
+    aiUse("ne");
+    var F = {
+      practice: { title: "練習", items: [["🃏", "ことばカード", "自分で・とばせる", "#/nepali/words"], ["❓", "クイズ", "聞いて えらぶ", "#/nepali/quiz"],
+        ["✏️", "書き順", "1画ずつ 見る", "#/nepali/kaki"], ["👆", "指で なぞる", "書いて おぼえる", "#/nepali/nazoru"]] },
+      ask: { title: "先生に 聞く・意見", items: [["💬", "質問と答え", "わからない所を きく", "#/nepali/qa"], ["🙋", "意見を 送る", "わかった・わかりにくい", "", "fb-open"]] }
+    }[which];
+    headName.textContent = F.title;
+    view.innerHTML = '<section class="lesson nh">' + nhTop("📁 " + F.title) + '<div class="cand-grid">' + F.items.map(function (x) {
+      var inner = '<span class="cand-name"><span class="nh-ic">' + x[0] + '</span>' + x[1] + '<span class="nh-sub">' + x[2] + "</span></span>";
+      return x[4] ? '<button class="cand nh-row" data-act="' + x[4] + '">' + inner + "</button>" : '<a class="cand nh-row" href="' + x[3] + '">' + inner + "</a>";
+    }).join("") + "</div></section>";
+  }
+  /* ネパール語を学ぶ人の確認（代表・校長だけ）＝誰が どの回まで やったか。サーバーが check 権限のない人には返さない */
+  function renderNepaliCheck() {
+    headName.textContent = "学ぶ人の確認";
+    if (!ONLINE || !ONLINE.can.check) { view.innerHTML = nhTop("学ぶ人の確認") + '<div class="warn">この画面は 代表・校長だけが 見られます。</div>'; return; }
+    view.innerHTML = '<section class="lesson nh">' + nhTop("👀 学ぶ人の確認") + '<p class="muted">読み込み中…</p></section>';
+    ONLINE.api("learn_list", {}).then(function (res) {
+      if (route().name === "hub" && route().item !== "check") return;
+      if (!res || !res.ok) throw new Error((res && res.error) || "応答なし");
+      var by = {};
+      (res.nepali || []).forEach(function (r) {
+        var nm = r["学ぶ人"]; if (!nm) return;
+        var x = by[nm] || (by[nm] = { name: nm, done: [], going: [], rec: 0, traced: 0, best: "", last: "" });
+        var no = Number(r["回"]) || 0, lbl = "N" + no;
+        if (r["状態"] === "終わり") x.done.push(lbl); else x.going.push(lbl);
+        x.rec += Number(r["声"]) || 0; x.traced += Number(r["なぞり"]) || 0;
+        if (Number(r["全問"]) && (!x.bt || Number(r["テスト"]) / Number(r["全問"]) > x.bt)) { x.bt = Number(r["テスト"]) / Number(r["全問"]); x.best = r["テスト"] + " / " + r["全問"]; }
+        if (String(r["記録日時"]) > x.last) x.last = String(r["記録日時"]);
+      });
+      var rows = Object.keys(by).sort().map(function (k) { return by[k]; });
+      var body = rows.length ? rows.map(function (x) {
+        return "<tr><td><b>" + esc(x.name) + "</b></td><td>" + (x.done.length ? esc(x.done.join(", ")) : '<span class="muted">まだ0</span>') + "</td>" +
+          "<td>" + esc(x.going.join(", ") || "—") + "</td><td class='num'>" + x.traced + "</td><td class='num'>" + x.rec + "</td>" +
+          "<td>" + esc(x.best || "—") + "</td><td>" + (x.last ? esc(jdate(x.last)) : "—") + "</td></tr>";
+      }).join("") : '<tr><td colspan="7" class="muted">まだ記録がありません。</td></tr>';
+      view.innerHTML = '<section class="lesson nh">' + nhTop("👀 学ぶ人の確認") +
+        '<div class="box">授業の回ごとの記録です（学ぶ人が授業を進めると自動で届きます）。N＝ことばの回。</div>' +
+        '<table class="rtable"><thead><tr><th>学ぶ人</th><th>終わった回</th><th>とちゅう</th><th>なぞり</th><th>声</th><th>テスト（最高）</th><th>最後</th></tr></thead><tbody>' +
+        body + "</tbody></table>" +
+        '<a class="btn btn-primary hw-wide" href="#/nepali/qa">💬 質問に答える</a></section>';
+    }).catch(function (err) {
+      view.innerHTML = '<section class="lesson nh">' + nhTop("学ぶ人の確認") + '<div class="warn">読めませんでした（' + esc(err.message) + "）。電波を確かめて、もう一度開いてください。</div></section>";
+    });
   }
   function renderNepaliWords() {
     aiUse("ne"); headName.textContent = "ことばカード";
@@ -3852,6 +4215,72 @@
     if (p < u.lesson + 2) return '<span class="bw-main">' + ja + '</span><span class="bw-sub ne">' + esc(u.ne) + "</span>";
     return '<span class="bw-main">' + ja + "</span>";
   }
+  /* ---------- 全画面のふりがな（2026-10-30 代表「ひらがな振られてない漢字は全部ひらがな振りなさいよ」）----------
+   * 辞書＝data/yomi_app.js（_tools/アプリのふりがな辞書.py が 画面に出る文から作る）。人が作った data/yomi.js が先。
+   * 画面に描いたあと、文字の部分だけ 漢字の上に <ruby> を 付ける（文の中身は 1文字も 変えない）。
+   * ★付けない所＝すでに ruby の中／入力欄／辞書の吹き出し／data-nr（わざと付けない所）。
+   * ★辞書に無い漢字は そのまま残し、FU_NO に数える（window.OUKA_NO_YOMI で 見える＝次の辞書づくりで直す）。 */
+  var FU = null, FU_NO = {}, FU_TIMER = 0;
+  var FU_KJ = /[一-鿿々〆]/, FU_DIGIT = /[0-9０-９]/;
+  var FU_SKIP = "ruby,rt,script,style,textarea,input,select,option,[data-nr],.jisho-pop,[contenteditable]";
+  window.OUKA_NO_YOMI = FU_NO;
+  function furiData() {
+    if (FU) return FU;
+    var d = window.OUKA_YOMI_APP || (LESSONS && LESSONS.yomi) || (window.OUKA_LESSONS && window.OUKA_LESSONS.yomi) || null;
+    if (!d) return null;
+    var idx = {};
+    function add(w, c) { var h = w.charAt(0); (idx[h] = idx[h] || []).push([w, c]); }
+    YOMI.forEach(function (r) { var at = r[0].indexOf(r[1]); add(r[0], r[0].slice(0, at) + r[1] + "{" + r[2] + "}" + r[0].slice(at + r[1].length)); });
+    (d.words || []).forEach(function (r) { add(r[0], r[1]); });
+    Object.keys(idx).forEach(function (h) { idx[h].sort(function (a, b) { return b[0].length - a[0].length; }); });
+    FU = { sent: d.sent || {}, idx: idx, counter: d.counter || {},
+           ckeys: Object.keys(d.counter || {}).sort(function (a, b) { return b.length - a.length; }) };
+    return FU;
+  }
+  function furiHtml(c) { return esc(c).replace(/([一-鿿々〆]+)\{([^}]+)\}/g, "<ruby>$1<rt>$2</rt></ruby>"); }
+  function furiConv(s, F) {
+    var core = s.trim(), lead = s.slice(0, s.indexOf(core)), tail = s.slice(lead.length + core.length);
+    if (F.sent[core]) return esc(lead) + furiHtml(F.sent[core]) + esc(tail);
+    var out = "", i = 0, n = s.length;
+    while (i < n) {
+      var ch = s.charAt(i), prev = i > 0 ? s.charAt(i - 1) : "", k, hit = null;
+      /* 1人・2人（ひとり・ふたり）。ほかの数は 数える字の表 */
+      if ((ch === "1" || ch === "１" || ch === "2" || ch === "２") && s.charAt(i + 1) === "人" && !FU_DIGIT.test(prev)) {
+        out += "<ruby>" + esc(ch + "人") + "<rt>" + (ch === "1" || ch === "１" ? "ひとり" : "ふたり") + "</rt></ruby>"; i += 2; continue;
+      }
+      if (i > 0 && FU_DIGIT.test(prev)) {
+        for (k = 0; k < F.ckeys.length; k++) if (s.substr(i, F.ckeys[k].length) === F.ckeys[k]) { hit = F.ckeys[k]; break; }
+        if (hit) { out += "<ruby>" + esc(hit) + "<rt>" + esc(F.counter[hit]) + "</rt></ruby>"; i += hit.length; continue; }
+      }
+      if (!FU_KJ.test(ch)) { out += esc(ch); i++; continue; }
+      var list = F.idx[ch] || [];
+      for (k = 0; k < list.length; k++) if (s.substr(i, list[k][0].length) === list[k][0]) { hit = list[k]; break; }
+      if (hit) { out += furiHtml(hit[1]); i += hit[0].length; continue; }
+      FU_NO[ch] = (FU_NO[ch] || 0) + 1; out += esc(ch); i++;
+    }
+    return out.indexOf("<ruby>") < 0 ? null : out;
+  }
+  function furiRun() {
+    FU_TIMER = 0;
+    var F = furiData(); if (!F) return;
+    [view, document.querySelector(".topbar")].forEach(function (root) {
+      if (!root) return;
+      var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null), n, list = [];
+      while ((n = w.nextNode())) if (FU_KJ.test(n.nodeValue)) list.push(n);
+      list.forEach(function (t) {
+        var p = t.parentNode;
+        if (!p || !p.closest || p.closest(FU_SKIP)) return;
+        var h = furiConv(t.nodeValue, F);
+        if (h === null) return;
+        var tpl = document.createElement("template"); tpl.innerHTML = h;
+        p.replaceChild(tpl.content, t);
+      });
+    });
+  }
+  function furiSoon() { if (!FU_TIMER) FU_TIMER = setTimeout(furiRun, 30); }
+  if (window.MutationObserver) new MutationObserver(furiSoon).observe(view, { childList: true, subtree: true });
+  furiSoon();
+
   /* ---------- あいうえお（声で）・2026-10-13 試作 ----------
    * 代表「いちばん最初に あいうえお を教える欄 → オリエンテーション → 本科。オリエンを飛ばす道も」
    *       「音を読み取って ち を さ にしてないか（ちがいます／さがします）」
@@ -4341,7 +4770,7 @@
       if (!nav) return;
       b = document.createElement("button");
       b.id = "fbFab"; b.className = "btn btn-sm fb-top"; b.setAttribute("data-act", "fb-open");
-      b.innerHTML = "🙋 <span>Help</span>";
+      b.innerHTML = '<svg class="ic" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7"/><path d="M12 17v.1"/></svg> <span>Help</span>';
       nav.insertBefore(b, nav.firstChild);
     }
     b.hidden = !show;
@@ -4623,6 +5052,7 @@
     if (k === "teacher/today") return renderTeacherDay(n);
     if (k === "teacher/materials") return renderTeacherMaterials();
     if (k === "teacher/study") return n ? renderTeacherStudyUnit(n) : renderTeacherStudy();
+    if (k === "student/study") return n ? renderStudentStudyUnit(n) : renderStudentStudy();
     if (k === "student/today") return renderStudentToday(n);
     if (k === "student/drill") return renderStudentDrill(n);
     if (k === "student/more") return renderStudentMore(n);
@@ -4643,7 +5073,15 @@
       if (PENDING_AI) { var pl = PENDING_AI; PENDING_AI = null; aiAct("ai-start", { getAttribute: function () { return pl; } }); return; }   /* 近道＝O10 から すぐ始める */
       return renderAiLesson();
     }
+    if (k === "student/folder") return renderStudentFolder(n);
+    if (k === "student/manners") return renderMannersList(n);
+    if (k === "student/mannersitem") return renderMannersItem(n);
     if (k === "nepali/home") return renderNepaliHome();
+    if (k === "nepali/check") return renderNepaliCheck();
+    if (k === "nepali/folder") return renderNepaliPackFolder(n);
+    if (k === "nepali/pack") return renderNepaliPack(n);
+    if (k === "nepali/practice") return renderNepaliFolder("practice");
+    if (k === "nepali/ask") return renderNepaliFolder("ask");
     if (k === "nepali/words") return renderNepaliWords();
     if (k === "nepali/quiz") return renderNepaliQuiz();
     if (k === "nepali/kaki") return renderNepaliKaki();
