@@ -3102,6 +3102,7 @@
       });
     });
     if (!quiz || quiz.day !== n) quiz = { day: n, ids: ids, idx: 0, picked: {} };
+    if (quiz.retry) ids = quiz.ids;                  /* まちがえた問題だけ やり直している時 */
     headName.textContent = "生徒／問題 Day " + n;
     if (!ids.length) {
       view.innerHTML = '<section class="lesson">' + dayNav("student", "drill", n) + fieldPicker() +
@@ -3113,9 +3114,12 @@
     }
     if (quiz.idx >= ids.length) {
       var ok = ids.filter(function (id) { return quiz.picked[id] === LESSONS.problems[id].answer; }).length;
+      var ng = ids.length - ok;
       view.innerHTML = '<section class="lesson">' + dayNav("student", "drill", n) +
-        '<div class="big-card"><div class="big-k">Day ' + n + ' の問題　おわり</div><div class="big-v" id="drillScore">' + ok + " / " + ids.length + "</div></div>" +
-        '<div class="start-btns"><button class="btn btn-primary btn-xl" data-act="drill-again">もう一度</button>' +
+        '<div class="big-card"><div class="big-k">Day ' + n + (quiz.retry ? ' まちがえた問題' : ' の問題') + '　おわり</div><div class="big-v" id="drillScore">' + ok + " / " + ids.length + "</div></div>" +
+        '<div class="start-btns">' +
+        (ng ? '<button class="btn btn-primary btn-xl" data-act="drill-wrong">まちがえた ' + ng + ' 問だけ もう一度</button>' : "") +
+        '<button class="btn ' + (ng ? "" : "btn-primary ") + 'btn-xl" data-act="drill-again">' + (quiz.retry ? "Day の問題を はじめから" : "もう一度") + '</button>' +
         '<a class="btn btn-xl" href="#/student/today/' + n + '">今日の教材へ</a>' +
         (DREX.groups.length ? '<a class="btn btn-xl" href="#/student/more">もっと問題</a>' : "") + '</div>' +
         (studentName()
@@ -4280,7 +4284,11 @@
         var h = furiConv(t.nodeValue, F);
         if (h === null) return;
         var tpl = document.createElement("template"); tpl.innerHTML = h;
-        p.replaceChild(tpl.content, t);
+        /* grid / flex の入れ物の直下では、文字と <ruby> が 別々の枠になって 縦に積まれる（2026-11-06 生徒ホーム・ドリル等）。
+         * 1つの <span> で包めば 元の「文字1つ＝枠1つ」のまま */
+        var pd = getComputedStyle(p).display;
+        if (pd.indexOf("flex") >= 0 || pd.indexOf("grid") >= 0) { var wr = document.createElement("span"); wr.className = "furi-w"; wr.appendChild(tpl.content); p.replaceChild(wr, t); }
+        else p.replaceChild(tpl.content, t);
       });
     });
   }
@@ -5898,12 +5906,16 @@
     else if (act === "drill-pick" && quiz) {
       var pid = quiz.ids[quiz.idx];
       quiz.picked[pid] = LESSONS.problems[pid].choices[parseInt(el.getAttribute("data-i"), 10)];
-      if (!quiz.extra) drSave(quiz.day, quiz.ids, quiz.picked, currentField().code);   /* もっと問題（試作）は まだ記録しない */
+      if (!quiz.extra && !quiz.retry) drSave(quiz.day, quiz.ids, quiz.picked, currentField().code);   /* もっと問題（試作）は まだ記録しない */
       render();
     }
     else if (act === "drill-next" && quiz) { quiz.idx++; render(); }
     else if (act === "drill-prev" && quiz) { quiz.idx = Math.max(0, quiz.idx - 1); render(); }
     else if (act === "drill-again" && quiz) { quiz = null; render(); }
+    else if (act === "drill-wrong" && quiz) {
+      var wr = quiz.ids.filter(function (id) { return quiz.picked[id] !== LESSONS.problems[id].answer; });
+      if (wr.length) { quiz = { day: quiz.day, ids: wr, idx: 0, picked: {}, retry: true, extra: quiz.extra, key: quiz.key }; render(); }
+    }
     else if (/^hw-/.test(act) && hwAct(act, el)) { /* 宿題の中の操作 */ }
     else if (/^ai-/.test(act) && aiAct(act, el)) { /* AIの授業の中の操作 */ }
     else if (/^kn-/.test(act) && kanaAct(act, el)) { /* あいうえお（声で）の操作 */ }
