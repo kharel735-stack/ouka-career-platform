@@ -364,7 +364,8 @@ textarea { width: 100%; font: inherit; font-size: 18px; padding: 10px; border: 1
   .step > div { grid-column: 1 / -1; }
   .choices { grid-template-columns: 1fr; }
   .rtable { font-size: 14px; }
-  .rtable th, .rtable td { padding: 8px 6px; }
+  .rtable th, .rtable td { padding: 8px 3px; }   /* ふりがな（ruby）で 見出しが 広がっても 横にはみ出さない */
+  .rtable rt { font-size: 0.45em; }
 }
 
 /* ---- 先生の勉強（画面で読む）と 代表の確認 ---- */
@@ -538,6 +539,9 @@ rt { font-size: .5em; color: #2E4A7A; font-weight: 700; line-height: 1; }
 .hw-say-t { font-size: 28px; }
 .hw-yo { font-size: 20px; color: #2E4A7A; text-align: center; }
 .hw-mn { font-size: 20px; margin-top: 10px; }
+.hw-en { display: block; margin-top: 10px; font-size: 18px; line-height: 1.4; }
+.hw-en small { display: block; font-size: 14px; color: var(--muted, #666); font-weight: normal; margin-top: 4px; }
+.hw-gloss { margin: 12px 0; padding: 10px 12px; border-radius: 10px; background: rgba(0,0,0,.05); text-align: left; }
 .hw-wide { width: 100%; margin-top: 10px; }
 .hw-choice { display: block; width: 100%; min-height: 58px; margin-top: 10px; padding: 10px 14px; font: inherit; font-size: 19px; text-align: left; background: #fff; border: 2px solid var(--line); border-radius: 12px; cursor: pointer; color: inherit; }
 .hw-choice.ok { border-color: #3F8F5A; background: #E6F4EA; }
@@ -860,3 +864,33 @@ button.beg-card { font: inherit; font-size: 30px; cursor: pointer; width: 100%; 
 .nh-g .nh-bn { fill: var(--shu); font-size: 5.4px; font-weight: 700; text-anchor: middle; }
 .ai-skipall { font-weight: 700; border-color: var(--shu); color: var(--shu); background: #FFF4F2; }
 .ai-skipbig { margin-top: 10px; }
+
+/* ネパール語ホーム＝日本語の生徒ホームと同じ横長の一覧（2026-10-26 代表「見づらい」） */
+button.nh-row { font: inherit; cursor: pointer; width: 100%; text-align: left; background: var(--card); }
+/* ふりがな（ruby）で 題名が 細かい部品に 分かれても 崩れないよう、grid でなく 普通の流れ＋絵だけ左に置く（2026-11-06） */
+.nh-row .cand-name { display: block; position: relative; padding-left: 52px; min-height: 44px; white-space: normal; line-height: 1.9; }
+.nh-row .nh-ic { position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 44px; font-size: 30px; text-align: center; }
+.nh-row .nh-sub { display: block; }
+.nh-row .nh-sub { font-size: 13px; font-weight: 400; color: var(--muted, #667); }
+
+/* 辞書（押した日本語の意味）＝画面の下に出る */
+.jisho-pop { position: fixed; left: 8px; right: 8px; bottom: 8px; max-height: 55vh; overflow: auto; z-index: 60; background: #fff; border: 2px solid var(--line, #cfd6e2); border-radius: 16px; padding: 14px 16px 10px; box-shadow: 0 6px 24px rgba(0,0,0,.22); }
+.jisho-pop[hidden] { display: none; }
+.jp-x { position: absolute; top: 6px; right: 8px; border: 0; background: transparent; font-size: 20px; padding: 6px 10px; cursor: pointer; }
+.jp-w { font-size: 28px; font-weight: 700; padding-right: 36px; }
+.jp-r { font-size: 16px; font-weight: 400; color: #556; }
+.jp-base { font-size: 13px; color: #667; }
+.jp-m { font-size: 16px; margin: 6px 0; line-height: 1.5; }
+.jp-kl { border-top: 1px solid var(--line, #dde); margin-top: 8px; padding-top: 6px; }
+.jp-k { font-size: 14px; margin: 4px 0; }
+.jp-kc { font-size: 22px; }
+.jp-c { font-size: 10px; color: #889; margin-top: 8px; }
+
+.nh-ic .ic { display: block; margin: 0 auto; color: #12294B; }
+
+.mn-t { font-size: 22px; margin: 6px 0 8px; }
+.mn-ja { font-size: 20px; line-height: 1.9; background: var(--card, #fff); border: 1px solid var(--line, #dde); border-radius: 14px; padding: 16px; margin: 10px 0; }
+
+.mn-frame { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 12px; overflow: hidden; margin: 8px 0; }
+.mn-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.mn-vl { margin: 6px 0; }

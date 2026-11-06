@@ -1224,7 +1224,7 @@
       .filter(function (x) { return x && LIVE["student/" + x.key] && LESSONS; });
   }
   function studentRow(href, icon, name, sub) {
-    return '<a class="cand nh-row" href="' + href + '"><span class="cand-name"><span class="nh-ic">' + svgIcon(icon) + "</span>" + name +
+    return '<a class="cand nh-row" href="' + href + '"><span class="cand-name"><span class="nh-ic">' + svgIcon(icon) + '</span><span class="nh-t">' + name + "</span>" +
       '<span class="nh-sub">' + sub + "</span></span></a>";
   }
   function renderStudentHome() {
@@ -2397,7 +2397,7 @@
         '<span class="ne">' + esc(d.title.ne) + "</span></div>" +
       '<h2 class="hw-h">📝 きょうの たんご ' + (d.words.length ? d.words.length + "ご" : "（これまでの ぜんぶ " + ow.length + "ご）") +
         " ／ <span class='ne'>आजका शब्द</span></h2>" +
-      (d.words.length ? '<div class="hw-words">' + d.words.map(function (w) { return "<span>" + esc(w.ja) + " <small>" + esc(w.ne) + "</small></span>"; }).join("") + "</div>" : "") +
+      (d.words.length ? '<div class="hw-words">' + d.words.map(function (w) { return "<span>" + esc(w.ja) + " <small>" + esc(w.ne) + (w.en ? " · " + esc(w.en) : "") + "</small></span>"; }).join("") + "</div>" : "") +
       '<a class="hw-task hw-practice" href="#/student/homework/' + n + '/card"><span class="hw-ic">🃏</span><span class="hw-tx"><b>カードで おぼえる（れんしゅう）</b>' +
         '<span class="ne">कार्डले याद गर्ने（अभ्यास）</span><span class="hw-sub">きく → いみ → いう</span></span><span class="hw-go">›</span></a>' +
       part(1);
@@ -2449,6 +2449,12 @@
       '<span class="hw-cnt">' + sub + "</span></div>";
   }
 
+  /* 語の意味＝ネパール語だけでなく 英語の意味＋その仕事での一言の説明（語の意味_*.txt が正本） */
+  function hwGloss(w) {
+    if (!w || !w.en) return "";
+    return '<span class="hw-en"><b>' + esc(w.en) + "</b>" + (w.ex ? "<small>" + esc(w.ex) + "</small>" : "") + "</span>";
+  }
+
   /* カード（れんしゅう＝数えない） */
   function renderHwCard(n) {
     var f = hwFieldData();
@@ -2460,7 +2466,7 @@
     view.innerHTML = '<section class="lesson hw2">' + hwHead(n, "たんご カード", (HWS.i + 1) + " / " + list.length) +
       '<button class="hw-card2" data-act="hw-flip"><span class="hw-em">' + esc(w.icon || f.icon) + "</span>" +
         '<span class="hw-kj">' + esc(w.ja) + '</span><span class="hw-yo">' + esc(w.yomi) + "</span>" +
-        (HWS.open ? '<span class="hw-mn ne">' + esc(w.ne) + "</span>" : '<span class="hw-hint">タップ ＝ いみ ／ <span class="ne">थिच्नुहोस् ＝ अर्थ</span></span>') +
+        (HWS.open ? '<span class="hw-mn ne">' + esc(w.ne) + "</span>" + hwGloss(w) : '<span class="hw-hint">タップ ＝ いみ ／ <span class="ne">थिच्नुहोस् ＝ अर्थ</span></span>') +
         '<span class="chip ' + (isNew ? "st-完了" : "st-面接中") + '">' + (isNew ? "あたらしい ／ नयाँ" : "ふくしゅう ／ दोहोर्याइ") + "</span></button>" +
       '<button class="btn btn-xl hw-wide" data-act="hw-say" data-say="' + esc(w.yomi) + '">🔊 きく ／ <span class="ne">सुन्ने</span></button>' +
       '<div class="hw-nav"><button class="btn btn-xl" data-act="hw-card-prev"' + (HWS.i ? "" : " disabled") + ">‹ まえ</button>" +
@@ -2558,9 +2564,10 @@
       body += q.ch.map(function (c, k) {
         var cls = "";
         if (s.picked !== null) { if (c.ja === w.ja) cls = " ok"; else if (k === s.picked) cls = " ng"; }
-        var label = (kind === "A" || kind === "L") ? '<span class="ne">' + esc(c.ne) + "</span>" : esc(c.ja) + (c.yomi ? ' <small class="muted">' + esc(c.yomi) + "</small>" : "");
+        var label = (kind === "A" || kind === "L") ? '<span class="ne">' + esc(c.ne) + "</span>" + (c.en ? ' <small class="muted">' + esc(c.en) + "</small>" : "") : esc(c.ja) + (c.yomi ? ' <small class="muted">' + esc(c.yomi) + "</small>" : "");
         return '<button class="hw-choice' + cls + '" data-act="hw-pick" data-k="' + k + '">' + label + "</button>";
       }).join("");
+      if (s.picked !== null && w.en) body += '<div class="hw-gloss"><b>' + esc(w.ja) + "</b> " + hwGloss(w) + "</div>";
       if (s.picked !== null) body += '<button class="btn btn-primary btn-xl hw-wide" data-act="hw-next">つぎ ／ <span class="ne">अर्को</span> ›</button>';
     } else if (key === "order") {
       var o = s.items[s.i], rest = o.pool.filter(function (p) { return o.got.indexOf(p) < 0; });

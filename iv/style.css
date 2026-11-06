@@ -539,6 +539,9 @@ rt { font-size: .5em; color: #2E4A7A; font-weight: 700; line-height: 1; }
 .hw-say-t { font-size: 28px; }
 .hw-yo { font-size: 20px; color: #2E4A7A; text-align: center; }
 .hw-mn { font-size: 20px; margin-top: 10px; }
+.hw-en { display: block; margin-top: 10px; font-size: 18px; line-height: 1.4; }
+.hw-en small { display: block; font-size: 14px; color: var(--muted, #666); font-weight: normal; margin-top: 4px; }
+.hw-gloss { margin: 12px 0; padding: 10px 12px; border-radius: 10px; background: rgba(0,0,0,.05); text-align: left; }
 .hw-wide { width: 100%; margin-top: 10px; }
 .hw-choice { display: block; width: 100%; min-height: 58px; margin-top: 10px; padding: 10px 14px; font: inherit; font-size: 19px; text-align: left; background: #fff; border: 2px solid var(--line); border-radius: 12px; cursor: pointer; color: inherit; }
 .hw-choice.ok { border-color: #3F8F5A; background: #E6F4EA; }
@@ -864,9 +867,10 @@ button.beg-card { font: inherit; font-size: 30px; cursor: pointer; width: 100%; 
 
 /* ネパール語ホーム＝日本語の生徒ホームと同じ横長の一覧（2026-10-26 代表「見づらい」） */
 button.nh-row { font: inherit; cursor: pointer; width: 100%; text-align: left; background: var(--card); }
-.nh-row .cand-name { display: grid; grid-template-columns: 44px 1fr; align-items: center; column-gap: 8px; row-gap: 2px; }
-.nh-row .nh-ic { grid-row: 1 / 3; font-size: 30px; text-align: center; }
-.nh-row .nh-sub { grid-column: 2; }
+/* ふりがな（ruby）で 題名が 細かい部品に 分かれても 崩れないよう、grid でなく 普通の流れ＋絵だけ左に置く（2026-11-06） */
+.nh-row .cand-name { display: block; position: relative; padding-left: 52px; min-height: 44px; white-space: normal; line-height: 1.9; }
+.nh-row .nh-ic { position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 44px; font-size: 30px; text-align: center; }
+.nh-row .nh-sub { display: block; }
 .nh-row .nh-sub { font-size: 13px; font-weight: 400; color: var(--muted, #667); }
 
 /* 辞書（押した日本語の意味）＝画面の下に出る */

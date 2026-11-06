@@ -322,7 +322,7 @@
     return n === "setfield";
   }
   /* 先生・代表＝ホーム／生徒＝生徒の画面／ネパール語を学ぶ人＝さくら先生のネパール語（2026-10-04） */
-  function home() { return who && who.can.teacher ? "#/" : who && who.can.student ? "#/student" : "#/nepali/learn"; }
+  function home() { return who && who.can.teacher ? "#/" : who && who.can.student ? "#/student" : "#/nepali/home"; }
 
   /* 名前は本人のアカウントの名前で決まる（打たせない＝ほかの人の名前で出せない） */
   function setNames() {
@@ -345,6 +345,71 @@
       if (!el.value) el.placeholder = "（この画面は生徒のアカウントで使います）";
     });
     badge();
+  }
+
+
+  /* ------------------------------------------------------------ 英語の画面（2026-10-26 代表「ネパールの生徒と先生は英語に」）
+   * ・生徒（STUDENT）は 初期値が英語、先生などは 日本語（右上の EN/日本語 で 切り替え・端末に 覚える）。
+   * ・ことばの 置き換え表（下の EN）にある 文だけ 英語になる。表に無い文（授業の中身・長い説明）は 日本語のまま＝翻訳が増えたら 表に足す。
+   * ・授業の中身は 変えない（教育パッケージ Ver.1.0）。画面の ことばだけ。 */
+  var LANG_KEY = "ouka_ui_lang";
+  var EN = {
+    "ホーム": "Home", "ログアウト": "Log out", "生徒・学習": "Student", "マナーと日本の文化": "Manners & culture", "ゴミ・交通・近所・まち・職場": "Garbage, traffic, town, work", "ゴミ出し": "Garbage", "交通安全": "Traffic safety", "生活安全・近隣マナー": "Safety & neighbours", "まちの使い方": "Using the town", "職場生活マナー": "Workplace manners", "先生": "Teacher", "緊急のとき": "Emergency",
+    "はじめての人の 入口": "Start here", "今日の 勉強": "Today's study", "出す": "Submit", "記録": "My records",
+    "あいうえお・AIの授業": "Hiragana & AI lesson", "宿題・教材・問題・動画": "Homework, materials, questions, videos",
+    "声・動画・提出": "Voice, video, submissions", "学習履歴・進捗": "History & progress",
+    "はじめての人の入口（試作）": "Start here (beginner)", "あいうえお（声で・試作）": "Hiragana by voice", "AIの授業（試作）": "AI lesson",
+    "宿題": "Homework", "今日の教材": "Today's materials", "問題": "Questions", "動画・音声": "Videos & audio",
+    "声・動画で出す": "Submit voice / video", "提出": "Submit", "学習履歴": "Study history", "進捗": "Progress",
+    "← 生徒・学習": "← Student", "今日の授業": "Today's lesson", "教材": "Materials", "報告を送る": "Send a report",
+    "先生の勉強": "Teacher study", "宿題を出す": "Assign homework", "提出物確認": "Check submissions", "ノートの写真": "Notebook photos",
+    "生徒の声": "Student voices", "採点": "Grading", "使える": "Ready", "準備中": "Coming soon", "読み込み中…": "Loading…",
+    "N5 → N1 の勉強": "Study N5 → N1", "N5 → N1 の 勉強": "Study N5 → N1", "未送信": "Unsent", "送信済み": "Sent", "送信ずみ": "Sent", "使い方": "How to use"
+  };
+  function langNow() {
+    var v = ""; try { v = localStorage.getItem(LANG_KEY) || ""; } catch (x) { /* 止めない */ }
+    if (v === "en" || v === "ja") return v;
+    return who && who.role === "STUDENT" ? "en" : "ja";
+  }
+  function enOf(t) {
+    var k = String(t).replace(/\s+/g, " ").trim();
+    if (!k) return null;
+    if (EN[k]) return EN[k];
+    var m = /^(.+?)（(生徒|先生|代表|校長|管理者)）$/.exec(k);
+    if (m) return m[1] + " (" + ({ 生徒: "Student", 先生: "Teacher", 代表: "CEO", 校長: "Principal", 管理者: "Admin" }[m[2]]) + ")";
+    var i = k.indexOf(" ／ ");
+    if (i > 0 && EN[k.slice(0, i)]) return EN[k.slice(0, i)];   /* 「宿題 ／ गृहकार्य」 */
+    return null;
+  }
+  var langBusy = false, langObs = null;
+  function translate(root) {
+    if (window.OUKA_LANG !== "en" || langBusy || !root) return;
+    langBusy = true;
+    try {
+      var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null), n, list = [];
+      while ((n = w.nextNode())) list.push(n);
+      list.forEach(function (t) { var e = enOf(t.nodeValue); if (e && t.nodeValue.trim() !== e) t.nodeValue = t.nodeValue.replace(t.nodeValue.trim(), e); });
+    } finally { langBusy = false; }
+  }
+  function startLang() {
+    window.OUKA_LANG = langNow();
+    document.documentElement.setAttribute("lang", window.OUKA_LANG);
+    if (!document.getElementById("langBtn")) {
+      var b = document.createElement("button");
+      b.className = "btn btn-sm"; b.id = "langBtn"; b.type = "button";
+      b.addEventListener("click", function () {
+        try { localStorage.setItem(LANG_KEY, window.OUKA_LANG === "en" ? "ja" : "en"); } catch (x) { /* 止めない */ }
+        location.reload();
+      });
+      var lo = $("logoutBtn"); lo.parentNode.insertBefore(b, lo);
+    }
+    $("langBtn").textContent = window.OUKA_LANG === "en" ? "日本語" : "EN";
+    if (window.OUKA_LANG === "en" && !langObs) {
+      langObs = new MutationObserver(function () { translate($("view")); translate(document.querySelector(".topbar")); });
+      langObs.observe($("view"), { childList: true, subtree: true });
+      langObs.observe(document.querySelector(".topbar"), { childList: true, subtree: true });
+    }
+    translate($("view")); translate(document.querySelector(".topbar"));
   }
 
   /* ------------------------------------------------------------ 教材 */
@@ -630,6 +695,7 @@
     window.OUKA_LESSONS_NE = who.can.teacher ? c.ne || null : null;
     window.OUKA_AI_NEPALI = who.can.nepali ? c.nepali || null : null;
     setNames();
+    startLang();
     window.OUKA_ONLINE = {
       role: who.role, name: who.name, can: who.can, students: who.students,
       allow: allow, home: home, changed: changed, afterRender: afterRender, api: api, photosChanged: photosChanged
