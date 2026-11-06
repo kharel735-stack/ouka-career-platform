@@ -1,0 +1,96 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow"><title>Voice</title>
+<style>
+:root{--ink:#12294B;--red:#C8362B;--bg:#F6F4EF;--line:#DDD6C8}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:#1D2433;font-family:"Geeza Pro","Noto Naskh Arabic","Kohinoor Devanagari","Noto Sans Devanagari","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+ min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;padding:0 16px env(safe-area-inset-bottom)}
+header{padding:14px 0 6px;display:flex;justify-content:space-between;gap:8px;font-size:14px;color:#4A5468}
+#chap{font-weight:800;color:var(--ink)}
+.bar{height:6px;background:#E7E2D6;border-radius:3px;overflow:hidden}#bar{height:6px;width:0;background:#2E8B57}
+.card{background:#fff;border:2px solid var(--ink);border-radius:16px;padding:22px 14px;margin:14px 0;text-align:center}
+#t{font-size:clamp(30px,9vw,48px);line-height:1.9;margin:6px 0;word-break:keep-all;overflow-wrap:anywhere}
+#t[dir=rtl]{font-size:clamp(34px,10vw,54px);line-height:2.1}
+#s{color:#4A5468;font-size:16px;min-height:22px}
+#st{min-height:26px;font-weight:700;margin-top:8px}.ok{color:#2E8B57}.ng{color:var(--red)}
+.btns{display:flex;gap:10px;margin:10px 0}
+button{font:inherit;font-size:18px;padding:14px 10px;border-radius:12px;border:1px solid var(--ink);background:#fff;color:var(--ink);flex:1;touch-action:manipulation}
+button:disabled{opacity:.35}
+#rec{flex:2;background:var(--red);color:#fff;border-color:var(--red);font-size:22px;padding:18px 10px}#rec.on{background:#1D2433;border-color:#1D2433}
+#m{height:8px;width:0;background:#2E8B57;border-radius:4px;margin:0 auto;max-width:100%}
+#pend{display:none;margin:6px 0}#pend button{background:var(--red);color:#fff;border-color:var(--red)}
+details{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin:8px 0;font-size:14px;line-height:1.7}
+#list{margin:8px 0 18px}.ch{background:#fff;border:1px solid var(--line);border-radius:10px;margin:6px 0}
+.ch>div{padding:10px 12px;display:flex;justify-content:space-between;font-weight:700}
+.it{padding:8px 12px;border-top:1px solid #F0ECE3;display:flex;gap:10px;align-items:center;font-size:16px}.it.cur{background:#FFF4D6}
+.it .d{width:18px;color:#2E8B57;font-weight:800}
+#bad{display:none;text-align:center;padding:40px 0;font-size:18px}
+</style></head><body>
+<header><span id="chap"></span><span id="cnt"></span></header>
+<div class="bar"><div id="bar"></div></div>
+<div id="bad"></div>
+<noscript><p style="padding:30px 0;font-size:18px">このページは Safari / Chrome で、送られた「リンク」から開いてください。ファイルのプレビューでは動きません。<br>Open this from the link in Safari or Chrome, not from a file preview.</p></noscript>
+<main id="app">
+ <div class="card"><div id="t"></div><div id="s"></div><div id="st"></div></div>
+ <div class="btns"><button id="rec"></button></div>
+ <div class="bar" style="background:#fff"><div id="m"></div></div>
+ <div class="btns"><button id="prev"></button><button id="play" disabled></button><button id="next"></button></div>
+ <div id="pend"><button id="retry"></button></div>
+ <details><summary id="howh">?</summary><div id="how"></div></details>
+ <div id="list"></div>
+</main>
+<script>
+/* 声の録音 — 受け口は supabase の voice。リンク ?t=<鍵>。録ったら 自動で送る（zip もメールも いらない）。 */
+var API="https://zolhsqgmgrdjbkeywrnx.supabase.co/functions/v1/voice";
+var $=function(i){return document.getElementById(i)},Q=new URLSearchParams(location.search),TOK=Q.get("t")||"";
+var C=null,ui={},items=[],done={},blobs={},pend={},cur=0,rec=false,stream,ctx,src,proc,buf,rate,SR=16000,db=null;
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;")}
+function openDB(){return new Promise(function(ok){try{var r=indexedDB.open("ouka_voice_"+TOK.slice(0,8),1);r.onupgradeneeded=function(){r.result.createObjectStore("p")};r.onsuccess=function(){db=r.result;ok()};r.onerror=function(){ok()}}catch(e){ok()}})}
+function dbPut(k,v){try{if(db)db.transaction("p","readwrite").objectStore("p").put(v,k)}catch(e){}}
+function dbDel(k){try{if(db)db.transaction("p","readwrite").objectStore("p").delete(k)}catch(e){}}
+function dbAll(){return new Promise(function(ok){try{if(!db)return ok();var r=db.transaction("p").objectStore("p").openCursor();r.onsuccess=function(){var c=r.result;if(c){pend[c.key]=c.value;c.continue()}else ok()};r.onerror=function(){ok()}}catch(e){ok()}})}
+function bad(){$("app").style.display="none";$("bad").style.display="block";$("bad").textContent=(ui.bad||"This link does not work.")}
+function load(){return fetch(API+"?t="+encodeURIComponent(TOK),{cache:"no-store"}).then(function(r){return r.json()}).then(function(j){
+ if(!j.ok||!j.content)throw 0;C=j.content;(j.done||[]).forEach(function(i){done[i]=1});return j})}
+function flat(){items=[];C.chapters.forEach(function(ch){ch.items.forEach(function(it){items.push({id:it.id,f:it.f,s:it.s,ch:ch.title,cid:ch.id})})})}
+function firstTodo(){for(var k=0;k<items.length;k++)if(!done[items[k].id]&&!pend[items[k].id])return k;return -1}
+function show(){var x=items[cur],n=items.filter(function(y){return done[y.id]}).length,rtl=/[؀-ۿ]/.test(x.f);
+ $("t").textContent=x.f;$("t").dir=rtl?"rtl":"ltr";$("s").textContent=x.s||"";$("chap").textContent=x.ch;$("cnt").textContent=(cur+1)+" / "+items.length+"　✓ "+n;
+ $("bar").style.width=(n/items.length*100)+"%";$("play").disabled=!blobs[x.id];$("prev").disabled=cur==0;$("next").disabled=cur==items.length-1;
+ var np=Object.keys(pend).length;$("pend").style.display=np?"block":"none";$("retry").textContent=ui.retry+"（"+ui.pend+" "+np+"）";
+ var h="";C.chapters.forEach(function(ch){var d=ch.items.filter(function(i){return done[i.id]}).length;
+  h+='<div class="ch"><div><span>'+esc(ch.title)+'</span><span>'+d+' / '+ch.items.length+'</span></div>'+ch.items.map(function(i){var k=items.findIndex(function(y){return y.id==i.id});
+  return '<div class="it'+(k==cur?" cur":"")+'" data-k="'+k+'"><span class="d">'+(done[i.id]?"✓":(pend[i.id]?"…":"・"))+'</span><span dir="auto">'+esc(i.f)+'</span></div>'}).join("")+'</div>'});
+ $("list").innerHTML=h;if(n==items.length)setSt(ui.all,"ok")}
+function setSt(m,c){$("st").textContent=m||"";$("st").className=c||""}
+$("list").onclick=function(e){var d=e.target.closest("[data-k]");if(d&&!rec){cur=+d.dataset.k;setSt("");show()}};
+$("prev").onclick=function(){if(cur>0&&!rec){cur--;setSt("");show()}};$("next").onclick=function(){if(cur<items.length-1&&!rec){cur++;setSt("");show()}};
+$("play").onclick=function(){var b=blobs[items[cur].id];if(b)new Audio(URL.createObjectURL(b)).play()};
+$("rec").onclick=function(){rec?stop():start()};
+function start(){setSt("");navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:true,autoGainControl:true}}).then(function(s){
+ stream=s;ctx=new (window.AudioContext||window.webkitAudioContext)();if(ctx.resume)ctx.resume();rate=ctx.sampleRate;src=ctx.createMediaStreamSource(s);proc=ctx.createScriptProcessor(4096,1,1);buf=[];
+ proc.onaudioprocess=function(e){var d=e.inputBuffer.getChannelData(0);buf.push(new Float32Array(d));var q=0;for(var k=0;k<d.length;k++)q+=d[k]*d[k];$("m").style.width=Math.min(100,Math.sqrt(q/d.length)*600)+"%"};
+ src.connect(proc);proc.connect(ctx.destination);rec=true;$("rec").classList.add("on");$("rec").textContent=ui.stop}).catch(function(){setSt(ui.mic,"ng")})}
+function stop(){rec=false;$("rec").classList.remove("on");$("rec").textContent=ui.rec;$("m").style.width="0";
+ proc.disconnect();src.disconnect();stream.getTracks().forEach(function(t){t.stop()});ctx.close();
+ var n=buf.reduce(function(a,b){return a+b.length},0),pcm=new Float32Array(n),o=0;buf.forEach(function(b){pcm.set(b,o);o+=b.length});
+ var pk=0;for(var k=0;k<n;k++)pk=Math.max(pk,Math.abs(pcm[k]));
+ if(n<rate*0.3||pk<0.04){setSt(ui.quiet,"ng");return}
+ var id=items[cur].id,b=wav(down(pcm,rate));blobs[id]=b;pend[id]=b;dbPut(id,b);send(id,true)}
+function send(id,adv){setSt(ui.sending);return b64(blobs[id]||pend[id]).then(function(s){return fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({t:TOK,id:id,wav_b64:s})})})
+ .then(function(r){return r.json()}).then(function(j){if(!j.ok)throw 0;done[id]=1;delete pend[id];dbDel(id);setSt(ui.sent+" ✓","ok");
+  if(adv){var k=cur+1;if(k<items.length)cur=k}show()}).catch(function(){setSt(ui.fail,"ng");if(adv&&cur<items.length-1)cur++;show()})}
+$("retry").onclick=function(){var ids=Object.keys(pend),p=Promise.resolve();ids.forEach(function(id){p=p.then(function(){return send(id,false)})})};
+function b64(blob){return new Promise(function(ok){var r=new FileReader();r.onload=function(){ok(String(r.result).split(",")[1])};r.readAsDataURL(blob)})}
+function down(p,sr){if(sr<=SR)return p;var r=sr/SR,n=Math.floor(p.length/r),o=new Float32Array(n);for(var k=0;k<n;k++){var a=Math.floor(k*r),b=Math.min(p.length,Math.floor((k+1)*r)),s=0;for(var j=a;j<b;j++)s+=p[j];o[k]=s/Math.max(1,b-a)}return o}
+function wav(p){var b=new ArrayBuffer(44+p.length*2),v=new DataView(b),w=function(o,s){for(var k=0;k<s.length;k++)v.setUint8(o+k,s.charCodeAt(k))};
+ w(0,"RIFF");v.setUint32(4,36+p.length*2,true);w(8,"WAVE");w(12,"fmt ");v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,SR,true);v.setUint32(28,SR*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,"data");v.setUint32(40,p.length*2,true);
+ for(var k=0;k<p.length;k++)v.setInt16(44+k*2,Math.max(-1,Math.min(1,p[k]))*0x7fff,true);return new Blob([b],{type:"audio/wav"})}
+function boot(){C.ui&&(ui=C.ui);document.documentElement.lang=C.lang||"ja";document.title=ui.title||"Voice";
+ $("rec").textContent=ui.rec;$("play").textContent=ui.play;$("prev").textContent=ui.prev;$("next").textContent=ui.next;$("how").textContent=ui.how;$("howh").textContent="ⓘ";
+ flat();Object.keys(pend).forEach(function(id){blobs[id]=pend[id]});var k=firstTodo();cur=k<0?0:k;show();if(Object.keys(pend).length)$("retry").click()}
+if(location.protocol=="file:"){$("app").style.display="none";$("bad").style.display="block";$("bad").textContent="Open the LINK in Safari / Chrome (not the file). リンクから開いてください。"}else if(!TOK){bad()}else{openDB().then(dbAll).then(load).then(boot).catch(function(){bad()})}
+/* 画面を開き直した時、新しく増えた章を 取り込む */
+document.addEventListener("visibilitychange",function(){if(!document.hidden&&C&&!rec)load().then(function(j){C=j.content;ui=C.ui||ui;flat();if(cur>=items.length)cur=0;show()}).catch(function(){})});
+</script></body></html>
